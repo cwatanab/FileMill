@@ -84,8 +84,7 @@ public partial class App : Application
         vm1.UseOxipng = true;
         vm1.OxipngPath = @"C:	oolsoxipng.exe";
         vm1.OxipngLevel = 4;
-        vm1.CjpegliPath = @"C:	ools
-pegli.exe";
+        vm1.CjpegliPath = @"C:	oolsnpegli.exe";
         vm1.UseJpegli = true;
         vm1.EnableOfficeOptimize = false;
         vm1.EnableImageOptimize = false;
@@ -142,8 +141,7 @@ pegli.exe";
         if (Math.Abs(vm2.WindowTop - 150) > 0.001) throw new Exception("WindowTop was not loaded correctly.");
         if (vm2.OxipngPath != @"C:	oolsoxipng.exe") throw new Exception("OxipngPath was not loaded correctly.");
         if (vm2.WindowState != WindowState.Maximized) throw new Exception("WindowState was not loaded correctly.");
-        if (vm2.CjpegliPath != @"C:	ools
-pegli.exe") throw new Exception("CjpegliPath was not loaded correctly.");
+        if (vm2.CjpegliPath != @"C:	oolsnpegli.exe") throw new Exception("CjpegliPath was not loaded correctly.");
         if (vm2.UseOxipng != true) throw new Exception("UseOxipng was not loaded correctly.");
         if (vm2.OxipngLevel != 4) throw new Exception("OxipngLevel was not loaded correctly.");
         if (vm2.UseJpegli != true) throw new Exception("UseJpegli was not loaded correctly.");

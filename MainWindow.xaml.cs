@@ -214,7 +214,18 @@ public partial class MainWindow : Window
 
     private void MenuItem_About_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("FileMill Image Resizer v1.0\n\nRalpha Image Resizerのレイアウトを踏襲したバッチ画像処理アプリです。", "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);
+        var message = "FileMill v1.0\n\n" +
+                      "本アプリは、画像一括変換ソフト「Ralpha」およびOfficeファイル軽量化ツール「OptiOpenXML」の思想を取り入れ、現代の画像フォーマット（WebP, AVIF等）に対応させて統合したバッチ処理アプリです。\n\n" +
+                      "【謝辞】\n" +
+                      "・Ralpha / RalphaPlus (にるぽ / Nilposoft 氏)\n" +
+                      "  画像変換の画面レイアウトおよび機能デザインの参考にさせていただきました。\n" +
+                      "  http://nilposoft.info/ralpha/ralphaplus64.html\n\n" +
+                      "・OptiOpenXML\n" +
+                      "  Office Open XML文書の軽量化・最適化処理のアイデアの参考にさせていただきました。\n" +
+                      "  https://www.hiskip.com/free/freesoft/doc/office/14978.html\n\n" +
+                      "素晴らしいソフトウェアの開発者および関係者の皆様に心より感謝申し上げます。";
+
+        MessageBox.Show(message, "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     // --- ファイル最適化用イベントハンドラー ---

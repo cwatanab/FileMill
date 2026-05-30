@@ -2,6 +2,8 @@
 
 FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一括変換と、Office Open XML ファイルや画像ファイルの軽量化を行います。
 
+本アプリは、画像一括変換ソフト「Ralpha」のレイアウト・UI思想を踏襲して画像変換機能を提供し、Office Open XML最適化ツール「OptiOpenXML」の処理思想を取り入れ、それぞれを現代的な画像フォーマット（WebP、AVIF等）に対応させて統合したものです。
+
 ## 主な機能
 
 - 画像ファイルまたはフォルダのドラッグ＆ドロップ登録
@@ -169,3 +171,14 @@ dotnet run --project FileMill.csproj -- --test-settings
 ```
 
 3 つのスイートすべてが `passed` と表示されれば正常です。
+
+## 謝辞
+
+本アプリの開発にあたり、以下の素晴らしいソフトウェアとその制作者様に深く感謝の意を表します。
+
+- **Ralpha / RalphaPlus** (にるぽ / Nilposoft 氏)
+  - 軽快で使いやすい画像変換の画面レイアウトおよび機能デザインの参考にさせていただきました。
+  - 公式サイト: [Nilposoft](http://nilposoft.info/ralpha/ralphaplus64.html)
+- **OptiOpenXML**
+  - Word, Excel, PowerPoint などの Office Open XML 文書の軽量化・最適化処理の設計・アイデアの参考にさせていただきました。
+  - 紹介・解説ページ: [OptiOpenXML](https://www.hiskip.com/free/freesoft/doc/office/14978.html)
