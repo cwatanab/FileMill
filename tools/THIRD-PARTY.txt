@@ -1,0 +1,42 @@
+THIRD-PARTY NOTICES
+
+This application bundles or interfaces with the following third-party software.
+Their respective licenses are included in the LICENSE.*.txt files in this directory.
+
+---
+
+oxipng (MIT)
+  URL: https://github.com/oxipng/oxipng
+  License: LICENSE.oxipng.txt
+  Copyright (c) 2016 Joshua Holmer
+
+cjpegli / libjxl (BSD 3-Clause)
+  URL: https://github.com/libjxl/libjxl
+  License: LICENSE.cjpegli.txt
+  Copyright (c) the JPEG XL Project Authors
+
+FFmpeg (LGPL v3)
+  URL: https://ffmpeg.org
+  Build: BtbN (https://github.com/BtbN/FFmpeg-Builds)
+  License: LICENSE.ffmpeg.txt
+
+  FFmpeg is distributed under the GNU Lesser General Public License v3.
+  The source code for the FFmpeg binary included in this distribution can be
+  obtained from https://github.com/BtbN/FFmpeg-Builds or https://ffmpeg.org/download.html.
+
+NetVips (MIT)
+  URL: https://github.com/kleisauke/net-vips
+  License: LICENSE.netvips.txt
+  Copyright (c) 2017-2024 Kleis Auke Wolthuizen
+
+  NetVips is a .NET binding for libvips. It is distributed under the MIT
+  License. The NuGet package is restored at build time.
+
+libvips (LGPL v2.1+)
+  URL: https://github.com/libvips/libvips
+  License: LICENSE.libvips.txt
+  Copyright (c) 1994-2024 John Cupitt and other contributors
+
+  libvips is bundled via NetVips.Native.win-x64 and distributed under the
+  GNU Lesser General Public License v2.1 or later. The source code can be
+  obtained from https://github.com/libvips/libvips.
