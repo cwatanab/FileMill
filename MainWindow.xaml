@@ -1170,7 +1170,7 @@
 
                                     <!-- プレースホルダー -->
 
-                                    <TextBlock Text="ここにOffice(docx, xlsx, pptx)、または画像ファイルをドラッグ＆ドロップしてください"
+                                    <TextBlock Text="ここにOffice(docx, xlsx, pptx)、画像ファイル、または動画・音声ファイルをドラッグ＆ドロップしてください"
 
                                                FontSize="13" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20">
 

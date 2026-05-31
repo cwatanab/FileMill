@@ -2,39 +2,8 @@ using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
-using FileMill.Models;
 
 namespace FileMill.Converters;
-
-/// <summary>
-/// PipelineStepType に応じて Visibility を切り替える。
-/// </summary>
-public class StepTypeToVisibilityConverter : IValueConverter
-{
-    public PipelineStepType TargetType { get; set; }
-
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is PipelineStepType stepType)
-            return stepType == TargetType ? Visibility.Visible : Visibility.Collapsed;
-        return Visibility.Collapsed;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => throw new NotSupportedException();
-}
-
-/// <summary>
-/// bool → Visibility (true=Visible, false=Collapsed)
-/// </summary>
-public class BoolToVisibilityConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is true ? Visibility.Visible : Visibility.Collapsed;
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is Visibility v && v == Visibility.Visible;
-}
 
 /// <summary>
 /// value (string) が parameter (string) と一致すれば Visible、そうでなければ Collapsed

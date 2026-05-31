@@ -46,7 +46,7 @@ public class ImageProcessingService
                 }
             }
 
-            var fmt = formatStep?.TargetFormat ?? OutputFormat.Jpeg;
+            var fmt = formatStep?.TargetFormat ?? GetFormatFromExtension(inputPath);
 
             // 出力ディレクトリがなければ作成
             var dir = Path.GetDirectoryName(outputPath);
@@ -361,6 +361,23 @@ public class ImageProcessingService
         OutputFormat.Tiff => ".tif",
         _ => ".jpg"
     };
+
+    /// <summary>
+    /// 入力ファイルの拡張子から出力形式を推測する。
+    /// FormatConvert ステップが無効な場合に元の形式を維持するために使用。
+    /// </summary>
+    private static OutputFormat GetFormatFromExtension(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext switch
+        {
+            ".png" => OutputFormat.Png,
+            ".webp" => OutputFormat.WebP,
+            ".avif" => OutputFormat.Avif,
+            ".tif" or ".tiff" => OutputFormat.Tiff,
+            _ => OutputFormat.Jpeg
+        };
+    }
 
     private sealed record PackageImageReplacement(string EntryName, byte[] Data);
 

@@ -89,8 +89,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    // --- ファイル名生成規則 ---
-    private string _fileNameRule = "resize_<old>-s";
+    // --- ファイル名生成規則（元のファイル名の末尾に付与するサフィックス） ---
+    private string _fileNameRule = "_converted";
     public string FileNameRule
     {
         get => _fileNameRule;
@@ -226,14 +226,48 @@ public class MainViewModel : INotifyPropertyChanged
     public string MediaVideoCodec
     {
         get => _mediaVideoCodec;
-        set { _mediaVideoCodec = value; OnPropertyChanged(); }
+        set { _mediaVideoCodec = value; OnPropertyChanged(); OnPropertyChanged(nameof(MediaVideoCodecIndex)); }
     }
 
-    private string _mediaAudioCodec = "libmp3lame";
+    private string _mediaAudioCodec = "aac";
     public string MediaAudioCodec
     {
         get => _mediaAudioCodec;
-        set { _mediaAudioCodec = value; OnPropertyChanged(); }
+        set { _mediaAudioCodec = value; OnPropertyChanged(); OnPropertyChanged(nameof(MediaAudioCodecIndex)); }
+    }
+
+    public int MediaVideoCodecIndex
+    {
+        get => _mediaVideoCodec switch
+        {
+            "libx265" => 1,
+            "libvpx-vp9" => 2,
+            "libaom-av1" => 3,
+            _ => 0
+        };
+        set => MediaVideoCodec = value switch
+        {
+            1 => "libx265",
+            2 => "libvpx-vp9",
+            3 => "libaom-av1",
+            _ => "libx264"
+        };
+    }
+
+    public int MediaAudioCodecIndex
+    {
+        get => _mediaAudioCodec switch
+        {
+            "libopus" => 1,
+            "copy" => 2,
+            _ => 0
+        };
+        set => MediaAudioCodec = value switch
+        {
+            1 => "libopus",
+            2 => "copy",
+            _ => "aac"
+        };
     }
 
     private string _ffmpegPath = "tools/ffmpeg.exe";
@@ -678,14 +712,18 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
+        var enabledSteps = Steps.Where(s => s.Enabled).ToList();
+        if (enabledSteps.Count == 0)
+        {
+            StatusText = "処理オプションが選択されていません";
+            return;
+        }
+
         IsProcessing = true;
         ProgressValue = 0;
         ProgressMax = targets.Count;
 
-        var enabledSteps = Steps.Where(s => s.Enabled).ToList();
         var formatStep = enabledSteps.LastOrDefault(s => s.Type == PipelineStepType.FormatConvert);
-        var ext = ImageProcessingService.GetExtension(
-            formatStep?.TargetFormat ?? OutputFormat.Jpeg);
 
         int success = 0;
         int errors = 0;
@@ -699,12 +737,13 @@ public class MainViewModel : INotifyPropertyChanged
                     var file = targets[i];
                     try
                     {
+                        // FormatConvert が有効なら指定形式、無効なら元ファイルと同じ拡張子
+                        var ext = formatStep != null
+                            ? ImageProcessingService.GetExtension(formatStep.TargetFormat)
+                            : Path.GetExtension(file.FilePath);
+
                         var baseName = Path.GetFileNameWithoutExtension(file.FilePath);
-                        var newBaseName = FileNameRule.Replace("<old>", baseName);
-                        if (!FileNameRule.Contains("<old>"))
-                        {
-                            newBaseName = FileNameRule + baseName;
-                        }
+                        var newBaseName = baseName + FileNameRule;
 
                         var fileName = newBaseName + ext;
                         var outputPath = Path.Combine(OutputDirectory, fileName);
@@ -1175,7 +1214,7 @@ public class MainViewModel : INotifyPropertyChanged
                     SelectedTabIndex = idx;
             }
 
-            if (data.TryGetValue("Optimize", out var opt))
+            if (data.TryGetValue("File", out var opt))
             {
                 if (opt.TryGetValue("EnableOfficeOptimize", out var val))
                     EnableOfficeOptimize = bool.TryParse(val, out var b) ? b : EnableOfficeOptimize;
@@ -1216,82 +1255,24 @@ public class MainViewModel : INotifyPropertyChanged
 
             }
 
-            // Restore pipeline steps
-            if (data.TryGetValue("Pipeline", out var pipeline) && pipeline.TryGetValue("Count", out var countStr) && int.TryParse(countStr, out var count))
+            // 保存された有効ステップのプロパティをデフォルトステップに上書き適用
+            if (data.TryGetValue("Image", out var pipeline) && pipeline.TryGetValue("Enabled", out var enabledList))
             {
-                var loadedSteps = new List<PipelineStep>();
-                for (int idx = 0; idx < count; idx++)
+                // 一旦全ステップを無効化（保存された有効ステップだけ再有効化する）
+                foreach (var step in Steps)
+                    step.Enabled = false;
+
+                foreach (var typeName in enabledList.Split(',', StringSplitOptions.RemoveEmptyEntries))
                 {
-                    var sectionName = $"PipelineStep_{idx}";
-                    if (data.TryGetValue(sectionName, out var stepData) && stepData.TryGetValue("Type", out var typeStr))
+                    if (Enum.TryParse<PipelineStepType>(typeName.Trim(), out var type) &&
+                        data.TryGetValue("Image." + typeName.Trim(), out var stepData))
                     {
-                        if (Enum.TryParse<PipelineStepType>(typeStr, out var type))
+                        var step = Steps.FirstOrDefault(s => s.Type == type);
+                        if (step != null)
                         {
-                            var step = new PipelineStep { Type = type };
-                            if (stepData.TryGetValue("Enabled", out var val))
-                                step.Enabled = bool.TryParse(val, out var b) ? b : step.Enabled;
-
-                            // Crop
-                            if (stepData.TryGetValue("CropWidth", out val)) step.CropWidth = int.TryParse(val, out var i) ? i : step.CropWidth;
-                            if (stepData.TryGetValue("CropHeight", out val)) step.CropHeight = int.TryParse(val, out var i) ? i : step.CropHeight;
-
-                            // Rotate
-                            if (stepData.TryGetValue("RotateTarget", out val)) step.RotateTarget = Enum.TryParse<RotateTarget>(val, out var r) ? r : step.RotateTarget;
-                            if (stepData.TryGetValue("RotationDegrees", out val)) step.RotationDegrees = int.TryParse(val, out var i) ? i : step.RotationDegrees;
-
-                            // FormatConvert
-                            if (stepData.TryGetValue("TargetFormat", out val)) step.TargetFormat = Enum.TryParse<OutputFormat>(val, out var f) ? f : step.TargetFormat;
-                            if (stepData.TryGetValue("Quality", out val)) step.Quality = int.TryParse(val, out var i) ? i : step.Quality;
-                            if (stepData.TryGetValue("CompressionLevel", out val)) step.CompressionLevel = int.TryParse(val, out var i) ? i : step.CompressionLevel;
-
-                            // Resize
-                            if (stepData.TryGetValue("TargetWidth", out val)) step.TargetWidth = int.TryParse(val, out var i) ? i : step.TargetWidth;
-                            if (stepData.TryGetValue("TargetHeight", out val)) step.TargetHeight = int.TryParse(val, out var i) ? i : step.TargetHeight;
-                            if (stepData.TryGetValue("FitMode", out val)) step.FitMode = Enum.TryParse<FitMode>(val, out var fm) ? fm : step.FitMode;
-                            if (stepData.TryGetValue("AllowUpscale", out val)) step.AllowUpscale = bool.TryParse(val, out var b2) ? b2 : step.AllowUpscale;
-
-                            // Padding
-                            if (stepData.TryGetValue("PaddingSize", out val)) step.PaddingSize = int.TryParse(val, out var i) ? i : step.PaddingSize;
-                            if (stepData.TryGetValue("PaddingRed", out val)) step.PaddingRed = int.TryParse(val, out var i) ? i : step.PaddingRed;
-                            if (stepData.TryGetValue("PaddingGreen", out val)) step.PaddingGreen = int.TryParse(val, out var i) ? i : step.PaddingGreen;
-                            if (stepData.TryGetValue("PaddingBlue", out val)) step.PaddingBlue = int.TryParse(val, out var i) ? i : step.PaddingBlue;
-
-                            // Sharpen
-                            if (stepData.TryGetValue("SharpenSigma", out val)) step.SharpenSigma = double.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : step.SharpenSigma;
-
-                            // ColorAdjust
-                            if (stepData.TryGetValue("Brightness", out val)) step.Brightness = int.TryParse(val, out var i) ? i : step.Brightness;
-                            if (stepData.TryGetValue("Contrast", out val)) step.Contrast = int.TryParse(val, out var i) ? i : step.Contrast;
-
-                            // ToneCurve
-                            if (stepData.TryGetValue("ToneGamma", out val)) step.ToneGamma = double.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : step.ToneGamma;
-
-                            // Composite
-                            if (stepData.TryGetValue("CompositePath", out val)) step.CompositePath = val;
-                            if (stepData.TryGetValue("CompositeX", out val)) step.CompositeX = int.TryParse(val, out var i) ? i : step.CompositeX;
-                            if (stepData.TryGetValue("CompositeY", out val)) step.CompositeY = int.TryParse(val, out var i) ? i : step.CompositeY;
-
-                            // Optimize
-                            if (stepData.TryGetValue("StripMetadata", out val)) step.StripMetadata = bool.TryParse(val, out var b2) ? b2 : step.StripMetadata;
-                            if (stepData.TryGetValue("OptimizeCoding", out val)) step.OptimizeCoding = bool.TryParse(val, out var b2) ? b2 : step.OptimizeCoding;
-                            if (stepData.TryGetValue("TrellisQuant", out val)) step.TrellisQuant = bool.TryParse(val, out var b2) ? b2 : step.TrellisQuant;
-                            if (stepData.TryGetValue("ReductionEffort", out val)) step.ReductionEffort = int.TryParse(val, out var i) ? i : step.ReductionEffort;
-                            if (stepData.TryGetValue("Lossless", out val)) step.Lossless = bool.TryParse(val, out var b2) ? b2 : step.Lossless;
-
-                            // Posterize
-                            if (stepData.TryGetValue("BitsPerChannel", out val)) step.BitsPerChannel = int.TryParse(val, out var i) ? i : step.BitsPerChannel;
-
-                            loadedSteps.Add(step);
+                            step.Enabled = true;
+                            LoadStepProperties(step, stepData);
                         }
-                    }
-                }
-
-                if (loadedSteps.Count > 0)
-                {
-                    Steps.Clear();
-                    foreach (var step in loadedSteps)
-                    {
-                        Steps.Add(step);
                     }
                 }
             }
@@ -1299,6 +1280,129 @@ public class MainViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to load settings: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ステップ種別ごとに必要なプロパティだけを保存用ディクショナリに追加する。
+    /// </summary>
+    private static void SaveStepProperties(PipelineStep step, Dictionary<string, string> data)
+    {
+        switch (step.Type)
+        {
+            case PipelineStepType.Crop:
+                data["CropWidth"] = step.CropWidth.ToString();
+                data["CropHeight"] = step.CropHeight.ToString();
+                break;
+            case PipelineStepType.Rotate:
+                data["RotateTarget"] = step.RotateTarget.ToString();
+                data["RotationDegrees"] = step.RotationDegrees.ToString();
+                break;
+            case PipelineStepType.Resize:
+                data["TargetWidth"] = step.TargetWidth.ToString();
+                data["TargetHeight"] = step.TargetHeight.ToString();
+                data["FitMode"] = step.FitMode.ToString();
+                data["AllowUpscale"] = step.AllowUpscale.ToString();
+                break;
+            case PipelineStepType.Padding:
+                data["PaddingSize"] = step.PaddingSize.ToString();
+                data["PaddingRed"] = step.PaddingRed.ToString();
+                data["PaddingGreen"] = step.PaddingGreen.ToString();
+                data["PaddingBlue"] = step.PaddingBlue.ToString();
+                break;
+            case PipelineStepType.Sharpen:
+                data["SharpenSigma"] = step.SharpenSigma.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                break;
+            case PipelineStepType.ColorAdjust:
+                data["Brightness"] = step.Brightness.ToString();
+                data["Contrast"] = step.Contrast.ToString();
+                break;
+            case PipelineStepType.ToneCurve:
+                data["ToneGamma"] = step.ToneGamma.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                break;
+            case PipelineStepType.FormatConvert:
+                data["TargetFormat"] = step.TargetFormat.ToString();
+                data["Quality"] = step.Quality.ToString();
+                data["CompressionLevel"] = step.CompressionLevel.ToString();
+                break;
+            case PipelineStepType.Optimize:
+                data["StripMetadata"] = step.StripMetadata.ToString();
+                data["OptimizeCoding"] = step.OptimizeCoding.ToString();
+                data["TrellisQuant"] = step.TrellisQuant.ToString();
+                data["ReductionEffort"] = step.ReductionEffort.ToString();
+                data["Lossless"] = step.Lossless.ToString();
+                break;
+            case PipelineStepType.Posterize:
+                data["BitsPerChannel"] = step.BitsPerChannel.ToString();
+                break;
+            case PipelineStepType.Composite:
+                data["CompositePath"] = step.CompositePath ?? "";
+                data["CompositeX"] = step.CompositeX.ToString();
+                data["CompositeY"] = step.CompositeY.ToString();
+                break;
+            // Grayscale, ExifAutoRotate: 追加プロパティなし
+        }
+    }
+
+    /// <summary>
+    /// 保存データから読み取ったプロパティを、ステップ種別に応じて適用する。
+    /// </summary>
+    private static void LoadStepProperties(PipelineStep step, Dictionary<string, string> data)
+    {
+        string? v;
+        switch (step.Type)
+        {
+            case PipelineStepType.Crop:
+                if (data.TryGetValue("CropWidth", out v)) step.CropWidth = int.TryParse(v, out var i) ? i : step.CropWidth;
+                if (data.TryGetValue("CropHeight", out v)) step.CropHeight = int.TryParse(v, out var i) ? i : step.CropHeight;
+                break;
+            case PipelineStepType.Rotate:
+                if (data.TryGetValue("RotateTarget", out v)) step.RotateTarget = Enum.TryParse<RotateTarget>(v, out var r) ? r : step.RotateTarget;
+                if (data.TryGetValue("RotationDegrees", out v)) step.RotationDegrees = int.TryParse(v, out var i) ? i : step.RotationDegrees;
+                break;
+            case PipelineStepType.Resize:
+                if (data.TryGetValue("TargetWidth", out v)) step.TargetWidth = int.TryParse(v, out var i) ? i : step.TargetWidth;
+                if (data.TryGetValue("TargetHeight", out v)) step.TargetHeight = int.TryParse(v, out var i) ? i : step.TargetHeight;
+                if (data.TryGetValue("FitMode", out v)) step.FitMode = Enum.TryParse<FitMode>(v, out var fm) ? fm : step.FitMode;
+                if (data.TryGetValue("AllowUpscale", out v)) step.AllowUpscale = bool.TryParse(v, out var b) ? b : step.AllowUpscale;
+                break;
+            case PipelineStepType.Padding:
+                if (data.TryGetValue("PaddingSize", out v)) step.PaddingSize = int.TryParse(v, out var i) ? i : step.PaddingSize;
+                if (data.TryGetValue("PaddingRed", out v)) step.PaddingRed = int.TryParse(v, out var i) ? i : step.PaddingRed;
+                if (data.TryGetValue("PaddingGreen", out v)) step.PaddingGreen = int.TryParse(v, out var i) ? i : step.PaddingGreen;
+                if (data.TryGetValue("PaddingBlue", out v)) step.PaddingBlue = int.TryParse(v, out var i) ? i : step.PaddingBlue;
+                break;
+            case PipelineStepType.Sharpen:
+                if (data.TryGetValue("SharpenSigma", out v)) step.SharpenSigma = double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : step.SharpenSigma;
+                break;
+            case PipelineStepType.ColorAdjust:
+                if (data.TryGetValue("Brightness", out v)) step.Brightness = int.TryParse(v, out var i) ? i : step.Brightness;
+                if (data.TryGetValue("Contrast", out v)) step.Contrast = int.TryParse(v, out var i) ? i : step.Contrast;
+                break;
+            case PipelineStepType.ToneCurve:
+                if (data.TryGetValue("ToneGamma", out v)) step.ToneGamma = double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : step.ToneGamma;
+                break;
+            case PipelineStepType.FormatConvert:
+                if (data.TryGetValue("TargetFormat", out v)) step.TargetFormat = Enum.TryParse<OutputFormat>(v, out var f) ? f : step.TargetFormat;
+                if (data.TryGetValue("Quality", out v)) step.Quality = int.TryParse(v, out var i) ? i : step.Quality;
+                if (data.TryGetValue("CompressionLevel", out v)) step.CompressionLevel = int.TryParse(v, out var i) ? i : step.CompressionLevel;
+                break;
+            case PipelineStepType.Optimize:
+                if (data.TryGetValue("StripMetadata", out v)) step.StripMetadata = bool.TryParse(v, out var b) ? b : step.StripMetadata;
+                if (data.TryGetValue("OptimizeCoding", out v)) step.OptimizeCoding = bool.TryParse(v, out var b) ? b : step.OptimizeCoding;
+                if (data.TryGetValue("TrellisQuant", out v)) step.TrellisQuant = bool.TryParse(v, out var b) ? b : step.TrellisQuant;
+                if (data.TryGetValue("ReductionEffort", out v)) step.ReductionEffort = int.TryParse(v, out var i) ? i : step.ReductionEffort;
+                if (data.TryGetValue("Lossless", out v)) step.Lossless = bool.TryParse(v, out var b) ? b : step.Lossless;
+                break;
+            case PipelineStepType.Posterize:
+                if (data.TryGetValue("BitsPerChannel", out v)) step.BitsPerChannel = int.TryParse(v, out var i) ? i : step.BitsPerChannel;
+                break;
+            case PipelineStepType.Composite:
+                if (data.TryGetValue("CompositePath", out v)) step.CompositePath = v;
+                if (data.TryGetValue("CompositeX", out v)) step.CompositeX = int.TryParse(v, out var i) ? i : step.CompositeX;
+                if (data.TryGetValue("CompositeY", out v)) step.CompositeY = int.TryParse(v, out var i) ? i : step.CompositeY;
+                break;
+            // Grayscale, ExifAutoRotate: 追加プロパティなし
         }
     }
 
@@ -1345,51 +1449,21 @@ public class MainViewModel : INotifyPropertyChanged
                 ["UseJpegli"] = UseJpegli.ToString(),
                 ["CjpegliPath"] = CjpegliPath ?? ""
             };
-            data["Optimize"] = opt;
+            data["File"] = opt;
 
+            // 有効ステップのみ種別をセクション名にして保存
+            var enabledSteps = Steps.Where(s => s.Enabled).ToList();
             var pipeline = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["Count"] = Steps.Count.ToString()
+                ["Enabled"] = string.Join(",", enabledSteps.Select(s => s.Type.ToString()))
             };
-            data["Pipeline"] = pipeline;
+            data["Image"] = pipeline;
 
-            for (int idx = 0; idx < Steps.Count; idx++)
+            foreach (var step in enabledSteps)
             {
-                var step = Steps[idx];
-                var stepData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Type"] = step.Type.ToString(),
-                    ["Enabled"] = step.Enabled.ToString(),
-                    ["CropWidth"] = step.CropWidth.ToString(),
-                    ["CropHeight"] = step.CropHeight.ToString(),
-                    ["RotateTarget"] = step.RotateTarget.ToString(),
-                    ["RotationDegrees"] = step.RotationDegrees.ToString(),
-                    ["TargetFormat"] = step.TargetFormat.ToString(),
-                    ["Quality"] = step.Quality.ToString(),
-                    ["CompressionLevel"] = step.CompressionLevel.ToString(),
-                    ["TargetWidth"] = step.TargetWidth.ToString(),
-                    ["TargetHeight"] = step.TargetHeight.ToString(),
-                    ["FitMode"] = step.FitMode.ToString(),
-                    ["AllowUpscale"] = step.AllowUpscale.ToString(),
-                    ["PaddingSize"] = step.PaddingSize.ToString(),
-                    ["PaddingRed"] = step.PaddingRed.ToString(),
-                    ["PaddingGreen"] = step.PaddingGreen.ToString(),
-                    ["PaddingBlue"] = step.PaddingBlue.ToString(),
-                    ["SharpenSigma"] = step.SharpenSigma.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ["Brightness"] = step.Brightness.ToString(),
-                    ["Contrast"] = step.Contrast.ToString(),
-                    ["ToneGamma"] = step.ToneGamma.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ["CompositePath"] = step.CompositePath ?? "",
-                    ["CompositeX"] = step.CompositeX.ToString(),
-                    ["CompositeY"] = step.CompositeY.ToString(),
-                    ["StripMetadata"] = step.StripMetadata.ToString(),
-                    ["OptimizeCoding"] = step.OptimizeCoding.ToString(),
-                    ["TrellisQuant"] = step.TrellisQuant.ToString(),
-                    ["ReductionEffort"] = step.ReductionEffort.ToString(),
-                    ["Lossless"] = step.Lossless.ToString(),
-                    ["BitsPerChannel"] = step.BitsPerChannel.ToString()
-                };
-                data[$"PipelineStep_{idx}"] = stepData;
+                var stepData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                SaveStepProperties(step, stepData);
+                data["Image." + step.Type.ToString()] = stepData;
             }
 
             var path = GetSettingsFilePath();

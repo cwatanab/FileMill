@@ -397,6 +397,13 @@
                         <CheckBox Content="リストを空にするとき確認する" IsChecked="{Binding ConfirmOnClear, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
                         <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
                             <StackPanel>
+                                <TextBlock Text="出力ファイル名:" FontSize="11" Foreground="#555" Margin="0,0,0,2"/>
+                                <TextBlock Text="元のファイル名の末尾に付与する文字列" FontSize="10" Foreground="#999" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding FileNameRule, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+                            </StackPanel>
+                        </Border>
+                        <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
+                            <StackPanel>
                                 <TextBlock Text="外部ツール パス:" FontSize="11" Foreground="#555" Margin="0,0,0,4"/>
                                 <Grid Margin="0,4">
                                     <Grid.ColumnDefinitions>
@@ -430,6 +437,16 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
+                    </StackPanel>
+
+                    <!-- グレースケール化設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Grayscale}">
+                        <TextBlock Text="グレースケール化は画像を白黒に変換します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="#555" Margin="0,6"/>
+                    </StackPanel>
+
+                    <!-- Exif自動回転設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ExifAutoRotate}">
+                        <TextBlock Text="画像に埋め込まれたExifの回転情報に基づいて、自動的に画像の向きを補正します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="#555" Margin="0,6"/>
                     </StackPanel>
 
                     <!-- デフォルト -->

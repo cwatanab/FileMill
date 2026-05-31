@@ -48,6 +48,7 @@ public partial class App : Application
         var failures = new System.Text.StringBuilder();
         if (vm1.PlaySoundOnComplete != true) failures.AppendLine($"PlaySoundOnComplete={vm1.PlaySoundOnComplete}");
         if (vm1.ConfirmOnClear != true) failures.AppendLine($"ConfirmOnClear={vm1.ConfirmOnClear}");
+        if (vm1.FileNameRule != "_converted") failures.AppendLine($"FileNameRule='{vm1.FileNameRule}'");
         if (vm1.UseOxipng != false) failures.AppendLine($"UseOxipng={vm1.UseOxipng}");
         if (vm1.OxipngLevel != 2) failures.AppendLine($"OxipngLevel={vm1.OxipngLevel}");
         if (vm1.OxipngPath != "tools/oxipng.exe") failures.AppendLine($"OxipngPath='{vm1.OxipngPath}'");
@@ -63,7 +64,7 @@ public partial class App : Application
         if (vm1.CompressMedia != true) failures.AppendLine($"CompressMedia={vm1.CompressMedia}");
         if (vm1.MediaVideoCrf != 23) failures.AppendLine($"MediaVideoCrf={vm1.MediaVideoCrf}");
         if (vm1.MediaVideoCodec != "libx264") failures.AppendLine($"MediaVideoCodec='{vm1.MediaVideoCodec}'");
-        if (vm1.MediaAudioCodec != "libmp3lame") failures.AppendLine($"MediaAudioCodec='{vm1.MediaAudioCodec}'");
+        if (vm1.MediaAudioCodec != "aac") failures.AppendLine($"MediaAudioCodec='{vm1.MediaAudioCodec}'");
         if (vm1.FfmpegPath != "tools/ffmpeg.exe") failures.AppendLine($"FfmpegPath='{vm1.FfmpegPath}'");
         if (failures.Length > 0)
         {
@@ -73,7 +74,7 @@ public partial class App : Application
         // 3. Edit settings
         vm1.PlaySoundOnComplete = false;
         vm1.ConfirmOnClear = false;
-        vm1.FileNameRule = "test_rule_<old>";
+        vm1.FileNameRule = "_test";
         vm1.WebPQuality = 92;
         vm1.SelectedTabIndex = 1;
         vm1.WindowWidth = 1100;
@@ -120,7 +121,7 @@ public partial class App : Application
         var grayscaleStep = vm1.Steps.FirstOrDefault(s => s.Type == PipelineStepType.Grayscale);
         if (grayscaleStep != null)
         {
-            vm1.Steps.Remove(grayscaleStep);
+            grayscaleStep.Enabled = false; // 無効化（削除ではなく）
         }
 
         // 4. Save settings
@@ -132,7 +133,7 @@ public partial class App : Application
         // 6. Assert restored options
         if (vm2.PlaySoundOnComplete != false) throw new Exception("PlaySoundOnComplete was not loaded correctly.");
         if (vm2.ConfirmOnClear != false) throw new Exception("ConfirmOnClear was not loaded correctly.");
-        if (vm2.FileNameRule != "test_rule_<old>") throw new Exception("FileNameRule was not loaded correctly.");
+        if (vm2.FileNameRule != "_test") throw new Exception("FileNameRule was not loaded correctly.");
         if (vm2.WebPQuality != 92) throw new Exception("WebPQuality was not loaded correctly.");
         if (vm2.SelectedTabIndex != 1) throw new Exception("SelectedTabIndex was not loaded correctly.");
         if (Math.Abs(vm2.WindowWidth - 1100) > 0.001) throw new Exception("WindowWidth was not loaded correctly.");
@@ -172,7 +173,8 @@ public partial class App : Application
         if (vm2Rotate.RotationAngleIndex != 2) throw new Exception("Rotate step RotationAngleIndex was not restored.");
 
         var vm2Grayscale = vm2.Steps.FirstOrDefault(s => s.Type == PipelineStepType.Grayscale);
-        if (vm2Grayscale != null) throw new Exception("Removed Grayscale step was restored/still present.");
+        if (vm2Grayscale == null) throw new Exception("Grayscale step was removed from defaults.");
+        if (vm2Grayscale.Enabled != false) throw new Exception("Grayscale step should be disabled after loading.");
 
         Console.WriteLine("=== Settings persistence test passed successfully ===");
     }
