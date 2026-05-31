@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using FileMill.Models;
 using FileMill.ViewModels;
+using FileMill.Services;
 
 namespace FileMill;
 
@@ -31,6 +32,7 @@ public partial class MainWindow : Window
         // ViewModel から設定ウィンドウの表示を要求されたら別ウィンドウとして開く
         vm.RequestOpenSettings = _ =>
         {
+            var previousLanguage = vm.Language;
             var win = new SettingsWindow
             {
                 DataContext = vm,
@@ -38,6 +40,43 @@ public partial class MainWindow : Window
             };
             win.ShowDialog();
             vm.SaveSettings();
+
+            // 言語が変更されたら再起動を促す
+            if (vm.Language != previousLanguage)
+            {
+                var result = MessageBox.Show(
+                    "Language changed. Restart now to apply?",
+                    "FileMill",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (result == MessageBoxResult.Yes)
+                {
+                    System.Diagnostics.Process.Start(Environment.ProcessPath!);
+                    Application.Current.Shutdown();
+                }
+            }
+        };
+
+        // テーマの初期適用と変更監視
+        App.ApplyTheme(vm.AppTheme);
+        ThemeHelper.ApplyWindowTheme(this, App.IsDarkThemeActive());
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.AppTheme))
+                App.ApplyTheme(vm.AppTheme);
+        };
+
+        // デバッグコンソールの配線
+        vm.OnDebugLog = line => DebugConsole.AddLog(line);
+
+        // F12 でデバッグコンソールをトグル
+        KeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.F12)
+            {
+                VM.IsDebugVisible = !VM.IsDebugVisible;
+                e.Handled = true;
+            }
         };
     }
 
@@ -52,8 +91,8 @@ public partial class MainWindow : Window
         if (HasImageFiles(e))
         {
             e.Effects = DragDropEffects.Copy;
-            FileListDropBorder.Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF0, 0xFE));
-            FileListDropBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x00, 0x78, 0xD4));
+            FileListDropBorder.Background = (Brush)TryFindResource("DragOverBackground");
+            FileListDropBorder.BorderBrush = (Brush)TryFindResource("DragOverBorderBrush");
         }
         else
         {
@@ -128,8 +167,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void ResetFileListHighlight()
     {
-        FileListDropBorder.Background = Brushes.White;
-        FileListDropBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
+        FileListDropBorder.Background = (Brush)TryFindResource("ControlBackground");
+        FileListDropBorder.BorderBrush = (Brush)TryFindResource("BorderBrush");
     }
 
     private void MenuItem_Exit_Click(object sender, RoutedEventArgs e)
@@ -214,18 +253,8 @@ public partial class MainWindow : Window
 
     private void MenuItem_About_Click(object sender, RoutedEventArgs e)
     {
-        var message = "FileMill v1.0\n\n" +
-                      "本アプリは、画像一括変換ソフト「Ralpha」およびOfficeファイル軽量化ツール「OptiOpenXML」の思想を取り入れ、現代の画像フォーマット（WebP, AVIF等）に対応させて統合したバッチ処理アプリです。\n\n" +
-                      "【謝辞】\n" +
-                      "・Ralpha / RalphaPlus (にるぽ / Nilposoft 氏)\n" +
-                      "  画像変換の画面レイアウトおよび機能デザインの参考にさせていただきました。\n" +
-                      "  http://nilposoft.info/ralpha/ralphaplus64.html\n\n" +
-                      "・OptiOpenXML\n" +
-                      "  Office Open XML文書の軽量化・最適化処理のアイデアの参考にさせていただきました。\n" +
-                      "  https://www.hiskip.com/free/freesoft/doc/office/14978.html\n\n" +
-                      "素晴らしいソフトウェアの開発者および関係者の皆様に心より感謝申し上げます。";
-
-        MessageBox.Show(message, "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);
+        var aboutWin = new AboutWindow { Owner = this };
+        aboutWin.ShowDialog();
     }
 
     // --- ファイル最適化用イベントハンドラー ---
@@ -252,8 +281,8 @@ public partial class MainWindow : Window
         if (HasOptimizeFiles(e))
         {
             e.Effects = DragDropEffects.Copy;
-            OptimizeFileListDropBorder.Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF0, 0xFE));
-            OptimizeFileListDropBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x00, 0x78, 0xD4));
+            OptimizeFileListDropBorder.Background = (Brush)TryFindResource("DragOverBackground");
+            OptimizeFileListDropBorder.BorderBrush = (Brush)TryFindResource("DragOverBorderBrush");
         }
         else
         {
@@ -283,7 +312,7 @@ public partial class MainWindow : Window
 
         if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
-            var allowedExts = new[] { ".docx", ".xlsx", ".pptx", ".jpg", ".jpeg", ".png", ".webp", ".avif", ".tif", ".tiff", ".gif", ".svg", ".bmp" };
+            var allowedExts = new[] { ".docx", ".xlsx", ".pptx" };
             var matchedFiles = paths.Where(p => Directory.Exists(p) || allowedExts.Contains(Path.GetExtension(p).ToLowerInvariant())).ToArray();
             
             foreach (var path in matchedFiles)
@@ -315,7 +344,7 @@ public partial class MainWindow : Window
 
         if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
-            var allowedExts = new[] { ".docx", ".xlsx", ".pptx", ".jpg", ".jpeg", ".png", ".webp", ".avif", ".tif", ".tiff", ".gif", ".svg", ".bmp" };
+            var allowedExts = new[] { ".docx", ".xlsx", ".pptx" };
             return paths.Any(p => Directory.Exists(p) || allowedExts.Contains(Path.GetExtension(p).ToLowerInvariant()));
         }
         return false;
@@ -325,8 +354,8 @@ public partial class MainWindow : Window
     {
         if (OptimizeFileListDropBorder != null)
         {
-            OptimizeFileListDropBorder.Background = Brushes.White;
-            OptimizeFileListDropBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
+            OptimizeFileListDropBorder.Background = (Brush)TryFindResource("ControlBackground");
+            OptimizeFileListDropBorder.BorderBrush = (Brush)TryFindResource("BorderBrush");
         }
     }
 

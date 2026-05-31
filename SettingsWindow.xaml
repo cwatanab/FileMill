@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="#F3F3F3">
+        Background="{DynamicResource WindowBackground}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -23,7 +23,7 @@
         </Grid.RowDefinitions>
 
         <!-- コンテンツ -->
-        <Border Grid.Row="0" Background="White" BorderBrush="#DFDFDF" BorderThickness="0,0,0,1" Padding="15,12">
+        <Border Grid.Row="0" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource SettingsBorderBrush}" BorderThickness="0,0,0,1" Padding="15,12">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <Grid>
                     <!-- リサイズ設定 -->
@@ -76,7 +76,7 @@
                             </ComboBox>
                         </Grid>
                         <StackPanel Margin="0,6,0,0">
-                            <TextBlock Text="品質 (JPEG/WebP):" FontSize="11" Foreground="#555"/>
+                            <TextBlock Text="品質 (JPEG/WebP):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -87,7 +87,7 @@
                             </Grid>
                         </StackPanel>
                         <StackPanel Margin="0,4,0,0">
-                            <TextBlock Text="圧縮レベル (PNG):" FontSize="11" Foreground="#555"/>
+                            <TextBlock Text="圧縮レベル (PNG):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -106,7 +106,7 @@
                         <CheckBox Content="Trellis量子化 (JPEG)" IsChecked="{Binding OptimizeStep.TrellisQuant}" Margin="0,2" FontSize="12"/>
                         <CheckBox Content="ロスレス (WebP/AVIF)" IsChecked="{Binding OptimizeStep.Lossless}" Margin="0,2" FontSize="12"/>
                         <StackPanel Margin="0,6,0,0">
-                            <TextBlock Text="圧縮努力 (WebP/AVIF):" FontSize="11" Foreground="#555"/>
+                            <TextBlock Text="圧縮努力 (WebP/AVIF):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -118,16 +118,16 @@
                         </StackPanel>
 
                         <!-- 外部ツール -->
-                        <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="0,10,0,0" Padding="0,8,0,0">
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,10,0,0" Padding="0,8,0,0">
                             <StackPanel>
-                                <TextBlock Text="外部ツール:" FontSize="11" Foreground="#555" Margin="0,0,0,4"/>
+                                <TextBlock Text="外部ツール:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
 
                                 <!-- oxipng -->
                                 <CheckBox x:Name="UseOxipngCheckOpt" Content="PNGロスレス最適化に oxipng を使う"
                                           IsChecked="{Binding UseOxipng, Mode=TwoWay}" Margin="0,2" FontSize="11"/>
                                 <StackPanel Margin="0,2,0,6"
                                             Visibility="{Binding IsChecked, ElementName=UseOxipngCheckOpt, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="oxipng 最適化レベル:" FontSize="11" Foreground="#555" Margin="0,2,0,0"/>
+                                    <TextBlock Text="oxipng 最適化レベル:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
                                     <Grid Margin="0,2">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -160,7 +160,7 @@
                             <ComboBoxItem Content="2 bit (4階調)" FontSize="11"/>
                             <ComboBoxItem Content="1 bit (2階調)" FontSize="11"/>
                         </ComboBox>
-                        <TextBlock Text="{Binding PosterizeStep.LevelsPerChannel, StringFormat='階調レベル: {0}階調/ch'}" FontSize="11" Foreground="Gray" Margin="0,4,0,0"/>
+                        <TextBlock Text="{Binding PosterizeStep.LevelsPerChannel, StringFormat='階調レベル: {0}階調/ch'}" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4,0,0"/>
                     </StackPanel>
 
                     <!-- 回転設定 -->
@@ -205,14 +205,14 @@
                             <TextBlock Text="余白サイズ (px)" VerticalAlignment="Center" FontSize="12"/>
                             <TextBox Grid.Column="1" Text="{Binding PaddingStep.PaddingSize, UpdateSourceTrigger=PropertyChanged}" Padding="4,2"/>
                         </Grid>
-                        <TextBlock Text="背景色 (RGB):" FontSize="11" Foreground="#555" Margin="0,6,0,0"/>
+                        <TextBlock Text="背景色 (RGB):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6,0,0"/>
                         <Grid Margin="0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="35"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="R" VerticalAlignment="Center" FontSize="11" Foreground="Red"/>
+                            <TextBlock Text="R" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource RGBRedBrush}"/>
                             <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingRed}" TickFrequency="5" IsSnapToTickEnabled="True"/>
                             <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingRed}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
                         </Grid>
@@ -222,7 +222,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="35"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="G" VerticalAlignment="Center" FontSize="11" Foreground="Green"/>
+                            <TextBlock Text="G" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource RGBGreenBrush}"/>
                             <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingGreen}" TickFrequency="5" IsSnapToTickEnabled="True"/>
                             <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingGreen}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
                         </Grid>
@@ -232,7 +232,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="35"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="B" VerticalAlignment="Center" FontSize="11" Foreground="Blue"/>
+                            <TextBlock Text="B" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource RGBBlueBrush}"/>
                             <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingBlue}" TickFrequency="5" IsSnapToTickEnabled="True"/>
                             <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingBlue}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
                         </Grid>
@@ -240,7 +240,7 @@
 
                     <!-- アンシャープマスク設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Sharpen}">
-                        <TextBlock Text="強さ (Sigma):" FontSize="11" Foreground="#555" Margin="0,4"/>
+                        <TextBlock Text="強さ (Sigma):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -253,7 +253,7 @@
 
                     <!-- 色調補正設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ColorAdjust}">
-                        <TextBlock Text="明るさ:" FontSize="11" Foreground="#555" Margin="0,4"/>
+                        <TextBlock Text="明るさ:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -262,7 +262,7 @@
                             <Slider Minimum="-100" Maximum="100" Value="{Binding ColorAdjustStep.Brightness}" TickFrequency="5" IsSnapToTickEnabled="True"/>
                             <TextBlock Grid.Column="1" Text="{Binding ColorAdjustStep.Brightness}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
                         </Grid>
-                        <TextBlock Text="コントラスト:" FontSize="11" Foreground="#555" Margin="0,4"/>
+                        <TextBlock Text="コントラスト:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -275,7 +275,7 @@
 
                     <!-- トーンカーブ設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ToneCurve}">
-                        <TextBlock Text="ガンマ補正:" FontSize="11" Foreground="#555" Margin="0,4"/>
+                        <TextBlock Text="ガンマ補正:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -288,7 +288,7 @@
 
                     <!-- 画像合成設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Composite}">
-                        <TextBlock Text="合成画像 (ウォーターマーク) パス:" FontSize="11" Foreground="#555" Margin="0,4"/>
+                        <TextBlock Text="合成画像 (ウォーターマーク) パス:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -321,11 +321,11 @@
                     <!-- 画像最適化設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ImageOptimize}">
                         <CheckBox Content="画像を再圧縮 (ロスレス/最適化)" IsChecked="{Binding CompressImages, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
-                        <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
                             <StackPanel>
                                 <CheckBox x:Name="UseOxipngCheck" Content="PNGロスレス最適化に oxipng を使う" IsChecked="{Binding UseOxipng, Mode=TwoWay}" Margin="0,4" FontSize="11"/>
                                 <StackPanel Margin="20,0,0,4" Visibility="{Binding IsChecked, ElementName=UseOxipngCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="oxipng 最適化レベル:" FontSize="11" Foreground="#555"/>
+                                    <TextBlock Text="oxipng 最適化レベル:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -340,7 +340,7 @@
                         </Border>
                         <CheckBox x:Name="WebPConvertCheck" Content="画像を WebP 形式に変換" IsChecked="{Binding ConvertToWebP, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6" FontSize="12"/>
                         <StackPanel Margin="0,8,0,0" Visibility="{Binding IsChecked, ElementName=WebPConvertCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="WebP品質:" FontSize="11" Foreground="#555"/>
+                            <TextBlock Text="WebP品質:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -355,7 +355,7 @@
                     <!-- メディア最適化設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=MediaOptimize}">
                         <CheckBox Content="動画ファイルを最適化する" IsChecked="{Binding CompressMedia, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
-                        <TextBlock Text="ビデオ品質 (CRF):" FontSize="11" Foreground="#555" Margin="0,4"/>
+                        <TextBlock Text="ビデオ品質 (CRF):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4"/>
                         <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -393,18 +393,45 @@
 
                     <!-- オプション設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Options}">
+                        <Grid Margin="0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="言語" VerticalAlignment="Center" FontSize="12"/>
+                            <ComboBox Grid.Column="1" SelectedIndex="{Binding LanguageIndex}">
+                                <ComboBoxItem Content="日本語" FontSize="11"/>
+                                <ComboBoxItem Content="English" FontSize="11"/>
+                            </ComboBox>
+                        </Grid>
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,4,0,0"/>
+
+                        <Grid Margin="0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="テーマ" VerticalAlignment="Center" FontSize="12"/>
+                            <ComboBox Grid.Column="1" SelectedIndex="{Binding ThemeModeIndex}">
+                                <ComboBoxItem Content="ライト" FontSize="11"/>
+                                <ComboBoxItem Content="ダーク" FontSize="11"/>
+                                <ComboBoxItem Content="自動 (Windowsに従う)" FontSize="11"/>
+                            </ComboBox>
+                        </Grid>
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,4,0,0"/>
+
                         <CheckBox Content="処理完了時に通知音を鳴らす" IsChecked="{Binding PlaySoundOnComplete, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
                         <CheckBox Content="リストを空にするとき確認する" IsChecked="{Binding ConfirmOnClear, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
-                        <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
                             <StackPanel>
-                                <TextBlock Text="出力ファイル名:" FontSize="11" Foreground="#555" Margin="0,0,0,2"/>
-                                <TextBlock Text="元のファイル名の末尾に付与する文字列" FontSize="10" Foreground="#999" Margin="0,0,0,4"/>
+                                <TextBlock Text="出力ファイル名:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,2"/>
+                                <TextBlock Text="元のファイル名の末尾に付与する文字列" FontSize="10" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
                                 <TextBox Text="{Binding FileNameRule, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
                             </StackPanel>
                         </Border>
-                        <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
                             <StackPanel>
-                                <TextBlock Text="外部ツール パス:" FontSize="11" Foreground="#555" Margin="0,0,0,4"/>
+                                <TextBlock Text="外部ツール パス:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
                                 <Grid Margin="0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -441,17 +468,17 @@
 
                     <!-- グレースケール化設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Grayscale}">
-                        <TextBlock Text="グレースケール化は画像を白黒に変換します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="#555" Margin="0,6"/>
+                        <TextBlock Text="グレースケール化は画像を白黒に変換します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
                     </StackPanel>
 
                     <!-- Exif自動回転設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ExifAutoRotate}">
-                        <TextBlock Text="画像に埋め込まれたExifの回転情報に基づいて、自動的に画像の向きを補正します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="#555" Margin="0,6"/>
+                        <TextBlock Text="画像に埋め込まれたExifの回転情報に基づいて、自動的に画像の向きを補正します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
                     </StackPanel>
 
                     <!-- デフォルト -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Default}">
-                        <TextBlock Text="この機能の設定項目は準備中です。" TextWrapping="Wrap" FontSize="12" Foreground="#666" Margin="0,10"/>
+                        <TextBlock Text="この機能の設定項目は準備中です。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,10"/>
                     </StackPanel>
                 </Grid>
             </ScrollViewer>

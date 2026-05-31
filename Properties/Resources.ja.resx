@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required"/>
+              <xsd:attribute name="type" type="xsd:string" default="System.String"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string"/>
+              <xsd:attribute name="name" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- Menu -->
+  <data name="MenuFile" xml:space="preserve"><value>ファイル(_F)</value></data>
+  <data name="MenuAddImages" xml:space="preserve"><value>画像を追加(_A)...</value></data>
+  <data name="MenuAddFolder" xml:space="preserve"><value>フォルダを追加(_D)...</value></data>
+  <data name="MenuSelectOutput" xml:space="preserve"><value>出力先を選択(_O)...</value></data>
+  <data name="MenuExit" xml:space="preserve"><value>終了(_X)</value></data>
+  <data name="MenuList" xml:space="preserve"><value>リスト(_L)</value></data>
+  <data name="MenuClearAll" xml:space="preserve"><value>すべてクリア(_C)</value></data>
+  <data name="MenuRemoveSelected" xml:space="preserve"><value>選択したファイルを削除(_R)</value></data>
+  <data name="MenuSettings" xml:space="preserve"><value>設定(_S)</value></data>
+  <data name="MenuOptions" xml:space="preserve"><value>オプション(_O)...</value></data>
+  <data name="MenuConvert" xml:space="preserve"><value>変換(_C)</value></data>
+  <data name="MenuConvertStart" xml:space="preserve"><value>変換開始(_S)</value></data>
+  <data name="MenuHelp" xml:space="preserve"><value>ヘルプ(_H)</value></data>
+  <data name="MenuAbout" xml:space="preserve"><value>バージョン情報(_A)</value></data>
+
+  <!-- Tabs -->
+  <data name="TabImageConversion" xml:space="preserve"><value>画像変換</value></data>
+  <data name="TabFileOptimization" xml:space="preserve"><value>Officeファイル最適化</value></data>
+
+  <!-- Toolbar -->
+  <data name="ToolbarOutput" xml:space="preserve"><value>出力先</value></data>
+  <data name="ToolbarConvert" xml:space="preserve"><value>変換</value></data>
+  <data name="ToolbarOptimize" xml:space="preserve"><value>最適化実行</value></data>
+
+  <!-- Sidebar headers -->
+  <data name="SidebarProcessingOptions" xml:space="preserve"><value>処理オプション</value></data>
+  <data name="SidebarOptimizeOptions" xml:space="preserve"><value>最適化オプション</value></data>
+
+  <!-- Pipeline steps -->
+  <data name="StepExifAutoRotate" xml:space="preserve"><value>Exif自動回転</value></data>
+  <data name="StepCrop" xml:space="preserve"><value>トリミング</value></data>
+  <data name="StepRotate" xml:space="preserve"><value>回転</value></data>
+  <data name="StepResize" xml:space="preserve"><value>リサイズ</value></data>
+  <data name="StepPadding" xml:space="preserve"><value>余白の追加</value></data>
+  <data name="StepGrayscale" xml:space="preserve"><value>グレースケール化</value></data>
+  <data name="StepSharpen" xml:space="preserve"><value>アンシャープマスク</value></data>
+  <data name="StepColorAdjust" xml:space="preserve"><value>色調補正</value></data>
+  <data name="StepToneCurve" xml:space="preserve"><value>トーンカーブ</value></data>
+  <data name="StepPosterize" xml:space="preserve"><value>減色</value></data>
+  <data name="StepComposite" xml:space="preserve"><value>画像合成</value></data>
+  <data name="StepFormatConvert" xml:space="preserve"><value>フォーマット変換</value></data>
+  <data name="StepOptimize" xml:space="preserve"><value>最適化</value></data>
+
+  <!-- File optimization options -->
+  <data name="OptOfficeOptimize" xml:space="preserve"><value>Office最適化</value></data>
+  <data name="OptImageOptimize" xml:space="preserve"><value>画像最適化</value></data>
+  <data name="OptMediaOptimize" xml:space="preserve"><value>メディア最適化</value></data>
+
+  <!-- Column headers -->
+  <data name="ColName" xml:space="preserve"><value>名前</value></data>
+  <data name="ColDimensions" xml:space="preserve"><value>大きさ</value></data>
+  <data name="ColSize" xml:space="preserve"><value>サイズ</value></data>
+  <data name="ColType" xml:space="preserve"><value>種類</value></data>
+  <data name="ColDateModified" xml:space="preserve"><value>更新日時</value></data>
+  <data name="ColDateTaken" xml:space="preserve"><value>写真の撮影日</value></data>
+  <data name="ColPath" xml:space="preserve"><value>パス</value></data>
+  <data name="ColOriginalSize" xml:space="preserve"><value>元のサイズ</value></data>
+  <data name="ColOptimizedSize" xml:space="preserve"><value>最適化後</value></data>
+  <data name="ColSavings" xml:space="preserve"><value>削減率</value></data>
+  <data name="ColStatus" xml:space="preserve"><value>状態</value></data>
+
+  <!-- GroupBox headers -->
+  <data name="GroupImageFiles" xml:space="preserve"><value>画像ファイルリスト</value></data>
+  <data name="GroupOptimizeFiles" xml:space="preserve"><value>最適化対象ファイルリスト</value></data>
+
+  <!-- Placeholder -->
+  <data name="PlaceholderImageFiles" xml:space="preserve"><value>ここに画像ファイルまたはフォルダをドラッグ＆ドロップしてください</value></data>
+  <data name="PlaceholderOptimizeFiles" xml:space="preserve"><value>ここにOffice(docx, xlsx, pptx)、画像ファイル、または動画・音声ファイルをドラッグ＆ドロップしてください</value></data>
+
+  <!-- Status -->
+  <data name="StatusReady" xml:space="preserve"><value>準備完了</value></data>
+  <data name="StatusNoFiles" xml:space="preserve"><value>選択されたファイルがありません</value></data>
+  <data name="StatusNoOptions" xml:space="preserve"><value>処理オプションが選択されていません</value></data>
+  <data name="StatusProcessing" xml:space="preserve"><value>処理中...</value></data>
+  <data name="StatusError" xml:space="preserve"><value>エラー:</value></data>
+  <data name="StatusDone" xml:space="preserve"><value>完了:</value></data>
+
+  <!-- Settings -->
+  <data name="SettingsTheme" xml:space="preserve"><value>テーマ</value></data>
+  <data name="SettingsThemeLight" xml:space="preserve"><value>ライト</value></data>
+  <data name="SettingsThemeDark" xml:space="preserve"><value>ダーク</value></data>
+  <data name="SettingsThemeAuto" xml:space="preserve"><value>自動 (Windowsに従う)</value></data>
+  <data name="SettingsLanguage" xml:space="preserve"><value>言語</value></data>
+  <data name="SettingsNotifySound" xml:space="preserve"><value>処理完了時に通知音を鳴らす</value></data>
+  <data name="SettingsConfirmClear" xml:space="preserve"><value>リストを空にするとき確認する</value></data>
+  <data name="SettingsOutputFilename" xml:space="preserve"><value>出力ファイル名:</value></data>
+  <data name="SettingsOutputFilenameHint" xml:space="preserve"><value>元のファイル名の末尾に付与する文字列</value></data>
+  <data name="SettingsExternalTools" xml:space="preserve"><value>外部ツール パス:</value></data>
+
+  <!-- Debug -->
+  <data name="DebugClear" xml:space="preserve"><value>クリア</value></data>
+  <data name="DebugConsole" xml:space="preserve"><value>コンソールログ</value></data>
+
+
+  <!-- Common -->
+  <data name="ButtonOK" xml:space="preserve"><value>OK</value></data>
+  <data name="ButtonCancel" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="ButtonRemove" xml:space="preserve"><value>削除(_D)</value></data>
+
+  <!-- About -->
+  <data name="AboutTitle" xml:space="preserve"><value>バージョン情報</value></data>
+  <data name="AboutMessage" xml:space="preserve"><value>FileMill v1.0
+
+本アプリは、画像一括変換ソフト「Ralpha」およびOfficeファイル軽量化ツール「OptiOpenXML」の思想を取り入れ、現代の画像フォーマット（WebP, AVIF等）に対応させて統合したバッチ処理アプリです。
+
+【謝辞】
+・Ralpha / RalphaPlus (にるぽ / Nilposoft 氏)
+  画像変換の画面レイアウトおよび機能デザインの参考にさせていただきました。
+  http://nilposoft.info/ralpha/ralphaplus64.html
+
+・OptiOpenXML
+  Office Open XML文書の軽量化・最適化処理のアイデアの参考にさせていただきました。
+  https://www.hiskip.com/free/freesoft/doc/office/14978.html
+
+素晴らしいソフトウェアの開発者および関係者の皆様に心より感謝申し上げます。</value></data>
+
+  <!-- Settings modal titles -->
+  <data name="ModalTitleGrayscale" xml:space="preserve"><value>グレースケール化設定</value></data>
+  <data name="ModalTitleExifAutoRotate" xml:space="preserve"><value>Exif自動回転設定</value></data>
+  <data name="ModalTitleCrop" xml:space="preserve"><value>トリミング設定</value></data>
+  <data name="ModalTitleResize" xml:space="preserve"><value>リサイズ設定</value></data>
+  <data name="ModalTitlePadding" xml:space="preserve"><value>余白の追加設定</value></data>
+  <data name="ModalTitleSharpen" xml:space="preserve"><value>アンシャープマスク設定</value></data>
+  <data name="ModalTitleColorAdjust" xml:space="preserve"><value>色調補正設定</value></data>
+  <data name="ModalTitleToneCurve" xml:space="preserve"><value>トーンカーブ設定</value></data>
+  <data name="ModalTitleFormat" xml:space="preserve"><value>フォーマット変換設定</value></data>
+  <data name="ModalTitleOptimize" xml:space="preserve"><value>最適化設定</value></data>
+  <data name="ModalTitlePosterize" xml:space="preserve"><value>減色設定</value></data>
+  <data name="ModalTitleRotate" xml:space="preserve"><value>回転</value></data>
+  <data name="ModalTitleComposite" xml:space="preserve"><value>画像合成設定</value></data>
+  <data name="ModalTitleOfficeOptimize" xml:space="preserve"><value>Office最適化設定</value></data>
+  <data name="ModalTitleImageOptimize" xml:space="preserve"><value>画像最適化設定</value></data>
+  <data name="ModalTitleMediaOptimize" xml:space="preserve"><value>メディア最適化設定</value></data>
+  <data name="ModalTitleOptions" xml:space="preserve"><value>オプション設定</value></data>
+  <data name="ModalTitleDefault" xml:space="preserve"><value>設定</value></data>
+
+</root>

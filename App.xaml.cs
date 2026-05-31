@@ -1,7 +1,10 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows;
+using Microsoft.Win32;
 using FileMill.ViewModels;
 using FileMill.Models;
 
@@ -12,15 +15,119 @@ namespace FileMill;
 /// </summary>
 public partial class App : Application
 {
+    private AppTheme _currentTheme = AppTheme.Auto;
+
+    /// <summary>
+    /// テーマを適用する。MainWindow の DataContext から ThemeMode を読み取って呼び出す。
+    /// </summary>
+    public static void ApplyTheme(AppTheme mode)
+    {
+        var app = (App)Current;
+        app._currentTheme = mode;
+
+        var resolvedMode = mode;
+        if (mode == AppTheme.Auto)
+        {
+            resolvedMode = IsSystemDarkMode() ? AppTheme.Dark : AppTheme.Light;
+        }
+
+        var themeName = resolvedMode == AppTheme.Dark
+            ? "DarkTheme.xaml"
+            : "LightTheme.xaml";
+
+        var dict = new ResourceDictionary { Source = new Uri($"pack://application:,,,/Themes/{themeName}") };
+
+        // 既存のテーマ辞書を置き換え（ThemeColors.xaml はそのまま）
+        var merged = app.Resources.MergedDictionaries;
+        // 2番目以降にテーマ辞書があれば削除（1番目は ThemeColors.xaml）
+        while (merged.Count > 1)
+            merged.RemoveAt(1);
+        merged.Add(dict);
+
+        // すべてのウィンドウのタイトルバーにテーマを適用
+        bool isDark = resolvedMode == AppTheme.Dark;
+        foreach (Window window in app.Windows)
+        {
+            Services.ThemeHelper.ApplyWindowTheme(window, isDark);
+        }
+    }
+
+    private static bool IsSystemDarkMode()
+    {
+        try
+        {
+            const string key = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+            var value = Registry.GetValue(key, "AppsUseLightTheme", 1);
+            return value is 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool IsDarkThemeActive()
+    {
+        var app = (App)Current;
+        var mode = app._currentTheme;
+        if (mode == AppTheme.Auto)
+        {
+            return IsSystemDarkMode();
+        }
+        return mode == AppTheme.Dark;
+    }
+
+    public static AppTheme CurrentTheme => ((App)Current)._currentTheme;
+
+    /// <summary>
+    /// settings.ini から Language キーを読み取り、UI カルチャを設定する。
+    /// </summary>
+    private static void ApplySavedLanguage()
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var path = Path.Combine(appData, "FileMill", "settings.ini");
+            if (!File.Exists(path)) return;
+
+            var lines = File.ReadAllLines(path);
+            bool inGeneral = false;
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (trimmed == "[General]") { inGeneral = true; continue; }
+                if (trimmed.StartsWith('[')) { inGeneral = false; continue; }
+                if (inGeneral && trimmed.StartsWith("Language=", StringComparison.OrdinalIgnoreCase))
+                {
+                    var lang = trimmed.Substring("Language=".Length).Trim();
+                    var culture = lang.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en-US" : "ja-JP";
+                    Thread.CurrentThread.CurrentCulture = new CultureInfo(culture);
+                    Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+                    break;
+                }
+            }
+        }
+        catch { }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        // OSのテーマ設定変更を監視
+        SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
+
+        // 保存された言語設定を読み取ってカルチャを適用
+        ApplySavedLanguage();
+
         if (e.Args.Contains("--test-settings"))
         {
             try
             {
-                RunSettingsTest();
-                RunModalStateTest();
-                RunListManagementTest();
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var settingsPath = Path.Combine(appData, "FileMill", "settings_test.ini");
+
+                RunSettingsTest(settingsPath);
+                RunModalStateTest(settingsPath);
+                RunListManagementTest(settingsPath);
                 Environment.Exit(0);
             }
             catch (Exception ex)
@@ -32,11 +139,25 @@ public partial class App : Application
         base.OnStartup(e);
     }
 
-    private void RunSettingsTest()
+    protected override void OnExit(ExitEventArgs e)
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var settingsPath = Path.Combine(appData, "FileMill", "settings.ini");
+        SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
+        base.OnExit(e);
+    }
 
+    private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.VisualStyle)
+        {
+            if (_currentTheme == AppTheme.Auto)
+            {
+                Dispatcher.BeginInvoke(new Action(() => ApplyTheme(AppTheme.Auto)));
+            }
+        }
+    }
+
+    private void RunSettingsTest(string settingsPath)
+    {
         // 1. Delete existing settings to ensure clean test
         if (File.Exists(settingsPath))
         {
@@ -44,7 +165,7 @@ public partial class App : Application
         }
 
         // 2. Verify defaults
-        var vm1 = new MainViewModel();
+        var vm1 = new MainViewModel(settingsPath);
         var failures = new System.Text.StringBuilder();
         if (vm1.PlaySoundOnComplete != true) failures.AppendLine($"PlaySoundOnComplete={vm1.PlaySoundOnComplete}");
         if (vm1.ConfirmOnClear != true) failures.AppendLine($"ConfirmOnClear={vm1.ConfirmOnClear}");
@@ -83,9 +204,9 @@ public partial class App : Application
         vm1.WindowTop = 150;
         vm1.WindowState = WindowState.Maximized;
         vm1.UseOxipng = true;
-        vm1.OxipngPath = @"C:	oolsoxipng.exe";
+        vm1.OxipngPath = @"C:\tools\oxipng.exe";
         vm1.OxipngLevel = 4;
-        vm1.CjpegliPath = @"C:	oolsnpegli.exe";
+        vm1.CjpegliPath = @"C:\tools\cjpegli.exe";
         vm1.UseJpegli = true;
         vm1.EnableOfficeOptimize = false;
         vm1.EnableImageOptimize = false;
@@ -125,10 +246,10 @@ public partial class App : Application
         }
 
         // 4. Save settings
-        vm1.SaveSettings();
+        vm1.SaveSettings(settingsPath);
 
         // 5. Load settings in another VM instance
-        var vm2 = new MainViewModel();
+        var vm2 = new MainViewModel(settingsPath);
 
         // 6. Assert restored options
         if (vm2.PlaySoundOnComplete != false) throw new Exception("PlaySoundOnComplete was not loaded correctly.");
@@ -140,9 +261,9 @@ public partial class App : Application
         if (Math.Abs(vm2.WindowHeight - 780) > 0.001) throw new Exception("WindowHeight was not loaded correctly.");
         if (Math.Abs(vm2.WindowLeft - 100) > 0.001) throw new Exception("WindowLeft was not loaded correctly.");
         if (Math.Abs(vm2.WindowTop - 150) > 0.001) throw new Exception("WindowTop was not loaded correctly.");
-        if (vm2.OxipngPath != @"C:	oolsoxipng.exe") throw new Exception("OxipngPath was not loaded correctly.");
+        if (vm2.OxipngPath != @"C:\tools\oxipng.exe") throw new Exception("OxipngPath was not loaded correctly.");
         if (vm2.WindowState != WindowState.Maximized) throw new Exception("WindowState was not loaded correctly.");
-        if (vm2.CjpegliPath != @"C:	oolsnpegli.exe") throw new Exception("CjpegliPath was not loaded correctly.");
+        if (vm2.CjpegliPath != @"C:\tools\cjpegli.exe") throw new Exception("CjpegliPath was not loaded correctly.");
         if (vm2.UseOxipng != true) throw new Exception("UseOxipng was not loaded correctly.");
         if (vm2.OxipngLevel != 4) throw new Exception("OxipngLevel was not loaded correctly.");
         if (vm2.UseJpegli != true) throw new Exception("UseJpegli was not loaded correctly.");
@@ -176,12 +297,18 @@ public partial class App : Application
         if (vm2Grayscale == null) throw new Exception("Grayscale step was removed from defaults.");
         if (vm2Grayscale.Enabled != false) throw new Exception("Grayscale step should be disabled after loading.");
 
+        // Clean up test settings file
+        if (File.Exists(settingsPath))
+        {
+            File.Delete(settingsPath);
+        }
+
         Console.WriteLine("=== Settings persistence test passed successfully ===");
     }
 
-    private void RunModalStateTest()
+    private void RunModalStateTest(string settingsPath)
     {
-        var vm = new MainViewModel();
+        var vm = new MainViewModel(settingsPath);
 
         // 1. ActiveModalType は初期状態で空
         if (vm.ActiveModalType != "") throw new Exception("ActiveModalType is not empty initially.");
@@ -205,9 +332,10 @@ public partial class App : Application
         Console.WriteLine("=== Modal state management test passed successfully ===");
     }
 
-    private void RunListManagementTest()
+    private void RunListManagementTest(string settingsPath)
     {
-        var vm = new MainViewModel();
+        var vm = new MainViewModel(settingsPath);
+        vm.ConfirmOnClear = false;
 
         // 1. Image Conversion List Test
         if (!vm.IsFileListEmpty) throw new Exception("IsFileListEmpty is not true initially.");

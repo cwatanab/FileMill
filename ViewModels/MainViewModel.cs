@@ -112,6 +112,32 @@ public class MainViewModel : INotifyPropertyChanged
         set { _confirmOnClear = value; OnPropertyChanged(); }
     }
 
+    private AppTheme _appTheme = AppTheme.Auto;
+    public AppTheme AppTheme
+    {
+        get => _appTheme;
+        set { _appTheme = value; OnPropertyChanged(); OnPropertyChanged(nameof(ThemeModeIndex)); }
+    }
+
+    public int ThemeModeIndex
+    {
+        get => (int)_appTheme;
+        set => AppTheme = (AppTheme)value;
+    }
+
+    private string _language = "ja";
+    public string Language
+    {
+        get => _language;
+        set { _language = value; OnPropertyChanged(); OnPropertyChanged(nameof(LanguageIndex)); }
+    }
+
+    public int LanguageIndex
+    {
+        get => _language == "en" ? 1 : 0;
+        set => Language = value == 1 ? "en" : "ja";
+    }
+
     // --- 外部ツール ---
     private bool _useOxipng;
     public bool UseOxipng
@@ -373,6 +399,22 @@ public class MainViewModel : INotifyPropertyChanged
         set { _modalTitle = value; OnPropertyChanged(); }
     }
 
+    // --- デバッグ ---
+    public Action<string>? OnDebugLog { get; set; }
+
+    private bool _isDebugVisible;
+    public bool IsDebugVisible
+    {
+        get => _isDebugVisible;
+        set { _isDebugVisible = value; OnPropertyChanged(); }
+    }
+
+    public void LogDebug(string message)
+    {
+        var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+        OnDebugLog?.Invoke($"[{timestamp}] {message}");
+    }
+
     // --- コマンド ---
     public ICommand AddFilesCommand { get; }
     public ICommand AddFolderCommand { get; }
@@ -392,8 +434,9 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ClearOptimizeFilesCommand { get; }
     public ICommand ProcessOptimizeCommand { get; }
     public ICommand BrowseCompositeCommand { get; }
+    public ICommand ToggleDebugCommand { get; }
 
-    public MainViewModel()
+    public MainViewModel(string? settingsPath = null)
     {
         AddFilesCommand = new RelayCommand(AddFiles, _ => !IsProcessing);
         AddFolderCommand = new RelayCommand(AddFolder, _ => !IsProcessing);
@@ -408,6 +451,7 @@ public class MainViewModel : INotifyPropertyChanged
         ProcessCommand = new RelayCommand(async _ => await ProcessAsync(), _ => !IsProcessing && Files.Count > 0);
         OpenModalCommand = new RelayCommand(OpenModal, _ => !IsProcessing);
         BrowseCompositeCommand = new RelayCommand(BrowseComposite, _ => !IsProcessing);
+        ToggleDebugCommand = new RelayCommand(_ => IsDebugVisible = !IsDebugVisible);
 
         AddOptimizeFilesCommand = new RelayCommand(AddOptimizeFiles, _ => !IsProcessing);
         AddOptimizeFolderCommand = new RelayCommand(AddOptimizeFolder, _ => !IsProcessing);
@@ -447,23 +491,23 @@ public class MainViewModel : INotifyPropertyChanged
             UpdateSummaries();
         };
 
-        // デフォルトのステップを追加（すべて登録しておく）
-        AddDefaultStep(PipelineStepType.Grayscale, false);
+        // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
         AddDefaultStep(PipelineStepType.ExifAutoRotate, true);
         AddDefaultStep(PipelineStepType.Crop, false);
         AddDefaultStep(PipelineStepType.Rotate, false);
         AddDefaultStep(PipelineStepType.Resize, true);
         AddDefaultStep(PipelineStepType.Padding, false);
+        AddDefaultStep(PipelineStepType.Grayscale, false);
         AddDefaultStep(PipelineStepType.Sharpen, false);
         AddDefaultStep(PipelineStepType.ColorAdjust, false);
         AddDefaultStep(PipelineStepType.ToneCurve, false);
-        AddDefaultStep(PipelineStepType.Optimize, true);
-        AddDefaultStep(PipelineStepType.FormatConvert, true);
         AddDefaultStep(PipelineStepType.Posterize, false);
         AddDefaultStep(PipelineStepType.Composite, false);
+        AddDefaultStep(PipelineStepType.FormatConvert, true);
+        AddDefaultStep(PipelineStepType.Optimize, true);
 
         // 設定の読み込み
-        LoadSettings();
+        LoadSettings(settingsPath);
     }
 
     private void AddDefaultStep(PipelineStepType type, bool enabled)
@@ -723,6 +767,8 @@ public class MainViewModel : INotifyPropertyChanged
         ProgressValue = 0;
         ProgressMax = targets.Count;
 
+        LogDebug($"変換開始: {targets.Count} ファイル, 有効ステップ: {string.Join(", ", enabledSteps.Select(s => s.DisplayName))}");
+
         var formatStep = enabledSteps.LastOrDefault(s => s.Type == PipelineStepType.FormatConvert);
 
         int success = 0;
@@ -756,8 +802,9 @@ public class MainViewModel : INotifyPropertyChanged
                             counter++;
                         }
 
-                        _processingService.Process(file.FilePath, outputPath, Steps, UseOxipng, OxipngPath, OxipngLevel, UseJpegli, CjpegliPath);
+                        _processingService.Process(file.FilePath, outputPath, Steps, UseOxipng, OxipngPath, OxipngLevel, UseJpegli, CjpegliPath, logAction: LogDebug);
                         success++;
+                        LogDebug($"OK  {file.FileName} → {Path.GetFileName(outputPath)}");
 
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
@@ -768,6 +815,8 @@ public class MainViewModel : INotifyPropertyChanged
                     catch (Exception ex)
                     {
                         errors++;
+                        LogDebug($"ERR {file.FileName}: {ex.Message}");
+
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
                             StatusText = $"エラー: {file.FileName} - {ex.Message}";
@@ -780,6 +829,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             IsProcessing = false;
             StatusText = $"完了: {success} 成功, {errors} 失敗";
+            LogDebug($"変換完了: {success} 成功, {errors} 失敗");
             if (PlaySoundOnComplete)
             {
                 System.Media.SystemSounds.Asterisk.Play();
@@ -866,15 +916,15 @@ public class MainViewModel : INotifyPropertyChanged
     private static bool IsSupportedOptimizeFile(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
-        return OptimizeDocumentExtensions.Contains(ext) || ImageExtensions.Contains(ext);
+        return OptimizeDocumentExtensions.Contains(ext);
     }
 
     private void AddOptimizeFiles(object? _)
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "ファイルを選択 (Office, 画像)",
-            Filter = "対象ファイル|*.docx;*.xlsx;*.pptx;*.jpg;*.jpeg;*.png;*.webp;*.avif;*.tif;*.tiff;*.gif;*.svg;*.bmp|すべてのファイル|*.*",
+            Title = "ファイルを選択 (Office)",
+            Filter = "Office ファイル|*.docx;*.xlsx;*.pptx|すべてのファイル|*.*",
             Multiselect = true
         };
 
@@ -932,6 +982,8 @@ public class MainViewModel : INotifyPropertyChanged
             StatusText = "選択されたファイルがありません";
             return;
         }
+
+        LogDebug($"最適化開始: {targets.Count} ファイル");
 
         IsProcessing = true;
         ProgressValue = 0;
@@ -1000,6 +1052,7 @@ public class MainViewModel : INotifyPropertyChanged
                     try
                     {
                         var originalPath = item.OriginalPath;
+                        LogDebug($"処理開始: {file.FileName}");
                         var ext = item.Extension;
                         var targetPath = item.TargetPath;
                         tempPath = targetPath + "." + Guid.NewGuid().ToString("N")[..8] + ".tmp";
@@ -1033,7 +1086,8 @@ public class MainViewModel : INotifyPropertyChanged
                             oxipngPath,
                             oxipngLevel,
                             useJpegli,
-                            cjpegliPath);
+                            cjpegliPath,
+                            logAction: LogDebug);
 
                         int retries = 5;
                         while (retries > 0)
@@ -1062,12 +1116,14 @@ public class MainViewModel : INotifyPropertyChanged
 
                         file.OptimizedSize = optimizedSize;
                         file.Status = "完了";
+                        LogDebug($"OK  {file.FileName} ({file.OriginalSize} -> {optimizedSize} bytes)");
                         Interlocked.Increment(ref success);
                     }
                     catch (Exception ex)
                     {
                         file.Status = "エラー";
                         Interlocked.Increment(ref errors);
+                        LogDebug($"ERR {file.FileName}: {ex.Message}");
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
                             StatusText = $"エラー: {file.FileName} - {ex.Message}";
@@ -1101,6 +1157,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             IsProcessing = false;
             StatusText = $"最適化完了: {success} 成功, {errors} 失敗";
+            LogDebug(StatusText);
             if (PlaySoundOnComplete)
             {
                 System.Media.SystemSounds.Asterisk.Play();
@@ -1176,11 +1233,11 @@ public class MainViewModel : INotifyPropertyChanged
         return Path.Combine(appData, "FileMill", "settings.ini");
     }
 
-    public void LoadSettings()
+    public void LoadSettings(string? customPath = null)
     {
         try
         {
-            var path = GetSettingsFilePath();
+            var path = customPath ?? GetSettingsFilePath();
             if (!File.Exists(path))
             {
                 return;
@@ -1194,6 +1251,10 @@ public class MainViewModel : INotifyPropertyChanged
                     OutputDirectory = outDir;
                 if (general.TryGetValue("FileNameRule", out var fnRule))
                     FileNameRule = fnRule;
+                if (general.TryGetValue("ThemeMode", out var themeVal) && Enum.TryParse<AppTheme>(themeVal, out var tm))
+                    AppTheme = tm;
+                if (general.TryGetValue("Language", out var langVal) && !string.IsNullOrWhiteSpace(langVal))
+                    Language = langVal;
                 if (general.TryGetValue("ConfirmOnClear", out var val))
                     ConfirmOnClear = bool.TryParse(val, out var b) ? b : ConfirmOnClear;
                 if (general.TryGetValue("PlaySoundOnComplete", out val))
@@ -1279,7 +1340,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load settings: {ex.Message}");
+            LogDebug($"Failed to load settings: {ex.Message}");
         }
     }
 
@@ -1406,7 +1467,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public void SaveSettings()
+    public void SaveSettings(string? customPath = null)
     {
         try
         {
@@ -1416,6 +1477,8 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 ["OutputDirectory"] = OutputDirectory ?? "",
                 ["FileNameRule"] = FileNameRule ?? "",
+                ["ThemeMode"] = AppTheme.ToString(),
+                ["Language"] = Language,
                 ["ConfirmOnClear"] = ConfirmOnClear.ToString(),
                 ["PlaySoundOnComplete"] = PlaySoundOnComplete.ToString(),
                 ["MaxDegreeOfParallelism"] = MaxDegreeOfParallelism.ToString(),
@@ -1466,12 +1529,12 @@ public class MainViewModel : INotifyPropertyChanged
                 data["Image." + step.Type.ToString()] = stepData;
             }
 
-            var path = GetSettingsFilePath();
+            var path = customPath ?? GetSettingsFilePath();
             SettingsService.Save(path, data);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to save settings: {ex.Message}");
+            LogDebug($"Failed to save settings: {ex.Message}");
         }
     }
 

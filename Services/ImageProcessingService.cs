@@ -17,9 +17,17 @@ public class ImageProcessingService
     /// </summary>
     public void Process(string inputPath, string outputPath, IReadOnlyList<PipelineStep> steps,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli")
+        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
         var enabled = steps.Where(s => s.Enabled).ToList();
+        
+        if (logAction != null)
+        {
+            var stepInfo = string.Join(", ", enabled.Select(s => s.Type.ToString()));
+            logAction($"[Process] 開始: {Path.GetFileName(inputPath)} -> {Path.GetFileName(outputPath)}");
+            logAction($"[Process] 引数: steps=[{stepInfo}], useOxipng={useOxipng}, oxipngPath=\"{oxipngPath}\", oxipngLevel={oxipngLevel}, useJpegli={useJpegli}, cjpegliPath=\"{cjpegliPath}\"");
+        }
+
         var formatStep = enabled.LastOrDefault(s => s.Type == PipelineStepType.FormatConvert);
         var optimizeStep = enabled.LastOrDefault(s => s.Type == PipelineStepType.Optimize);
 
@@ -54,7 +62,7 @@ public class ImageProcessingService
                 Directory.CreateDirectory(dir);
 
             SaveWithFormat(processed, outputPath, fmt, formatStep, optimizeStep,
-                useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath);
+                useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction);
         }
         finally
         {
@@ -220,7 +228,7 @@ public class ImageProcessingService
     private static void SaveWithFormat(Image image, string path, OutputFormat format,
         PipelineStep? formatStep, PipelineStep? optimizeStep,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli")
+        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
         int quality = formatStep?.Quality ?? 85;
         int compression = formatStep?.CompressionLevel ?? 6;
@@ -237,7 +245,7 @@ public class ImageProcessingService
                     try
                     {
                         image.Pngsave(tempPng, compression: 1);
-                        var ok = RunCjpegli(tempPng, path, cjpegliPath, quality);
+                        var ok = RunCjpegli(tempPng, path, cjpegliPath, quality, logAction);
                         if (!ok)
                         {
                             image.Jpegsave(path,
@@ -269,7 +277,7 @@ public class ImageProcessingService
                     keep: keep);
                 if (useOxipng)
                 {
-                    RunOxipng(path, oxipngPath, oxipngLevel, strip);
+                    RunOxipng(path, oxipngPath, oxipngLevel, strip, logAction);
                 }
                 break;
 
@@ -383,7 +391,7 @@ public class ImageProcessingService
 
     private static long OptimizeOpenXmlPackage(string inputPath, string outputPath, bool stripMetadata, bool repackPackage, bool compressImages, bool convertImagesToWebP, int imageQuality, bool compressMedia, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli")
+        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
         if (!stripMetadata && !repackPackage && !compressImages && !compressMedia)
         {
@@ -398,14 +406,14 @@ public class ImageProcessingService
         using (var destination = new ZipArchive(output, ZipArchiveMode.Create))
         {
             var imageReplacements = compressImages
-                ? BuildPackageImageReplacements(source, imageQuality, convertImagesToWebP, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath)
+                ? BuildPackageImageReplacements(source, imageQuality, convertImagesToWebP, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction)
                 : new Dictionary<string, PackageImageReplacement>(StringComparer.OrdinalIgnoreCase);
             var imageEntryRenames = imageReplacements
                 .Where(kvp => !PackagePathEquals(kvp.Key, kvp.Value.EntryName))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.EntryName, StringComparer.OrdinalIgnoreCase);
 
             var mediaReplacements = compressMedia
-                ? BuildMediaReplacements(source, ffmpegPath, videoCrf, videoCodec, audioCodec)
+                ? BuildMediaReplacements(source, ffmpegPath, videoCrf, videoCodec, audioCodec, logAction)
                 : new Dictionary<string, PackageImageReplacement>(StringComparer.OrdinalIgnoreCase);
             var mediaEntryRenames = mediaReplacements
                 .Where(kvp => !PackagePathEquals(kvp.Key, kvp.Value.EntryName))
@@ -461,7 +469,7 @@ public class ImageProcessingService
 
     private static Dictionary<string, PackageImageReplacement> BuildPackageImageReplacements(ZipArchive source, int quality, bool convertToWebP,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli")
+        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
         var replacements = new Dictionary<string, PackageImageReplacement>(StringComparer.OrdinalIgnoreCase);
         var usedEntryNames = source.Entries
@@ -479,7 +487,7 @@ public class ImageProcessingService
                 : entryName;
 
             using var stream = entry.Open();
-            var replacement = TryOptimizePackageImage(stream, entryName, outputEntryName, quality, convertToWebP, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath);
+            var replacement = TryOptimizePackageImage(stream, entryName, outputEntryName, quality, convertToWebP, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction);
             if (replacement != null)
             {
                 replacements[entryName] = replacement;
@@ -598,7 +606,7 @@ public class ImageProcessingService
         }
     }
 
-    private static Dictionary<string, PackageImageReplacement> BuildMediaReplacements(ZipArchive source, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec)
+    private static Dictionary<string, PackageImageReplacement> BuildMediaReplacements(ZipArchive source, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec, Action<string>? logAction = null)
     {
         var replacements = new Dictionary<string, PackageImageReplacement>(StringComparer.OrdinalIgnoreCase);
         var usedEntryNames = source.Entries
@@ -625,7 +633,7 @@ public class ImageProcessingService
                 : GetUniqueEntryName(candidatePath, usedEntryNames);
 
             using var stream = entry.Open();
-            var replacement = TryCompressMediaWithFfmpeg(stream, entryName, outputEntryName, resolvedFfmpeg, videoCrf, videoCodec, audioCodec);
+            var replacement = TryCompressMediaWithFfmpeg(stream, entryName, outputEntryName, resolvedFfmpeg, videoCrf, videoCodec, audioCodec, logAction);
             if (replacement != null)
             {
                 replacements[entryName] = replacement;
@@ -636,7 +644,7 @@ public class ImageProcessingService
         return replacements;
     }
 
-    private static PackageImageReplacement? TryCompressMediaWithFfmpeg(Stream stream, string entryName, string outputEntryName, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec)
+    private static PackageImageReplacement? TryCompressMediaWithFfmpeg(Stream stream, string entryName, string outputEntryName, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec, Action<string>? logAction = null)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "FileMill_Media_" + Guid.NewGuid().ToString("N"));
         try
@@ -701,6 +709,20 @@ public class ImageProcessingService
             foreach (var arg in args)
                 process.StartInfo.ArgumentList.Add(arg);
 
+            if (logAction != null)
+            {
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        logAction($"[ffmpeg] {e.Data}");
+                };
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        logAction($"[ffmpeg] {e.Data}");
+                };
+            }
+
             process.Start();
 
             // Drain stdout/stderr to prevent deadlock when ffmpeg fills the buffer
@@ -711,11 +733,15 @@ public class ImageProcessingService
             if (!completed)
             {
                 try { process.Kill(); } catch { }
+                logAction?.Invoke("[ffmpeg] タイムアウトまたは処理強制終了");
                 return null;
             }
 
             if (process.ExitCode != 0 || !File.Exists(outputFile))
+            {
+                logAction?.Invoke($"[ffmpeg] エラー (終了コード: {process.ExitCode})");
                 return null;
+            }
 
             var compressed = File.ReadAllBytes(outputFile);
             if (compressed.Length >= original.Length)
@@ -723,8 +749,9 @@ public class ImageProcessingService
 
             return new PackageImageReplacement(outputEntryName, compressed);
         }
-        catch
+        catch (Exception ex)
         {
+            logAction?.Invoke($"[ffmpeg] 例外エラー: {ex.Message}");
             return null;
         }
         finally
@@ -855,7 +882,7 @@ public class ImageProcessingService
 
     private static PackageImageReplacement? TryOptimizePackageImage(Stream stream, string entryName, string outputEntryName, int quality, bool convertToWebP,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli")
+        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
         try
         {
@@ -884,7 +911,7 @@ public class ImageProcessingService
                     try
                     {
                         image.Pngsave(tempPng, compression: 1);
-                        var ok = RunCjpegli(tempPng, tempJpg, cjpegliPath, Math.Clamp(quality, 10, 100));
+                        var ok = RunCjpegli(tempPng, tempJpg, cjpegliPath, Math.Clamp(quality, 10, 100), logAction);
                         if (ok && File.Exists(tempJpg))
                         {
                             optimized = File.ReadAllBytes(tempJpg);
@@ -919,7 +946,7 @@ public class ImageProcessingService
                     try
                     {
                         image.Pngsave(tempPng, compression: 1, keep: Enums.ForeignKeep.None);
-                        RunOxipng(tempPng, oxipngPath, oxipngLevel, true);
+                        RunOxipng(tempPng, oxipngPath, oxipngLevel, true, logAction);
                         optimized = File.ReadAllBytes(tempPng);
                     }
                     finally
@@ -1142,7 +1169,7 @@ public class ImageProcessingService
     /// </summary>
     public long Optimize(string inputPath, string outputPath, bool stripMetadata, bool cleanUnused, bool compressImages, bool convertToWebP, int webpQuality, bool compressMedia = false, string ffmpegPath = "ffmpeg", int videoCrf = 23, string videoCodec = "libx264", string audioCodec = "libmp3lame",
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli")
+        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
         var ext = Path.GetExtension(inputPath).ToLowerInvariant();
         var dir = Path.GetDirectoryName(outputPath);
@@ -1152,7 +1179,7 @@ public class ImageProcessingService
         // 1. Office Open XML ファイルの場合
         if (ext == ".docx" || ext == ".xlsx" || ext == ".pptx")
         {
-            return OptimizeOpenXmlPackage(inputPath, outputPath, stripMetadata, cleanUnused, compressImages, convertToWebP, webpQuality, compressMedia, ffmpegPath, videoCrf, videoCodec, audioCodec, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath);
+            return OptimizeOpenXmlPackage(inputPath, outputPath, stripMetadata, cleanUnused, compressImages, convertToWebP, webpQuality, compressMedia, ffmpegPath, videoCrf, videoCodec, audioCodec, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction);
         }
 
         // 2. 画像ファイルの場合 (JPEG, PNG, WEBP, AVIF 等)
@@ -1181,7 +1208,7 @@ public class ImageProcessingService
                             try
                             {
                                 image.Pngsave(tempPng, compression: 1);
-                                var ok = RunCjpegli(tempPng, finalPath, cjpegliPath, webpQuality);
+                                var ok = RunCjpegli(tempPng, finalPath, cjpegliPath, webpQuality, logAction);
                                 if (!ok)
                                 {
                                     image.Jpegsave(finalPath, q: 80, optimizeCoding: true, keep: keep);
@@ -1202,7 +1229,7 @@ public class ImageProcessingService
                         if (useOxipng)
                         {
                             image.Pngsave(finalPath, compression: 1, keep: keep);
-                            RunOxipng(finalPath, oxipngPath, oxipngLevel, stripMetadata);
+                            RunOxipng(finalPath, oxipngPath, oxipngLevel, stripMetadata, logAction);
                         }
                         else
                         {
@@ -1246,7 +1273,7 @@ public class ImageProcessingService
         return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configuredPath));
     }
 
-    private static void RunOxipng(string filePath, string oxipngPath, int level, bool stripMetadata)
+    private static void RunOxipng(string filePath, string oxipngPath, int level, bool stripMetadata, Action<string>? logAction = null)
     {
         try
         {
@@ -1261,8 +1288,22 @@ public class ImageProcessingService
                 CreateNoWindow = true
             };
 
-            using var process = System.Diagnostics.Process.Start(processInfo);
-            if (process != null)
+            using var process = new Process { StartInfo = processInfo };
+            if (logAction != null)
+            {
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        logAction($"[oxipng] {e.Data}");
+                };
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        logAction($"[oxipng] {e.Data}");
+                };
+            }
+
+            if (process.Start())
             {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -1272,10 +1313,11 @@ public class ImageProcessingService
         catch (Exception ex)
         {
             Debug.WriteLine($"oxipng failed: {ex.Message}");
+            logAction?.Invoke($"[oxipng] エラー: {ex.Message}");
         }
     }
 
-    private static bool RunCjpegli(string inputPath, string outputPath, string cjpegliPath, int quality)
+    private static bool RunCjpegli(string inputPath, string outputPath, string cjpegliPath, int quality, Action<string>? logAction = null)
     {
         try
         {
@@ -1289,8 +1331,22 @@ public class ImageProcessingService
                 CreateNoWindow = true
             };
 
-            using var process = System.Diagnostics.Process.Start(processInfo);
-            if (process != null)
+            using var process = new Process { StartInfo = processInfo };
+            if (logAction != null)
+            {
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        logAction($"[cjpegli] {e.Data}");
+                };
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        logAction($"[cjpegli] {e.Data}");
+                };
+            }
+
+            if (process.Start())
             {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -1302,6 +1358,7 @@ public class ImageProcessingService
         catch (Exception ex)
         {
             Debug.WriteLine($"cjpegli failed: {ex.Message}");
+            logAction?.Invoke($"[cjpegli] エラー: {ex.Message}");
             return false;
         }
     }

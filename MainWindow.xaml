@@ -1,4 +1,4 @@
-﻿<Window x:Class="FileMill.MainWindow"
+<Window x:Class="FileMill.MainWindow"
 
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 
@@ -11,6 +11,8 @@
         xmlns:models="clr-namespace:FileMill.Models"
 
         xmlns:conv="clr-namespace:FileMill.Converters"
+
+        xmlns:views="clr-namespace:FileMill.Views"
 
         mc:Ignorable="d"
 
@@ -28,7 +30,7 @@
 
         WindowStartupLocation="CenterScreen"
 
-        Background="#F3F3F3">
+        Background="{DynamicResource WindowBackground}">
 
 
 
@@ -62,9 +64,9 @@
 
         <Style x:Key="PopupCardStyle" TargetType="Border">
 
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
 
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
 
             <Setter Property="BorderThickness" Value="1"/>
 
@@ -102,7 +104,7 @@
 
             <Setter Property="FontSize" Value="14"/>
 
-            <Setter Property="Foreground" Value="#888888"/>
+            <Setter Property="Foreground" Value="{DynamicResource GearButtonForeground}"/>
 
             <Setter Property="Cursor" Value="Hand"/>
 
@@ -122,17 +124,17 @@
 
                             <Trigger Property="IsMouseOver" Value="True">
 
-                                <Setter TargetName="border" Property="Background" Value="#E5E5E5"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ToolbarButtonHoverBackground}"/>
 
-                                <Setter Property="Foreground" Value="#333333"/>
+                                <Setter Property="Foreground" Value="{DynamicResource GearButtonHoverForeground}"/>
 
                             </Trigger>
 
                             <Trigger Property="IsPressed" Value="True">
 
-                                <Setter TargetName="border" Property="Background" Value="#CCE8FF"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource GearButtonPressedBackground}"/>
 
-                                <Setter Property="Foreground" Value="#0078D4"/>
+                                <Setter Property="Foreground" Value="{DynamicResource GearButtonPressedForeground}"/>
 
                             </Trigger>
 
@@ -178,13 +180,13 @@
 
                             <Trigger Property="IsMouseOver" Value="True">
 
-                                <Setter TargetName="border" Property="Background" Value="#E5E5E5"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ToolbarButtonHoverBackground}"/>
 
                             </Trigger>
 
                             <Trigger Property="IsPressed" Value="True">
 
-                                <Setter TargetName="border" Property="Background" Value="#D0D0D0"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ToolbarButtonPressedBackground}"/>
 
                             </Trigger>
 
@@ -236,7 +238,7 @@
 
                             <Trigger Property="IsMouseOver" Value="True">
 
-                                <Setter TargetName="border" Property="Background" Value="#E5E5E5"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ToolbarButtonHoverBackground}"/>
 
                             </Trigger>
 
@@ -255,14 +257,19 @@
 
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <DockPanel>
+        <DockPanel Grid.Row="0">
 
 
 
         <!-- ===== MENU BAR ===== -->
 
-        <Menu DockPanel.Dock="Top" Background="#F3F3F3" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,2">
+        <Menu DockPanel.Dock="Top" Background="{DynamicResource WindowBackground}" BorderBrush="{DynamicResource MenuBorderBrush}" BorderThickness="0,0,0,1" Padding="4,2">
 
             <MenuItem Header="ファイル(_F)">
 
@@ -320,11 +327,11 @@
 
                     <!-- ===== TOOLBAR ===== -->
 
-                    <StackPanel DockPanel.Dock="Top" Background="#F9F9F9">
+                    <StackPanel DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}">
 
                         <!-- ツールバー（1行統合） -->
 
-                        <Border BorderBrush="#E5E5E5" BorderThickness="0,0,0,1" Padding="8,4">
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="8,4">
 
                             <Grid>
 
@@ -386,7 +393,7 @@
 
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="出力先" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#555" FontSize="12"/>
+                                    <TextBlock Text="出力先" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource ControlForegroundDim}" FontSize="12"/>
 
                                     <TextBox Grid.Column="1" Text="{Binding OutputDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" FontSize="11" Padding="4,0"/>
 
@@ -398,13 +405,13 @@
 
                                 <!-- 右側：変換実行ボタン -->
 
-                                <Button Grid.Column="2" Command="{Binding ProcessCommand}" ToolTip="変換開始" Background="#E2F0D9" BorderBrush="#A9D08E" BorderThickness="1" Width="100" Height="28" HorizontalAlignment="Right">
+                                <Button Grid.Column="2" Command="{Binding ProcessCommand}" ToolTip="変換開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" HorizontalAlignment="Right">
 
                                     <StackPanel Orientation="Horizontal">
 
-                                        <TextBlock Text="▶" Foreground="#385723" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="▶" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                        <TextBlock Text="変換" Foreground="#385723" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="変換" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
 
                                     </StackPanel>
 
@@ -418,33 +425,7 @@
 
 
 
-        <!-- ===== STATUS BAR ===== -->
 
-        <StatusBar DockPanel.Dock="Bottom" Background="#F3F3F3" BorderBrush="#D9D9D9" BorderThickness="0,1,0,0" Padding="4,2">
-
-            <StatusBarItem HorizontalAlignment="Left">
-
-                <TextBlock Text="{Binding StatusText}" Margin="4,0"/>
-
-            </StatusBarItem>
-
-            <StatusBarItem HorizontalAlignment="Right">
-
-                <StackPanel Orientation="Horizontal">
-
-                    <!-- 進捗バー。処理中のみ表示 -->
-
-                    <ProgressBar Width="120" Height="14" Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}" Margin="0,0,12,0" 
-
-                                 Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                    <TextBlock Text="{Binding OutputSummary}" Foreground="#555"/>
-
-                </StackPanel>
-
-            </StatusBarItem>
-
-        </StatusBar>
 
 
 
@@ -468,7 +449,7 @@
 
             <GroupBox Grid.Column="0" Header="画像ファイルリスト" Padding="4">
 
-                <Border x:Name="FileListDropBorder" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White"
+                <Border x:Name="FileListDropBorder" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource ControlBackground}"
 
                         AllowDrop="True" DragEnter="FileList_DragEnter" DragOver="FileList_DragOver" DragLeave="FileList_DragLeave" Drop="FileList_Drop">
 
@@ -478,7 +459,7 @@
 
                         <TextBlock Text="ここに画像ファイルまたはフォルダをドラッグ＆ドロップしてください"
 
-                                   FontSize="13" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                   FontSize="13" Foreground="{DynamicResource ControlForegroundDim}" HorizontalAlignment="Center" VerticalAlignment="Center">
 
                             <TextBlock.Style>
 
@@ -510,16 +491,8 @@
 
                             <ListView.Resources>
 
-                                <Style TargetType="GridViewColumnHeader">
-
+                                <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
                                     <EventSetter Event="Click" Handler="FileListHeader_Click"/>
-
-                                    <Setter Property="Padding" Value="6,4"/>
-
-                                    <Setter Property="Background" Value="#F2F2F2"/>
-
-                                    <Setter Property="BorderBrush" Value="#D9D9D9"/>
-
                                 </Style>
 
                             </ListView.Resources>
@@ -670,7 +643,7 @@
 
                             <ListView.ItemContainerStyle>
 
-                                <Style TargetType="ListViewItem">
+                                <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
 
                                     <Setter Property="ContextMenu">
 
@@ -714,33 +687,9 @@
 
                     <StackPanel Margin="2">
 
-                        <!-- 1. グレースケール化 -->
+                        <!-- 1. Exif自動回転 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
-
-                            <Grid MinHeight="24">
-
-                                <Grid.ColumnDefinitions>
-
-                                    <ColumnDefinition Width="*"/>
-
-                                    <ColumnDefinition Width="Auto"/>
-
-                                </Grid.ColumnDefinitions>
-
-                                <CheckBox Content="グレースケール化" IsChecked="{Binding GrayscaleStep.Enabled, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
-
-                                <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Visibility="Collapsed"/>
-
-                            </Grid>
-
-                        </Border>
-
-
-
-                        <!-- 2. Exif自動回転 -->
-
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid MinHeight="24">
 
@@ -762,9 +711,10 @@
 
 
 
-                        <!-- 3. トリミング -->
+                        
+<!-- 2. トリミング -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -786,9 +736,10 @@
 
 
 
-                        <!-- 4. 回転 -->
+                        
+<!-- 3. 回転 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -810,9 +761,10 @@
 
 
 
-                        <!-- 5. リサイズ -->
+                        
+<!-- 4. リサイズ -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -834,9 +786,10 @@
 
 
 
-                        <!-- 6. 余白の追加 -->
+                        
+<!-- 5. 余白の追加 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -858,9 +811,35 @@
 
 
 
-                        <!-- 7. アンシャープマスク -->
+                        
+<!-- 6. グレースケール化 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
+
+                            <Grid MinHeight="24">
+
+                                <Grid.ColumnDefinitions>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                    <ColumnDefinition Width="Auto"/>
+
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox Content="グレースケール化" IsChecked="{Binding GrayscaleStep.Enabled, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
+
+                                <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Visibility="Collapsed"/>
+
+                            </Grid>
+
+                        </Border>
+
+
+
+                        
+<!-- 7. アンシャープマスク -->
+
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -882,9 +861,10 @@
 
 
 
-                        <!-- 8. 色調補正 -->
+                        
+<!-- 8. 色調補正 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -906,9 +886,10 @@
 
 
 
-                        <!-- 9. トーンカーブ -->
+                        
+<!-- 9. トーンカーブ -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -930,57 +911,10 @@
 
 
 
-                        <!-- 10. 最適化 -->
+                        
+<!-- 10. 減色 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
-
-                            <Grid>
-
-                                <Grid.ColumnDefinitions>
-
-                                    <ColumnDefinition Width="*"/>
-
-                                    <ColumnDefinition Width="Auto"/>
-
-                                </Grid.ColumnDefinitions>
-
-                                <CheckBox Content="最適化" IsChecked="{Binding OptimizeStep.Enabled, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
-
-                                <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="Optimize"/>
-
-                            </Grid>
-
-                        </Border>
-
-
-
-                        <!-- 11. フォーマット変換 -->
-
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
-
-                            <Grid>
-
-                                <Grid.ColumnDefinitions>
-
-                                    <ColumnDefinition Width="*"/>
-
-                                    <ColumnDefinition Width="Auto"/>
-
-                                </Grid.ColumnDefinitions>
-
-                                <CheckBox Content="フォーマット変換" IsChecked="{Binding FormatStep.Enabled, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
-
-                                <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="Format"/>
-
-                            </Grid>
-
-                        </Border>
-
-
-
-                        <!-- 12. 減色 -->
-
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -1002,9 +936,10 @@
 
 
 
-                        <!-- 13. 画像合成 -->
+                        
+<!-- 11. 画像合成 -->
 
-                        <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                             <Grid>
 
@@ -1024,7 +959,57 @@
 
                         </Border>
 
-                    </StackPanel>
+                    
+<!-- 12. フォーマット変換 -->
+
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                    <ColumnDefinition Width="Auto"/>
+
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox Content="フォーマット変換" IsChecked="{Binding FormatStep.Enabled, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
+
+                                <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="Format"/>
+
+                            </Grid>
+
+                        </Border>
+
+
+
+                        
+<!-- 13. 最適化 -->
+
+                        <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                    <ColumnDefinition Width="Auto"/>
+
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox Content="最適化" IsChecked="{Binding OptimizeStep.Enabled, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
+
+                                <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="Optimize"/>
+
+                            </Grid>
+
+                        </Border>
+
+
+
+                        </StackPanel>
 
                 </ScrollViewer>
 
@@ -1044,11 +1029,11 @@
 
                     <!-- ===== TOOLBAR ===== -->
 
-                    <StackPanel DockPanel.Dock="Top" Background="#F9F9F9">
+                    <StackPanel DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}">
 
                         <!-- ツールバー（1行統合） -->
 
-                        <Border BorderBrush="#E5E5E5" BorderThickness="0,0,0,1" Padding="8,4">
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="8,4">
 
                             <Grid>
 
@@ -1110,7 +1095,7 @@
 
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="出力先" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#555" FontSize="12"/>
+                                    <TextBlock Text="出力先" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource ControlForegroundDim}" FontSize="12"/>
 
                                     <TextBox Grid.Column="1" Text="{Binding OutputDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" FontSize="11" Padding="4,0"/>
 
@@ -1122,13 +1107,13 @@
 
                                 <!-- 右側：最適化実行ボタン -->
 
-                                <Button Grid.Column="2" Command="{Binding ProcessOptimizeCommand}" ToolTip="最適化を開始" Background="#E2F0D9" BorderBrush="#A9D08E" BorderThickness="1" Width="100" Height="28" HorizontalAlignment="Right">
+                                <Button Grid.Column="2" Command="{Binding ProcessOptimizeCommand}" ToolTip="最適化を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" HorizontalAlignment="Right">
 
                                     <StackPanel Orientation="Horizontal">
 
-                                        <TextBlock Text="⚡" Foreground="#385723" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                        <TextBlock Text="最適化実行" Foreground="#385723" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
 
                                     </StackPanel>
 
@@ -1162,7 +1147,7 @@
 
                         <GroupBox Grid.Column="0" Header="最適化対象ファイルリスト" Padding="4">
 
-                            <Border x:Name="OptimizeFileListDropBorder" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White"
+                            <Border x:Name="OptimizeFileListDropBorder" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource ControlBackground}"
 
                                     AllowDrop="True" DragEnter="OptimizeFileList_DragEnter" DragOver="OptimizeFileList_DragOver" DragLeave="OptimizeFileList_DragLeave" Drop="OptimizeFileList_Drop">
 
@@ -1172,7 +1157,7 @@
 
                                     <TextBlock Text="ここにOffice(docx, xlsx, pptx)、画像ファイル、または動画・音声ファイルをドラッグ＆ドロップしてください"
 
-                                               FontSize="13" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20">
+                                               FontSize="13" Foreground="{DynamicResource ControlForegroundDim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20">
 
                                         <TextBlock.Style>
 
@@ -1204,15 +1189,15 @@
 
                                         <ListView.Resources>
 
-                                            <Style TargetType="GridViewColumnHeader">
+                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
 
                                                 <EventSetter Event="Click" Handler="OptimizeFileListHeader_Click"/>
 
-                                                <Setter Property="Padding" Value="6,4"/>
 
-                                                <Setter Property="Background" Value="#F2F2F2"/>
 
-                                                <Setter Property="BorderBrush" Value="#D9D9D9"/>
+
+
+
 
                                             </Style>
 
@@ -1314,7 +1299,7 @@
 
                                                         <DataTemplate>
 
-                                                            <TextBlock Text="{Binding SavingDisplay}" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="#2E7D32"/>
+                                                            <TextBlock Text="{Binding SavingDisplay}" HorizontalAlignment="Center" Foreground="{DynamicResource SavingsForeground}"/>
 
                                                         </DataTemplate>
 
@@ -1340,23 +1325,19 @@
 
                                                                             <DataTrigger Binding="{Binding Status}" Value="完了">
 
-                                                                                <Setter Property="Foreground" Value="Green"/>
-
-                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                                <Setter Property="Foreground" Value="{DynamicResource StatusSuccessBrush}"/>
 
                                                                             </DataTrigger>
 
                                                                             <DataTrigger Binding="{Binding Status}" Value="処理中">
 
-                                                                                <Setter Property="Foreground" Value="Blue"/>
+                                                                                <Setter Property="Foreground" Value="{DynamicResource StatusProcessingBrush}"/>
 
                                                                             </DataTrigger>
 
                                                                             <DataTrigger Binding="{Binding Status}" Value="エラー">
 
-                                                                                <Setter Property="Foreground" Value="Red"/>
-
-                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                                <Setter Property="Foreground" Value="{DynamicResource StatusErrorBrush}"/>
 
                                                                             </DataTrigger>
 
@@ -1398,7 +1379,7 @@
 
                                         <ListView.ItemContainerStyle>
 
-                                            <Style TargetType="ListViewItem">
+                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
 
                                                 <Setter Property="ContextMenu">
 
@@ -1444,7 +1425,7 @@
 
                                     <!-- 1. Office最適化 -->
 
-                                    <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                                         <Grid>
 
@@ -1468,7 +1449,7 @@
 
                                     <!-- 2. 画像最適化 -->
 
-                                    <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                                         <Grid>
 
@@ -1492,7 +1473,7 @@
 
                                     <!-- 3. メディア最適化 -->
 
-                                    <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" Padding="4,3">
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
 
                                         <Grid>
 
@@ -1523,6 +1504,26 @@
             </TabItem>
         </TabControl>
     </DockPanel>
+
+        <!-- デバッグコンソール (F12 でトグル) -->
+        <views:DebugWindow x:Name="DebugConsole" Grid.Row="1"
+                           Visibility="{Binding IsDebugVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                           Height="200"/>
+
+        <!-- ===== GLOBAL STATUS BAR ===== -->
+        <StatusBar Grid.Row="2" Background="{DynamicResource WindowBackground}" BorderBrush="{DynamicResource StatusBarBorderBrush}" BorderThickness="0,1,0,0" Padding="4,2">
+            <StatusBarItem HorizontalAlignment="Left">
+                <TextBlock Text="{Binding StatusText}" Margin="4,0"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                    <!-- 進捗バー。処理中のみ表示 -->
+                    <ProgressBar Width="120" Height="14" Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}" Margin="0,0,12,0" 
+                                 Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding OutputSummary}" Foreground="{DynamicResource ControlForegroundDim}"/>
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
 
 </Grid>
 </Window>

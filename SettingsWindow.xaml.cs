@@ -1,4 +1,5 @@
 using System.Windows;
+using FileMill.Services;
 
 namespace FileMill;
 
@@ -7,6 +8,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+        ThemeHelper.ApplyWindowTheme(this, App.IsDarkThemeActive());
     }
 
     private void OK_Click(object sender, RoutedEventArgs e)
