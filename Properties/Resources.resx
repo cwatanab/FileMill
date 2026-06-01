@@ -79,6 +79,7 @@
   <data name="OptOfficeOptimize" xml:space="preserve"><value>Office Optimize</value></data>
   <data name="OptImageOptimize" xml:space="preserve"><value>Image Optimize</value></data>
   <data name="OptMediaOptimize" xml:space="preserve"><value>Media Optimize</value></data>
+  <data name="OptResetCellSelection" xml:space="preserve"><value>Reset selected cell to A1</value></data>
 
   <!-- Column headers -->
   <data name="ColName" xml:space="preserve"><value>Name</value></data>
@@ -163,4 +164,35 @@ With gratitude to all developers and contributors.</value></data>
   <data name="ModalTitleOptions" xml:space="preserve"><value>Options</value></data>
   <data name="ModalTitleDefault" xml:space="preserve"><value>Settings</value></data>
 
+  <data name="SummaryOutput" xml:space="preserve"><value>Output: {0}  /  Files: {1}  /  Steps: {2}</value></data>
+  <data name="SummaryOptimizeOutput" xml:space="preserve"><value>Output: {0}  /  Files: {1}</value></data>
+
+  <!-- Added Status & Dialog localization keys -->
+  <data name="StatusProcessingProgress" xml:space="preserve"><value>Processing... ({0}/{1}) {2}</value></data>
+  <data name="StatusErrorMsg" xml:space="preserve"><value>Error: {0} - {1}</value></data>
+  <data name="StatusDoneMsg" xml:space="preserve"><value>Done: {0} succeeded, {1} failed</value></data>
+  <data name="StatusCancelled" xml:space="preserve"><value>Processing was cancelled</value></data>
+  <data name="StatusOptimizingPackage" xml:space="preserve"><value>Optimizing package...</value></data>
+  <data name="StatusCompleted" xml:space="preserve"><value>Completed</value></data>
+  <data name="StatusErrorState" xml:space="preserve"><value>Error</value></data>
+  <data name="StatusOptimizingProgress" xml:space="preserve"><value>Optimizing... ({0}/{1})</value></data>
+  <data name="StatusOptimizeCancelled" xml:space="preserve"><value>Optimization was cancelled</value></data>
+  <data name="StatusOptimizeDone" xml:space="preserve"><value>Optimization done: {0} succeeded, {1} failed</value></data>
+  <data name="MsgConfirmClearImageList" xml:space="preserve"><value>Do you want to remove all image files from the list?</value></data>
+  <data name="MsgConfirmClearList" xml:space="preserve"><value>Do you want to remove all files from the list?</value></data>
+  <data name="TitleConfirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="StatusWaiting" xml:space="preserve"><value>Pending</value></data>
+  <data name="StatusCancelling" xml:space="preserve"><value>Cancelling...</value></data>
+
+  <data name="DlgTitleSelectImages" xml:space="preserve"><value>Select Image Files</value></data>
+  <data name="DlgFilterImages" xml:space="preserve"><value>Image Files|*.jpg;*.jpeg;*.png;*.webp;*.avif;*.tif;*.tiff;*.gif;*.svg;*.bmp|All Files|*.*</value></data>
+  <data name="DlgTitleAddImageFolder" xml:space="preserve"><value>Add Image Folder</value></data>
+  <data name="DlgTitleSelectOutputFolder" xml:space="preserve"><value>Select Output Folder</value></data>
+  <data name="DlgTitleSelectToolExecutable" xml:space="preserve"><value>Select Executable for {0}</value></data>
+  <data name="DlgFilterExecutable" xml:space="preserve"><value>Executable Files (*.exe)|*.exe|All Files (*.*)|*.*</value></data>
+  <data name="DlgTitleSelectCompositeImage" xml:space="preserve"><value>Select Image File for Compositing</value></data>
+  <data name="DlgFilterCompositeImages" xml:space="preserve"><value>Image Files|*.jpg;*.jpeg;*.png;*.webp;*.bmp|All Files|*.*</value></data>
+  <data name="DlgTitleSelectOfficeFiles" xml:space="preserve"><value>Select Office Files</value></data>
+  <data name="DlgFilterOfficeFiles" xml:space="preserve"><value>Office Files|*.docx;*.xlsx;*.pptx|All Files|*.*</value></data>
+  <data name="DlgTitleAddFolder" xml:space="preserve"><value>Add Folder</value></data>
 </root>

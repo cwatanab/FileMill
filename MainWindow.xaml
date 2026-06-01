@@ -1,4 +1,4 @@
-<Window x:Class="FileMill.MainWindow"
+﻿<Window x:Class="FileMill.MainWindow"
 
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 
@@ -341,7 +341,7 @@
 
                                     <ColumnDefinition Width="*"/>
 
-                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="Auto"/>
 
                                 </Grid.ColumnDefinitions>
 
@@ -405,17 +405,33 @@
 
                                 <!-- 右側：変換実行ボタン -->
 
-                                <Button Grid.Column="2" Command="{Binding ProcessCommand}" ToolTip="変換開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" HorizontalAlignment="Right">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
 
-                                    <StackPanel Orientation="Horizontal">
+                                    <Button Command="{Binding ProcessCommand}" ToolTip="変換開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
 
-                                        <TextBlock Text="▶" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal">
 
-                                        <TextBlock Text="変換" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="▶" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                    </StackPanel>
+                                            <TextBlock Text="変換" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
 
-                                </Button>
+                                        </StackPanel>
+
+                                    </Button>
+
+                                    <Button Command="{Binding CancelCommand}" ToolTip="処理をキャンセル" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Width="100" Height="28">
+
+                                        <StackPanel Orientation="Horizontal">
+
+                                            <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
+
+                                        </StackPanel>
+
+                                    </Button>
+
+                                </StackPanel>
 
                             </Grid>
 
@@ -1043,7 +1059,7 @@
 
                                     <ColumnDefinition Width="*"/>
 
-                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="Auto"/>
 
                                 </Grid.ColumnDefinitions>
 
@@ -1107,17 +1123,33 @@
 
                                 <!-- 右側：最適化実行ボタン -->
 
-                                <Button Grid.Column="2" Command="{Binding ProcessOptimizeCommand}" ToolTip="最適化を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" HorizontalAlignment="Right">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
 
-                                    <StackPanel Orientation="Horizontal">
+                                    <Button Command="{Binding ProcessOptimizeCommand}" ToolTip="最適化を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
 
-                                        <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal">
 
-                                        <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                    </StackPanel>
+                                            <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
 
-                                </Button>
+                                        </StackPanel>
+
+                                    </Button>
+
+                                    <Button Command="{Binding CancelCommand}" ToolTip="処理をキャンセル" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Width="100" Height="28">
+
+                                        <StackPanel Orientation="Horizontal">
+
+                                            <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
+
+                                        </StackPanel>
+
+                                    </Button>
+
+                                </StackPanel>
 
                             </Grid>
 
@@ -1155,7 +1187,7 @@
 
                                     <!-- プレースホルダー -->
 
-                                    <TextBlock Text="ここにOffice(docx, xlsx, pptx)、画像ファイル、または動画・音声ファイルをドラッグ＆ドロップしてください"
+                                    <TextBlock Text="ここに Office ファイル (.docx, .xlsx, .pptx) をドラッグ＆ドロップしてください"
 
                                                FontSize="13" Foreground="{DynamicResource ControlForegroundDim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20">
 
@@ -1229,7 +1261,7 @@
 
 
 
-                                                <GridViewColumn Header="名前" Width="180">
+                                                <GridViewColumn x:Name="ColOptName" Header="名前" Width="180">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1245,7 +1277,7 @@
 
 
 
-                                                <GridViewColumn Header="種類" Width="60">
+                                                <GridViewColumn x:Name="ColOptFormat" Header="種類" Width="60">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1261,7 +1293,7 @@
 
 
 
-                                                <GridViewColumn Header="元のサイズ" Width="95">
+                                                <GridViewColumn x:Name="ColOptOriginalSize" Header="元のサイズ" Width="95">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1277,7 +1309,7 @@
 
 
 
-                                                <GridViewColumn Header="最適化後" Width="95">
+                                                <GridViewColumn x:Name="ColOptOptimizedSize" Header="最適化後" Width="95">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1293,7 +1325,7 @@
 
 
 
-                                                <GridViewColumn Header="削減率" Width="75">
+                                                <GridViewColumn x:Name="ColOptSavings" Header="削減率" Width="75">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1309,7 +1341,7 @@
 
 
 
-                                                <GridViewColumn Header="状態" Width="65">
+                                                <GridViewColumn x:Name="ColOptStatus" Header="状態" Width="65">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1357,7 +1389,7 @@
 
 
 
-                                                <GridViewColumn Header="パス" Width="200">
+                                                <GridViewColumn x:Name="ColOptPath" Header="パス" Width="200">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1447,51 +1479,6 @@
 
 
 
-                                    <!-- 2. 画像最適化 -->
-
-                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
-
-                                        <Grid>
-
-                                            <Grid.ColumnDefinitions>
-
-                                                <ColumnDefinition Width="*"/>
-
-                                                <ColumnDefinition Width="Auto"/>
-
-                                            </Grid.ColumnDefinitions>
-
-                                            <CheckBox Content="画像最適化" IsChecked="{Binding EnableImageOptimize, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
-
-                                            <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="ImageOptimize"/>
-
-                                        </Grid>
-
-                                    </Border>
-
-
-
-                                    <!-- 3. メディア最適化 -->
-
-                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
-
-                                        <Grid>
-
-                                            <Grid.ColumnDefinitions>
-
-                                                <ColumnDefinition Width="*"/>
-
-                                                <ColumnDefinition Width="Auto"/>
-
-                                            </Grid.ColumnDefinitions>
-
-                                            <CheckBox Content="メディア最適化" IsChecked="{Binding CompressMedia, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
-
-                                            <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="MediaOptimize"/>
-
-                                        </Grid>
-
-                                    </Border>
 
                                 </StackPanel>
 

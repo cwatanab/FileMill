@@ -30,6 +30,11 @@ public class ImageProcessingService
 
         var formatStep = enabled.LastOrDefault(s => s.Type == PipelineStepType.FormatConvert);
         var optimizeStep = enabled.LastOrDefault(s => s.Type == PipelineStepType.Optimize);
+        if (enabled.Count == 0)
+        {
+            File.Copy(inputPath, outputPath, true);
+            return;
+        }
 
         using var image = Image.NewFromFile(inputPath, memory: true);
 
@@ -330,7 +335,10 @@ public class ImageProcessingService
                     }
                 }
             }
-            catch {}
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to parse EXIF date taken: {ex.Message}");
+            }
 
             var info = new ImageFile
             {
@@ -344,8 +352,9 @@ public class ImageProcessingService
             };
             return info;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"Failed to load image info for {filePath}: {ex.Message}");
             return new ImageFile
             {
                 FilePath = filePath,
@@ -391,9 +400,9 @@ public class ImageProcessingService
 
     private static long OptimizeOpenXmlPackage(string inputPath, string outputPath, bool stripMetadata, bool repackPackage, bool compressImages, bool convertImagesToWebP, int imageQuality, bool compressMedia, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
+        bool useJpegli = false, string cjpegliPath = "cjpegli", bool resetCellSelection = false, Action<string>? logAction = null)
     {
-        if (!stripMetadata && !repackPackage && !compressImages && !compressMedia)
+        if (!stripMetadata && !repackPackage && !compressImages && !compressMedia && !resetCellSelection)
         {
             File.Copy(inputPath, outputPath, true);
             return new FileInfo(outputPath).Length;
@@ -455,6 +464,10 @@ public class ImageProcessingService
                 else if (allRenames.Count > 0 && IsRelationshipEntry(entry.FullName))
                 {
                     xmlReplacement = UpdateRelationshipTargets(sourceStream, entry.FullName, allRenames);
+                }
+                else if (resetCellSelection && IsExcelWorksheetEntry(entry.FullName))
+                {
+                    xmlReplacement = ResetSheetSelections(sourceStream);
                 }
 
                 if (xmlReplacement != null)
@@ -799,6 +812,84 @@ public class ImageProcessingService
     private static bool IsRelationshipEntry(string entryName)
         => NormalizePackagePath(entryName).EndsWith(".rels", StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsExcelWorksheetEntry(string entryName)
+    {
+        var normalized = NormalizePackagePath(entryName);
+        return normalized.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase)
+               && normalized.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Excel ワークシート XML 内の sheetView/selection を A1 にリセットする。
+    /// </summary>
+    private static byte[]? ResetSheetSelections(Stream stream)
+    {
+        byte[]? original = null;
+        try
+        {
+            using var input = new MemoryStream();
+            stream.CopyTo(input);
+            original = input.ToArray();
+            using var documentStream = new MemoryStream(original);
+            var document = XDocument.Load(documentStream, LoadOptions.PreserveWhitespace);
+            var root = document.Root;
+            if (root == null)
+                return original;
+
+            var ns = root.Name.Namespace;
+            bool modified = false;
+
+            foreach (var sheetView in document.Descendants(ns + "sheetView"))
+            {
+                // topLeftCell をリセット
+                var topLeftCell = sheetView.Attribute("topLeftCell");
+                if (topLeftCell != null && !string.Equals(topLeftCell.Value, "A1", StringComparison.OrdinalIgnoreCase))
+                {
+                    topLeftCell.Value = "A1";
+                    modified = true;
+                }
+
+                // 既存の selection 要素をリセットまたは追加
+                var selections = sheetView.Elements(ns + "selection").ToList();
+                if (selections.Count > 0)
+                {
+                    // 最初の selection を A1 にリセットし、余分な selection を削除
+                    var first = selections[0];
+                    if (first.Attribute("activeCell")?.Value != "A1" || first.Attribute("sqref")?.Value != "A1")
+                    {
+                        first.SetAttributeValue("activeCell", "A1");
+                        first.SetAttributeValue("sqref", "A1");
+                        modified = true;
+                    }
+                    // pane 属性があれば削除（分割ペインの選択状態をクリア）
+                    var paneAttr = first.Attribute("pane");
+                    if (paneAttr != null)
+                    {
+                        paneAttr.Remove();
+                        modified = true;
+                    }
+                    for (int i = 1; i < selections.Count; i++)
+                    {
+                        selections[i].Remove();
+                        modified = true;
+                    }
+                }
+            }
+
+            if (!modified)
+                return null; // 変更なしの場合は元データをそのまま使う
+
+            using var output = new MemoryStream();
+            document.Save(output, SaveOptions.DisableFormatting);
+            return output.ToArray();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ResetSheetSelections failed: {ex.Message}");
+            return original;
+        }
+    }
+
     private static byte[]? SanitizeOpenXmlProperties(Stream stream, string entryName)
     {
         byte[]? original = null;
@@ -828,8 +919,9 @@ public class ImageProcessingService
             document.Save(output, SaveOptions.DisableFormatting);
             return output.ToArray();
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"SanitizeOpenXmlProperties failed for {entryName}: {ex.Message}");
             return original;
         }
     }
@@ -978,8 +1070,9 @@ public class ImageProcessingService
                 ? new PackageImageReplacement(outputEntryName, optimized)
                 : null;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"TryOptimizePackageImage failed for {entryName}: {ex.Message}");
             return null;
         }
     }
@@ -1169,7 +1262,7 @@ public class ImageProcessingService
     /// </summary>
     public long Optimize(string inputPath, string outputPath, bool stripMetadata, bool cleanUnused, bool compressImages, bool convertToWebP, int webpQuality, bool compressMedia = false, string ffmpegPath = "ffmpeg", int videoCrf = 23, string videoCodec = "libx264", string audioCodec = "libmp3lame",
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
+        bool useJpegli = false, string cjpegliPath = "cjpegli", bool resetCellSelection = false, Action<string>? logAction = null)
     {
         var ext = Path.GetExtension(inputPath).ToLowerInvariant();
         var dir = Path.GetDirectoryName(outputPath);
@@ -1179,7 +1272,7 @@ public class ImageProcessingService
         // 1. Office Open XML ファイルの場合
         if (ext == ".docx" || ext == ".xlsx" || ext == ".pptx")
         {
-            return OptimizeOpenXmlPackage(inputPath, outputPath, stripMetadata, cleanUnused, compressImages, convertToWebP, webpQuality, compressMedia, ffmpegPath, videoCrf, videoCodec, audioCodec, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction);
+            return OptimizeOpenXmlPackage(inputPath, outputPath, stripMetadata, cleanUnused, compressImages, convertToWebP, webpQuality, compressMedia, ffmpegPath, videoCrf, videoCodec, audioCodec, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, resetCellSelection: resetCellSelection, logAction: logAction);
         }
 
         // 2. 画像ファイルの場合 (JPEG, PNG, WEBP, AVIF 等)
@@ -1211,7 +1304,7 @@ public class ImageProcessingService
                                 var ok = RunCjpegli(tempPng, finalPath, cjpegliPath, webpQuality, logAction);
                                 if (!ok)
                                 {
-                                    image.Jpegsave(finalPath, q: 80, optimizeCoding: true, keep: keep);
+                                    image.Jpegsave(finalPath, q: webpQuality, optimizeCoding: true, keep: keep);
                                 }
                             }
                             finally
@@ -1221,7 +1314,7 @@ public class ImageProcessingService
                         }
                         else
                         {
-                            image.Jpegsave(finalPath, q: 80, optimizeCoding: true, keep: keep);
+                            image.Jpegsave(finalPath, q: webpQuality, optimizeCoding: true, keep: keep);
                         }
                     }
                     else if (ext == ".png")
@@ -1238,7 +1331,7 @@ public class ImageProcessingService
                     }
                     else if (ext == ".webp")
                     {
-                        image.Webpsave(finalPath, q: 80, keep: keep);
+                        image.Webpsave(finalPath, q: webpQuality, keep: keep);
                     }
                     else
                     {
@@ -1307,7 +1400,11 @@ public class ImageProcessingService
             {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
-                process.WaitForExit(30000); // 30 seconds timeout
+                if (!process.WaitForExit(30000)) // 30 seconds timeout
+                {
+                    try { process.Kill(); } catch {}
+                    logAction?.Invoke("[oxipng] 処理がタイムアウトしたためプロセスを終了しました。");
+                }
             }
         }
         catch (Exception ex)

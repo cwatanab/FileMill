@@ -133,4 +133,37 @@ public static class Loc
     public static string ModalTitleMediaOptimize => RM.GetString("ModalTitleMediaOptimize") ?? "";
     public static string ModalTitleOptions => RM.GetString("ModalTitleOptions") ?? "";
     public static string ModalTitleDefault => RM.GetString("ModalTitleDefault") ?? "";
+
+    // Summaries
+    public static string SummaryOutput => RM.GetString("SummaryOutput") ?? "";
+    public static string SummaryOptimizeOutput => RM.GetString("SummaryOptimizeOutput") ?? "";
+
+    // Added Status & Dialog localization keys
+    public static string StatusProcessingProgress => RM.GetString("StatusProcessingProgress") ?? "";
+    public static string StatusErrorMsg => RM.GetString("StatusErrorMsg") ?? "";
+    public static string StatusDoneMsg => RM.GetString("StatusDoneMsg") ?? "";
+    public static string StatusCancelled => RM.GetString("StatusCancelled") ?? "";
+    public static string StatusOptimizingPackage => RM.GetString("StatusOptimizingPackage") ?? "";
+    public static string StatusCompleted => RM.GetString("StatusCompleted") ?? "";
+    public static string StatusErrorState => RM.GetString("StatusErrorState") ?? "";
+    public static string StatusOptimizingProgress => RM.GetString("StatusOptimizingProgress") ?? "";
+    public static string StatusOptimizeCancelled => RM.GetString("StatusOptimizeCancelled") ?? "";
+    public static string StatusOptimizeDone => RM.GetString("StatusOptimizeDone") ?? "";
+    public static string MsgConfirmClearImageList => RM.GetString("MsgConfirmClearImageList") ?? "";
+    public static string MsgConfirmClearList => RM.GetString("MsgConfirmClearList") ?? "";
+    public static string TitleConfirm => RM.GetString("TitleConfirm") ?? "";
+    public static string StatusWaiting => RM.GetString("StatusWaiting") ?? "";
+    public static string StatusCancelling => RM.GetString("StatusCancelling") ?? "";
+
+    public static string DlgTitleSelectImages => RM.GetString("DlgTitleSelectImages") ?? "";
+    public static string DlgFilterImages => RM.GetString("DlgFilterImages") ?? "";
+    public static string DlgTitleAddImageFolder => RM.GetString("DlgTitleAddImageFolder") ?? "";
+    public static string DlgTitleSelectOutputFolder => RM.GetString("DlgTitleSelectOutputFolder") ?? "";
+    public static string DlgTitleSelectToolExecutable => RM.GetString("DlgTitleSelectToolExecutable") ?? "";
+    public static string DlgFilterExecutable => RM.GetString("DlgFilterExecutable") ?? "";
+    public static string DlgTitleSelectCompositeImage => RM.GetString("DlgTitleSelectCompositeImage") ?? "";
+    public static string DlgFilterCompositeImages => RM.GetString("DlgFilterCompositeImages") ?? "";
+    public static string DlgTitleSelectOfficeFiles => RM.GetString("DlgTitleSelectOfficeFiles") ?? "";
+    public static string DlgFilterOfficeFiles => RM.GetString("DlgFilterOfficeFiles") ?? "";
+    public static string DlgTitleAddFolder => RM.GetString("DlgTitleAddFolder") ?? "";
 }

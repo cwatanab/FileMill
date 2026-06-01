@@ -9,7 +9,7 @@ echo  FileMill GitHub Release Automator
 echo ===================================================
 echo.
 
-set TAG=0.1
+set TAG=0.2
 
 :: 1. Check prerequisites
 where gh >nul 2>nul

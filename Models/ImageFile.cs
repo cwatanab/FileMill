@@ -69,15 +69,7 @@ public class ImageFile : INotifyPropertyChanged
     public string DateModifiedDisplay => DateModified.ToString("yyyy/MM/dd HH:mm");
     public string DateTakenDisplay => DateTaken?.ToString("yyyy/MM/dd HH:mm") ?? DateModifiedDisplay;
 
-    public string FileSizeDisplay
-    {
-        get
-        {
-            if (FileSize < 1024) return $"{FileSize} B";
-            if (FileSize < 1024 * 1024) return $"{FileSize / 1024.0:F1} KB";
-            return $"{FileSize / (1024.0 * 1024.0):F1} MB";
-        }
-    }
+    public string FileSizeDisplay => FileMill.Helpers.FormatHelper.FormatFileSize(FileSize);
 
     public string DimensionsDisplay => Width > 0 && Height > 0
         ? $"{Width} × {Height}"

@@ -8,7 +8,7 @@ echo " FileMill GitHub Release Automator (Bash Version)"
 echo "==================================================="
 echo ""
 
-TAG="0.1"
+TAG="0.2"
 
 # 1. Check prerequisites
 if command -v gh &> /dev/null; then

@@ -79,6 +79,7 @@
   <data name="OptOfficeOptimize" xml:space="preserve"><value>Office最適化</value></data>
   <data name="OptImageOptimize" xml:space="preserve"><value>画像最適化</value></data>
   <data name="OptMediaOptimize" xml:space="preserve"><value>メディア最適化</value></data>
+  <data name="OptResetCellSelection" xml:space="preserve"><value>選択セルをA1に変更する</value></data>
 
   <!-- Column headers -->
   <data name="ColName" xml:space="preserve"><value>名前</value></data>
@@ -168,4 +169,35 @@
   <data name="ModalTitleOptions" xml:space="preserve"><value>オプション設定</value></data>
   <data name="ModalTitleDefault" xml:space="preserve"><value>設定</value></data>
 
+  <data name="SummaryOutput" xml:space="preserve"><value>出力先: {0}  /  ファイル数: {1}  /  ステップ数: {2}</value></data>
+  <data name="SummaryOptimizeOutput" xml:space="preserve"><value>出力先: {0}  /  ファイル数: {1}</value></data>
+
+  <!-- Added Status & Dialog localization keys -->
+  <data name="StatusProcessingProgress" xml:space="preserve"><value>処理中... ({0}/{1}) {2}</value></data>
+  <data name="StatusErrorMsg" xml:space="preserve"><value>エラー: {0} - {1}</value></data>
+  <data name="StatusDoneMsg" xml:space="preserve"><value>完了: {0} 成功, {1} 失敗</value></data>
+  <data name="StatusCancelled" xml:space="preserve"><value>処理がキャンセルされました</value></data>
+  <data name="StatusOptimizingPackage" xml:space="preserve"><value>パッケージ最適化中</value></data>
+  <data name="StatusCompleted" xml:space="preserve"><value>完了</value></data>
+  <data name="StatusErrorState" xml:space="preserve"><value>エラー</value></data>
+  <data name="StatusOptimizingProgress" xml:space="preserve"><value>最適化中... ({0}/{1})</value></data>
+  <data name="StatusOptimizeCancelled" xml:space="preserve"><value>最適化がキャンセルされました</value></data>
+  <data name="StatusOptimizeDone" xml:space="preserve"><value>最適化完了: {0} 成功, {1} 失敗</value></data>
+  <data name="MsgConfirmClearImageList" xml:space="preserve"><value>リストからすべての画像ファイルを削除しますか？</value></data>
+  <data name="MsgConfirmClearList" xml:space="preserve"><value>リストからすべてのファイルを削除しますか？</value></data>
+  <data name="TitleConfirm" xml:space="preserve"><value>確認</value></data>
+  <data name="StatusWaiting" xml:space="preserve"><value>待機中</value></data>
+  <data name="StatusCancelling" xml:space="preserve"><value>キャンセル要求中...</value></data>
+
+  <data name="DlgTitleSelectImages" xml:space="preserve"><value>画像ファイルを選択</value></data>
+  <data name="DlgFilterImages" xml:space="preserve"><value>画像ファイル|*.jpg;*.jpeg;*.png;*.webp;*.avif;*.tif;*.tiff;*.gif;*.svg;*.bmp|すべてのファイル|*.*</value></data>
+  <data name="DlgTitleAddImageFolder" xml:space="preserve"><value>画像フォルダを追加</value></data>
+  <data name="DlgTitleSelectOutputFolder" xml:space="preserve"><value>出力先フォルダを選択</value></data>
+  <data name="DlgTitleSelectToolExecutable" xml:space="preserve"><value>{0} の実行ファイルを選択</value></data>
+  <data name="DlgFilterExecutable" xml:space="preserve"><value>実行ファイル (*.exe)|*.exe|すべてのファイル (*.*)|*.*</value></data>
+  <data name="DlgTitleSelectCompositeImage" xml:space="preserve"><value>合成用の画像ファイルを選択</value></data>
+  <data name="DlgFilterCompositeImages" xml:space="preserve"><value>画像ファイル|*.jpg;*.jpeg;*.png;*.webp;*.bmp|すべてのファイル|*.*</value></data>
+  <data name="DlgTitleSelectOfficeFiles" xml:space="preserve"><value>ファイルを選択 (Office)</value></data>
+  <data name="DlgFilterOfficeFiles" xml:space="preserve"><value>Office ファイル|*.docx;*.xlsx;*.pptx|すべてのファイル|*.*</value></data>
+  <data name="DlgTitleAddFolder" xml:space="preserve"><value>フォルダを追加</value></data>
 </root>

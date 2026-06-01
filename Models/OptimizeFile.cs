@@ -12,7 +12,7 @@ public class OptimizeFile : INotifyPropertyChanged
     private long _originalSize;
     private long? _optimizedSize;
     private string _format = "";
-    private string _status = "待機中";
+    private string _status = Properties.Loc.StatusWaiting;
     private bool _isProcessing;
 
     public bool IsChecked
@@ -59,7 +59,7 @@ public class OptimizeFile : INotifyPropertyChanged
     public string Status
     {
         get => _status;
-        set { _status = value; OnPropertyChanged(); }
+        set { if (_status == value) return; _status = value; OnPropertyChanged(); }
     }
 
     public bool IsProcessing
@@ -68,9 +68,9 @@ public class OptimizeFile : INotifyPropertyChanged
         set { _isProcessing = value; OnPropertyChanged(); }
     }
 
-    public string OriginalSizeDisplay => FormatSize(OriginalSize);
+    public string OriginalSizeDisplay => FileMill.Helpers.FormatHelper.FormatFileSize(OriginalSize);
 
-    public string OptimizedSizeDisplay => OptimizedSize.HasValue ? FormatSize(OptimizedSize.Value) : "-";
+    public string OptimizedSizeDisplay => OptimizedSize.HasValue ? FileMill.Helpers.FormatHelper.FormatFileSize(OptimizedSize.Value) : "-";
 
     public string SavingDisplay
     {
@@ -81,13 +81,6 @@ public class OptimizeFile : INotifyPropertyChanged
             double percent = (double)saved / OriginalSize * 100.0;
             return $"{percent:F1}%";
         }
-    }
-
-    private string FormatSize(long bytes)
-    {
-        if (bytes < 1024) return $"{bytes} B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
-        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

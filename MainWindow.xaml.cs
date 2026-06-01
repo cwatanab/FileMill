@@ -15,10 +15,7 @@ namespace FileMill;
 
 public partial class MainWindow : Window
 {
-    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg", ".jpeg", ".png", ".webp", ".avif", ".tif", ".tiff", ".gif", ".svg", ".bmp", ".heic", ".heif"
-    };
+    private static readonly HashSet<string> SupportedExtensions = new(MainViewModel.ImageExtensions, StringComparer.OrdinalIgnoreCase);
 
     private string _lastSortColumn = "";
     private ListSortDirection _lastSortDir = ListSortDirection.Ascending;
@@ -156,8 +153,7 @@ public partial class MainWindow : Window
     private static bool IsImageFile(string path)
     {
         if (string.IsNullOrEmpty(path)) return false;
-        // ディレクトリは除外
-        if (Directory.Exists(path)) return false;
+        if (Directory.Exists(path)) return true;
         var ext = Path.GetExtension(path);
         return SupportedExtensions.Contains(ext);
     }
@@ -223,7 +219,7 @@ public partial class MainWindow : Window
     private void UpdateHeaderArrows(GridViewColumnHeader active)
     {
         var arrow = _lastSortDir == ListSortDirection.Ascending ? " ▲" : " ▼";
-        var cols = new[] { ColName, ColDim, ColSize, ColFormat, ColDateModified, ColDateTaken, ColPath };
+        var cols = new[] { ColName, ColDim, ColSize, ColFormat, ColDateModified, ColDateTaken, ColPath, ColOptName, ColOptFormat, ColOptOriginalSize, ColOptOptimizedSize, ColOptSavings, ColOptStatus, ColOptPath };
         foreach (var col in cols)
         {
             if (col == null) continue;
@@ -326,7 +322,10 @@ public partial class MainWindow : Window
                         foreach (var f in files)
                             VM.AddOptimizeFileByPath(f);
                     }
-                    catch {}
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to read files in dropped directory {path}: {ex.Message}");
+                    }
                 }
                 else
                 {
@@ -361,60 +360,39 @@ public partial class MainWindow : Window
 
     private void OptimizeFileListHeader_Click(object sender, RoutedEventArgs e)
     {
-        if (e.OriginalSource is GridViewColumnHeader header && header.Column != null)
+        if (e.OriginalSource is not GridViewColumnHeader header || header.Column == null)
+            return;
+
+        string? sortProp = header.Column switch
         {
-            var propName = GetSortPropertyForOptimizeHeader(header.Column);
-            if (string.IsNullOrEmpty(propName)) return;
-
-            var dir = ListSortDirection.Ascending;
-            if (_lastSortColumn == propName && _lastSortDir == ListSortDirection.Ascending)
-                dir = ListSortDirection.Descending;
-
-            _lastSortColumn = propName;
-            _lastSortDir = dir;
-
-            SortOptimizeFiles(propName, dir);
-        }
-    }
-
-    private static string GetSortPropertyForOptimizeHeader(GridViewColumn column)
-    {
-        if (column.Header is string headerText)
-        {
-            return headerText switch
-            {
-                "名前" => "FileName",
-                "種類" => "Format",
-                "元のサイズ" => "OriginalSize",
-                "最適化後" => "OptimizedSize",
-                "状態" => "Status",
-                "パス" => "FilePath",
-                _ => ""
-            };
-        }
-        return "";
-    }
-
-    private void SortOptimizeFiles(string propName, ListSortDirection direction)
-    {
-        if (VM?.OptimizeFiles == null) return;
-
-        var list = VM.OptimizeFiles.ToList();
-        VM.OptimizeFiles.Clear();
-
-        IOrderedEnumerable<OptimizeFile> sorted = propName switch
-        {
-            "FileName" => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.FileName) : list.OrderByDescending(f => f.FileName),
-            "Format" => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.Format) : list.OrderByDescending(f => f.Format),
-            "OriginalSize" => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.OriginalSize) : list.OrderByDescending(f => f.OriginalSize),
-            "OptimizedSize" => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.OptimizedSize ?? 0) : list.OrderByDescending(f => f.OptimizedSize ?? 0),
-            "Status" => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.Status) : list.OrderByDescending(f => f.Status),
-            "FilePath" => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.FilePath) : list.OrderByDescending(f => f.FilePath),
-            _ => direction == ListSortDirection.Ascending ? list.OrderBy(f => f.FileName) : list.OrderByDescending(f => f.FileName)
+            _ when header.Column == ColOptName => nameof(OptimizeFile.FileName),
+            _ when header.Column == ColOptFormat => nameof(OptimizeFile.Format),
+            _ when header.Column == ColOptOriginalSize => nameof(OptimizeFile.OriginalSize),
+            _ when header.Column == ColOptOptimizedSize => nameof(OptimizeFile.OptimizedSize),
+            _ when header.Column == ColOptStatus => nameof(OptimizeFile.Status),
+            _ when header.Column == ColOptPath => nameof(OptimizeFile.FilePath),
+            _ => null
         };
 
-        foreach (var item in sorted)
-            VM.OptimizeFiles.Add(item);
+        if (sortProp == null) return;
+
+        if (_lastSortColumn == sortProp)
+            _lastSortDir = _lastSortDir == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+        else
+            _lastSortDir = ListSortDirection.Ascending;
+
+        _lastSortColumn = sortProp;
+
+        var view = CollectionViewSource.GetDefaultView(VM.OptimizeFiles);
+        using (view.DeferRefresh())
+        {
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new SortDescription(sortProp, _lastSortDir));
+        }
+
+        UpdateHeaderArrows(header);
     }
 
     protected override void OnClosing(CancelEventArgs e)

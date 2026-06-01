@@ -41,7 +41,7 @@ public class RelayCommand : ICommand
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    private static readonly string[] ImageExtensions =
+    internal static readonly string[] ImageExtensions =
     [
         ".jpg", ".jpeg", ".png", ".webp", ".avif", ".tif", ".tiff", ".gif", ".svg", ".bmp", ".heic", ".heif"
     ];
@@ -52,6 +52,8 @@ public class MainViewModel : INotifyPropertyChanged
     ];
 
     private readonly ImageProcessingService _processingService = new();
+    private CancellationTokenSource? _cts;
+    private bool _suppressNotifications;
 
     // --- ファイルリスト ---
     public ObservableCollection<ImageFile> Files { get; } = [];
@@ -182,13 +184,6 @@ public class MainViewModel : INotifyPropertyChanged
         set { _enableOfficeOptimize = value; OnPropertyChanged(); }
     }
 
-    private bool _enableImageOptimize = true;
-    public bool EnableImageOptimize
-    {
-        get => _enableImageOptimize;
-        set { _enableImageOptimize = value; OnPropertyChanged(); }
-    }
-
     // --- Office最適化詳細 ---
     private bool _stripOfficeMetadata = true;
     public bool StripOfficeMetadata
@@ -204,19 +199,18 @@ public class MainViewModel : INotifyPropertyChanged
         set { _cleanUnusedObjects = value; OnPropertyChanged(); }
     }
 
+    private bool _resetCellSelection;
+    public bool ResetCellSelection
+    {
+        get => _resetCellSelection;
+        set { _resetCellSelection = value; OnPropertyChanged(); }
+    }
+
     private bool _compressEmbeddedImages = true;
     public bool CompressEmbeddedImages
     {
         get => _compressEmbeddedImages;
         set { _compressEmbeddedImages = value; OnPropertyChanged(); }
-    }
-
-    // --- 画像最適化詳細 ---
-    private bool _compressImages = true;
-    public bool CompressImages
-    {
-        get => _compressImages;
-        set { _compressImages = value; OnPropertyChanged(); }
     }
 
     private bool _convertToWebP;
@@ -349,7 +343,7 @@ public class MainViewModel : INotifyPropertyChanged
         set { _progressMax = value; OnPropertyChanged(); }
     }
 
-    private string _statusText = "準備完了";
+    private string _statusText = Properties.Loc.StatusReady;
     public string StatusText
     {
         get => _statusText;
@@ -376,10 +370,10 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsOptimizeFileListEmpty => OptimizeFiles.Count == 0;
 
     public string OutputSummary
-        => $"出力先: {OutputDirectory}  /  ファイル数: {Files.Count}  /  ステップ数: {Steps.Count(s => s.Enabled)}";
+        => string.Format(Properties.Loc.SummaryOutput, OutputDirectory, Files.Count, Steps.Count(s => s.Enabled));
 
     public string OptimizeOutputSummary
-        => $"出力先: {OutputDirectory}  /  ファイル数: {OptimizeFiles.Count}";
+        => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, OptimizeFiles.Count);
 
     // --- 設定ウィンドウの管理 ---
     // View 側がここに SettingsWindow を開く処理を登録する
@@ -433,11 +427,13 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand RemoveOptimizeFileCommand { get; }
     public ICommand ClearOptimizeFilesCommand { get; }
     public ICommand ProcessOptimizeCommand { get; }
+    public ICommand CancelCommand { get; }
     public ICommand BrowseCompositeCommand { get; }
     public ICommand ToggleDebugCommand { get; }
 
     public MainViewModel(string? settingsPath = null)
     {
+        _suppressNotifications = true;
         AddFilesCommand = new RelayCommand(AddFiles, _ => !IsProcessing);
         AddFolderCommand = new RelayCommand(AddFolder, _ => !IsProcessing);
         RemoveFileCommand = new RelayCommand(RemoveFile, _ => !IsProcessing);
@@ -452,12 +448,12 @@ public class MainViewModel : INotifyPropertyChanged
         OpenModalCommand = new RelayCommand(OpenModal, _ => !IsProcessing);
         BrowseCompositeCommand = new RelayCommand(BrowseComposite, _ => !IsProcessing);
         ToggleDebugCommand = new RelayCommand(_ => IsDebugVisible = !IsDebugVisible);
-
         AddOptimizeFilesCommand = new RelayCommand(AddOptimizeFiles, _ => !IsProcessing);
         AddOptimizeFolderCommand = new RelayCommand(AddOptimizeFolder, _ => !IsProcessing);
         RemoveOptimizeFileCommand = new RelayCommand(RemoveOptimizeFile, _ => !IsProcessing);
         ClearOptimizeFilesCommand = new RelayCommand(ClearOptimizeFiles, _ => !IsProcessing);
         ProcessOptimizeCommand = new RelayCommand(async _ => await ProcessOptimizeAsync(), _ => !IsProcessing && OptimizeFiles.Count > 0);
+        CancelCommand = new RelayCommand(_ => Cancel(), _ => IsProcessing);
 
         // ファイルリスト変更時に空表示を更新
         Files.CollectionChanged += (_, _) =>
@@ -472,6 +468,24 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(OptimizeOutputSummary));
             ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
         };
+
+        // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
+        AddDefaultStep(PipelineStepType.ExifAutoRotate, true);
+        AddDefaultStep(PipelineStepType.Crop, false);
+        AddDefaultStep(PipelineStepType.Rotate, false);
+        AddDefaultStep(PipelineStepType.Resize, true);
+        AddDefaultStep(PipelineStepType.Padding, false);
+        AddDefaultStep(PipelineStepType.Grayscale, false);
+        AddDefaultStep(PipelineStepType.Sharpen, false);
+        AddDefaultStep(PipelineStepType.ColorAdjust, false);
+        AddDefaultStep(PipelineStepType.ToneCurve, false);
+        AddDefaultStep(PipelineStepType.Posterize, false);
+        AddDefaultStep(PipelineStepType.Composite, false);
+        AddDefaultStep(PipelineStepType.FormatConvert, true);
+        AddDefaultStep(PipelineStepType.Optimize, true);
+
+        foreach (var step in Steps)
+            step.PropertyChanged += Step_PropertyChanged;
 
         Steps.CollectionChanged += (_, e) =>
         {
@@ -491,23 +505,9 @@ public class MainViewModel : INotifyPropertyChanged
             UpdateSummaries();
         };
 
-        // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
-        AddDefaultStep(PipelineStepType.ExifAutoRotate, true);
-        AddDefaultStep(PipelineStepType.Crop, false);
-        AddDefaultStep(PipelineStepType.Rotate, false);
-        AddDefaultStep(PipelineStepType.Resize, true);
-        AddDefaultStep(PipelineStepType.Padding, false);
-        AddDefaultStep(PipelineStepType.Grayscale, false);
-        AddDefaultStep(PipelineStepType.Sharpen, false);
-        AddDefaultStep(PipelineStepType.ColorAdjust, false);
-        AddDefaultStep(PipelineStepType.ToneCurve, false);
-        AddDefaultStep(PipelineStepType.Posterize, false);
-        AddDefaultStep(PipelineStepType.Composite, false);
-        AddDefaultStep(PipelineStepType.FormatConvert, true);
-        AddDefaultStep(PipelineStepType.Optimize, true);
-
         // 設定の読み込み
         LoadSettings(settingsPath);
+        _suppressNotifications = false;
     }
 
     private void AddDefaultStep(PipelineStepType type, bool enabled)
@@ -591,8 +591,8 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "画像ファイルを選択",
-            Filter = "画像ファイル|*.jpg;*.jpeg;*.png;*.webp;*.avif;*.tif;*.tiff;*.gif;*.svg;*.bmp|すべてのファイル|*.*",
+            Title = Properties.Loc.DlgTitleSelectImages,
+            Filter = Properties.Loc.DlgFilterImages,
             Multiselect = true
         };
 
@@ -607,7 +607,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var dlg = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "画像フォルダを追加",
+            Title = Properties.Loc.DlgTitleAddImageFolder,
             Multiselect = false
         };
 
@@ -627,7 +627,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (ConfirmOnClear)
         {
-            var result = MessageBox.Show("リストからすべての画像ファイルを削除しますか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var result = MessageBox.Show(Properties.Loc.MsgConfirmClearImageList, Properties.Loc.TitleConfirm, MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
                 return;
         }
@@ -680,7 +680,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var dlg = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "出力先フォルダを選択"
+            Title = Properties.Loc.DlgTitleSelectOutputFolder
         };
 
         if (dlg.ShowDialog() == true)
@@ -704,8 +704,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = $"{toolName} の実行ファイルを選択",
-            Filter = "実行ファイル (*.exe)|*.exe|すべてのファイル (*.*)|*.*",
+            Title = string.Format(Properties.Loc.DlgTitleSelectToolExecutable, toolName),
+            Filter = Properties.Loc.DlgFilterExecutable,
             FileName = Path.GetFileName(currentPath)
         };
 
@@ -734,8 +734,8 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "合成用の画像ファイルを選択",
-            Filter = "画像ファイル|*.jpg;*.jpeg;*.png;*.webp;*.bmp|すべてのファイル|*.*"
+            Title = Properties.Loc.DlgTitleSelectCompositeImage,
+            Filter = Properties.Loc.DlgFilterCompositeImages
         };
         if (dlg.ShowDialog() == true)
         {
@@ -752,20 +752,23 @@ public class MainViewModel : INotifyPropertyChanged
         var targets = Files.Where(f => f.IsChecked).ToList();
         if (targets.Count == 0)
         {
-            StatusText = "選択されたファイルがありません";
+            StatusText = Properties.Loc.StatusNoFiles;
             return;
         }
 
         var enabledSteps = Steps.Where(s => s.Enabled).ToList();
         if (enabledSteps.Count == 0)
         {
-            StatusText = "処理オプションが選択されていません";
+            StatusText = Properties.Loc.StatusNoOptions;
             return;
         }
 
         IsProcessing = true;
         ProgressValue = 0;
         ProgressMax = targets.Count;
+
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         LogDebug($"変換開始: {targets.Count} ファイル, 有効ステップ: {string.Join(", ", enabledSteps.Select(s => s.DisplayName))}");
 
@@ -780,6 +783,7 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 for (int i = 0; i < targets.Count; i++)
                 {
+                    token.ThrowIfCancellationRequested();
                     var file = targets[i];
                     try
                     {
@@ -808,7 +812,7 @@ public class MainViewModel : INotifyPropertyChanged
 
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
-                            StatusText = $"処理中... ({i + 1}/{targets.Count}) {file.FileName}";
+                            StatusText = string.Format(Properties.Loc.StatusProcessingProgress, i + 1, targets.Count, file.FileName);
                             ProgressValue = i + 1;
                         });
                     }
@@ -819,26 +823,49 @@ public class MainViewModel : INotifyPropertyChanged
 
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
-                            StatusText = $"エラー: {file.FileName} - {ex.Message}";
+                            StatusText = string.Format(Properties.Loc.StatusErrorMsg, file.FileName, ex.Message);
                         });
                     }
                 }
             });
         }
+        catch (OperationCanceledException)
+        {
+            LogDebug("変換処理がキャンセルされました。");
+        }
         finally
         {
+            var isCancelled = token.IsCancellationRequested;
+            _cts?.Dispose();
+            _cts = null;
             IsProcessing = false;
-            StatusText = $"完了: {success} 成功, {errors} 失敗";
-            LogDebug($"変換完了: {success} 成功, {errors} 失敗");
-            if (PlaySoundOnComplete)
+            if (isCancelled)
             {
-                System.Media.SystemSounds.Asterisk.Play();
+                StatusText = Properties.Loc.StatusCancelled;
+                LogDebug($"変換キャンセル: {success} 成功, {errors} 失敗");
+            }
+            else
+            {
+                StatusText = string.Format(Properties.Loc.StatusDoneMsg, success, errors);
+                LogDebug($"変換完了: {success} 成功, {errors} 失敗");
+                if (PlaySoundOnComplete)
+                {
+                    System.Media.SystemSounds.Asterisk.Play();
+                }
             }
         }
     }
 
+    private void Cancel()
+    {
+        _cts?.Cancel();
+        LogDebug("ユーザーによって処理がキャンセルされました");
+        StatusText = Properties.Loc.StatusCancelling;
+    }
+
     private void RefreshCommands()
     {
+        ((RelayCommand)CancelCommand).RaiseCanExecuteChanged();
         ((RelayCommand)AddFilesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)AddFolderCommand).RaiseCanExecuteChanged();
         ((RelayCommand)RemoveFileCommand).RaiseCanExecuteChanged();
@@ -871,24 +898,23 @@ public class MainViewModel : INotifyPropertyChanged
             ActiveModalType = type;
             ModalTitle = type switch
             {
-                "Grayscale" => "グレースケール化設定",
-                "ExifAutoRotate" => "Exif自動回転設定",
-                "Crop" => "トリミング設定",
-                "Resize" => "リサイズ設定",
-                "Padding" => "余白の追加設定",
-                "Sharpen" => "アンシャープマスク設定",
-                "ColorAdjust" => "色調補正設定",
-                "ToneCurve" => "トーンカーブ設定",
-                "Format" => "フォーマット変換設定",
-                "Optimize" => "最適化設定",
-                "Posterize" => "減色設定",
-                "Rotate" => "回転",
-                "Composite" => "画像合成設定",
-                "OfficeOptimize" => "Office最適化設定",
-                "ImageOptimize" => "画像最適化設定",
-                "MediaOptimize" => "メディア最適化設定",
-                "Options" => "オプション設定",
-                _ => "設定"
+                "Grayscale" => Properties.Loc.ModalTitleGrayscale,
+                "ExifAutoRotate" => Properties.Loc.ModalTitleExifAutoRotate,
+                "Crop" => Properties.Loc.ModalTitleCrop,
+                "Resize" => Properties.Loc.ModalTitleResize,
+                "Padding" => Properties.Loc.ModalTitlePadding,
+                "Sharpen" => Properties.Loc.ModalTitleSharpen,
+                "ColorAdjust" => Properties.Loc.ModalTitleColorAdjust,
+                "ToneCurve" => Properties.Loc.ModalTitleToneCurve,
+                "Format" => Properties.Loc.ModalTitleFormat,
+                "Optimize" => Properties.Loc.ModalTitleOptimize,
+                "Posterize" => Properties.Loc.ModalTitlePosterize,
+                "Rotate" => Properties.Loc.ModalTitleRotate,
+                "Composite" => Properties.Loc.ModalTitleComposite,
+                "OfficeOptimize" => Properties.Loc.ModalTitleOfficeOptimize,
+
+                "Options" => Properties.Loc.ModalTitleOptions,
+                _ => Properties.Loc.ModalTitleDefault
             };
             RequestOpenSettings?.Invoke(type);
         }
@@ -907,7 +933,7 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 FilePath = path,
                 OriginalSize = fileInfo.Length,
-                Status = "待機中"
+                Status = Properties.Loc.StatusWaiting
             };
             OptimizeFiles.Add(info);
         }
@@ -923,8 +949,8 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "ファイルを選択 (Office)",
-            Filter = "Office ファイル|*.docx;*.xlsx;*.pptx|すべてのファイル|*.*",
+            Title = Properties.Loc.DlgTitleSelectOfficeFiles,
+            Filter = Properties.Loc.DlgFilterOfficeFiles,
             Multiselect = true
         };
 
@@ -939,7 +965,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var dlg = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "フォルダを追加",
+            Title = Properties.Loc.DlgTitleAddFolder,
             Multiselect = false
         };
 
@@ -967,7 +993,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (ConfirmOnClear)
         {
-            var result = MessageBox.Show("リストからすべてのファイルを削除しますか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var result = MessageBox.Show(Properties.Loc.MsgConfirmClearList, Properties.Loc.TitleConfirm, MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
                 return;
         }
@@ -979,7 +1005,7 @@ public class MainViewModel : INotifyPropertyChanged
         var targets = OptimizeFiles.Where(f => f.IsChecked).ToList();
         if (targets.Count == 0)
         {
-            StatusText = "選択されたファイルがありません";
+            StatusText = Properties.Loc.StatusNoFiles;
             return;
         }
 
@@ -995,11 +1021,11 @@ public class MainViewModel : INotifyPropertyChanged
 
         // UI スレッドから読み取るオプションをローカル変数にキャプチャ
         var enableOfficeOptimize = EnableOfficeOptimize;
-        var enableImageOptimize = EnableImageOptimize;
+
         var stripOfficeMetadata = StripOfficeMetadata;
         var cleanUnusedObjects = CleanUnusedObjects;
         var compressEmbeddedImages = CompressEmbeddedImages;
-        var compressImages = CompressImages;
+
         var convertToWebP = ConvertToWebP;
         var webPQuality = WebPQuality;
         var compressMedia = CompressMedia;
@@ -1008,6 +1034,7 @@ public class MainViewModel : INotifyPropertyChanged
         var mediaVideoCodec = MediaVideoCodec;
         var mediaAudioCodec = MediaAudioCodec;
         var outputDirectory = OutputDirectory;
+        var resetCellSelection = ResetCellSelection;
         var maxParallel = MaxDegreeOfParallelism;
         var useOxipng = UseOxipng;
         var oxipngLevel = OxipngLevel;
@@ -1015,14 +1042,12 @@ public class MainViewModel : INotifyPropertyChanged
         var oxipngPath = OxipngPath;
         var cjpegliPath = CjpegliPath;
 
-        var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".avif", ".tif", ".tiff", ".bmp" };
         var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var workItems = targets.Select(file =>
         {
             var originalPath = file.FilePath;
             var ext = Path.GetExtension(originalPath);
-            var isWebPConversion = enableImageOptimize && convertToWebP && imageExtensions.Contains(ext.ToLowerInvariant());
-            var outputExtension = isWebPConversion ? ".webp" : Path.GetExtension(originalPath);
+            var outputExtension = Path.GetExtension(originalPath);
             var targetPath = GetUniqueSuffixedPath(originalPath, "_optimized", outputExtension, outputDirectory, reservedOutputPaths);
             reservedOutputPaths.Add(targetPath);
             return new
@@ -1034,9 +1059,13 @@ public class MainViewModel : INotifyPropertyChanged
             };
         }).ToList();
 
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
         var parallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = maxParallel > 0 ? maxParallel : Environment.ProcessorCount
+            MaxDegreeOfParallelism = maxParallel > 0 ? maxParallel : Environment.ProcessorCount,
+            CancellationToken = token
         };
 
         try
@@ -1045,8 +1074,9 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 Parallel.ForEach(workItems, parallelOptions, item =>
                 {
+                    token.ThrowIfCancellationRequested();
                     var file = item.File;
-                    file.Status = "処理中";
+                    file.Status = Properties.Loc.StatusProcessing;
                     file.IsProcessing = true;
                     string? tempPath = null;
                     try
@@ -1057,18 +1087,14 @@ public class MainViewModel : INotifyPropertyChanged
                         var targetPath = item.TargetPath;
                         tempPath = targetPath + "." + Guid.NewGuid().ToString("N")[..8] + ".tmp";
 
-                        var isOpenXml = ext == ".docx" || ext == ".xlsx" || ext == ".pptx";
-                        var passStrip = isOpenXml && enableOfficeOptimize && stripOfficeMetadata;
-                        var passClean = isOpenXml && enableOfficeOptimize && cleanUnusedObjects;
-                        var shouldCompressImages = isOpenXml
-                            ? (enableOfficeOptimize && compressEmbeddedImages)
-                            : (enableImageOptimize && compressImages);
-                        var passConvertToWebP = isOpenXml
-                            ? (enableOfficeOptimize && convertToWebP)
-                            : (enableImageOptimize && convertToWebP);
-                        var passCompressMedia = isOpenXml && compressMedia;
+                        var passStrip = enableOfficeOptimize && stripOfficeMetadata;
+                        var passClean = enableOfficeOptimize && cleanUnusedObjects;
+                        var shouldCompressImages = enableOfficeOptimize && compressEmbeddedImages;
+                        var passConvertToWebP = enableOfficeOptimize && convertToWebP;
+                        var passCompressMedia = enableOfficeOptimize && compressMedia;
+                        var passResetCellSelection = enableOfficeOptimize && resetCellSelection;
 
-                        file.Status = isOpenXml ? "パッケージ最適化中" : "処理中";
+                        file.Status = Properties.Loc.StatusOptimizingPackage;
                         long optimizedSize = _processingService.Optimize(
                             originalPath, 
                             tempPath, 
@@ -1087,6 +1113,7 @@ public class MainViewModel : INotifyPropertyChanged
                             oxipngLevel,
                             useJpegli,
                             cjpegliPath,
+                            resetCellSelection: passResetCellSelection,
                             logAction: LogDebug);
 
                         int retries = 5;
@@ -1115,18 +1142,18 @@ public class MainViewModel : INotifyPropertyChanged
                         tempPath = null; // 正常完了したのでクリア
 
                         file.OptimizedSize = optimizedSize;
-                        file.Status = "完了";
+                        file.Status = Properties.Loc.StatusCompleted;
                         LogDebug($"OK  {file.FileName} ({file.OriginalSize} -> {optimizedSize} bytes)");
                         Interlocked.Increment(ref success);
                     }
                     catch (Exception ex)
                     {
-                        file.Status = "エラー";
+                        file.Status = Properties.Loc.StatusErrorState;
                         Interlocked.Increment(ref errors);
                         LogDebug($"ERR {file.FileName}: {ex.Message}");
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
-                            StatusText = $"エラー: {file.FileName} - {ex.Message}";
+                            StatusText = string.Format(Properties.Loc.StatusErrorMsg, file.FileName, ex.Message);
                         });
 
                         // 残った一時ファイルがあればクリーンアップ
@@ -1140,7 +1167,7 @@ public class MainViewModel : INotifyPropertyChanged
                         int current = Interlocked.Increment(ref processed);
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
-                            StatusText = $"最適化中... ({current}/{targets.Count})";
+                            StatusText = string.Format(Properties.Loc.StatusOptimizingProgress, current, targets.Count);
                             ProgressValue = current;
                         });
                         file.IsProcessing = false;
@@ -1153,14 +1180,34 @@ public class MainViewModel : INotifyPropertyChanged
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
+        catch (OperationCanceledException)
+        {
+            LogDebug("最適化処理がキャンセルされました。");
+        }
+        catch (AggregateException ae) when (ae.InnerExceptions.Any(e => e is OperationCanceledException))
+        {
+            LogDebug("最適化処理がキャンセルされました。");
+        }
         finally
         {
+            var isCancelled = token.IsCancellationRequested;
+            _cts?.Dispose();
+            _cts = null;
             IsProcessing = false;
-            StatusText = $"最適化完了: {success} 成功, {errors} 失敗";
-            LogDebug(StatusText);
-            if (PlaySoundOnComplete)
+
+            if (isCancelled)
             {
-                System.Media.SystemSounds.Asterisk.Play();
+                StatusText = Properties.Loc.StatusOptimizeCancelled;
+                LogDebug($"最適化キャンセル: {success} 成功, {errors} 失敗");
+            }
+            else
+            {
+                StatusText = string.Format(Properties.Loc.StatusOptimizeDone, success, errors);
+                LogDebug(StatusText);
+                if (PlaySoundOnComplete)
+                {
+                    System.Media.SystemSounds.Asterisk.Play();
+                }
             }
         }
     }
@@ -1279,14 +1326,14 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 if (opt.TryGetValue("EnableOfficeOptimize", out var val))
                     EnableOfficeOptimize = bool.TryParse(val, out var b) ? b : EnableOfficeOptimize;
-                if (opt.TryGetValue("EnableImageOptimize", out val))
-                    EnableImageOptimize = bool.TryParse(val, out var b) ? b : EnableImageOptimize;
+
                 if (opt.TryGetValue("StripOfficeMetadata", out val))
                     StripOfficeMetadata = bool.TryParse(val, out var b) ? b : StripOfficeMetadata;
                 if (opt.TryGetValue("CleanUnusedObjects", out val))
                     CleanUnusedObjects = bool.TryParse(val, out var b) ? b : CleanUnusedObjects;
-                if (opt.TryGetValue("CompressImages", out val))
-                    CompressImages = bool.TryParse(val, out var b) ? b : CompressImages;
+                if (opt.TryGetValue("ResetCellSelection", out val))
+                    ResetCellSelection = bool.TryParse(val, out var b) ? b : ResetCellSelection;
+
                 if (opt.TryGetValue("ConvertToWebP", out val))
                     ConvertToWebP = bool.TryParse(val, out var b) ? b : ConvertToWebP;
                 if (opt.TryGetValue("WebPQuality", out val))
@@ -1494,10 +1541,11 @@ public class MainViewModel : INotifyPropertyChanged
             var opt = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["EnableOfficeOptimize"] = EnableOfficeOptimize.ToString(),
-                ["EnableImageOptimize"] = EnableImageOptimize.ToString(),
+
                 ["StripOfficeMetadata"] = StripOfficeMetadata.ToString(),
                 ["CleanUnusedObjects"] = CleanUnusedObjects.ToString(),
-                ["CompressImages"] = CompressImages.ToString(),
+                ["ResetCellSelection"] = ResetCellSelection.ToString(),
+
                 ["ConvertToWebP"] = ConvertToWebP.ToString(),
                 ["WebPQuality"] = WebPQuality.ToString(),
                 ["CompressEmbeddedImages"] = CompressEmbeddedImages.ToString(),
@@ -1542,5 +1590,8 @@ public class MainViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    {
+        if (!_suppressNotifications)
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
 }

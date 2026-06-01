@@ -108,24 +108,24 @@ public class PipelineStep : INotifyPropertyChanged
     public bool Enabled
     {
         get => _enabled;
-        set { _enabled = value; OnPropertyChanged(); }
+        set { if (_enabled == value) return; _enabled = value; OnPropertyChanged(); }
     }
 
     public string DisplayName => Type switch
     {
-        PipelineStepType.Grayscale => "グレースケール化",
-        PipelineStepType.ExifAutoRotate => "Exif自動回転",
-        PipelineStepType.Crop => "トリミング",
-        PipelineStepType.Rotate => "回転",
-        PipelineStepType.Padding => "余白の追加",
-        PipelineStepType.Sharpen => "アンシャープマスク",
-        PipelineStepType.ColorAdjust => "色調補正",
-        PipelineStepType.ToneCurve => "トーンカーブ",
-        PipelineStepType.FormatConvert => "フォーマット変換",
-        PipelineStepType.Resize => "リサイズ",
-        PipelineStepType.Optimize => "最適化",
-        PipelineStepType.Posterize => "減色",
-        PipelineStepType.Composite => "画像合成",
+        PipelineStepType.Grayscale => Properties.Loc.StepGrayscale,
+        PipelineStepType.ExifAutoRotate => Properties.Loc.StepExifAutoRotate,
+        PipelineStepType.Crop => Properties.Loc.StepCrop,
+        PipelineStepType.Rotate => Properties.Loc.StepRotate,
+        PipelineStepType.Padding => Properties.Loc.StepPadding,
+        PipelineStepType.Sharpen => Properties.Loc.StepSharpen,
+        PipelineStepType.ColorAdjust => Properties.Loc.StepColorAdjust,
+        PipelineStepType.ToneCurve => Properties.Loc.StepToneCurve,
+        PipelineStepType.FormatConvert => Properties.Loc.StepFormatConvert,
+        PipelineStepType.Resize => Properties.Loc.StepResize,
+        PipelineStepType.Optimize => Properties.Loc.StepOptimize,
+        PipelineStepType.Posterize => Properties.Loc.StepPosterize,
+        PipelineStepType.Composite => Properties.Loc.StepComposite,
         _ => Type.ToString()
     };
 
