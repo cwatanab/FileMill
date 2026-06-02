@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <UseAppHost>false</UseAppHost>
+    <UseAppHost>true</UseAppHost>
     <StartupObject>FileMill.Program</StartupObject>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
@@ -34,10 +34,6 @@
       <ToolsFiles Include="tools\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(ToolsFiles)" DestinationFolder="$(OutputPath)\tools\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="Exists('tools')" />
-  </Target>
-
-  <Target Name="BuildLauncher" AfterTargets="Build">
-    <Exec Command="gcc -Os -s -mwindows &quot;$(MSBuildProjectDirectory)\launcher.c&quot; -lshell32 -o &quot;$(TargetDir)FileMill.exe&quot;" />
   </Target>
 
 </Project>

@@ -68,6 +68,9 @@ public class MainViewModel : INotifyPropertyChanged
 
     // --- パイプライン ---
     public ObservableCollection<PipelineStep> Steps { get; } = [];
+    public ObservableCollection<string> ImagePresetNames { get; } = [];
+    public ObservableCollection<string> OfficePresetNames { get; } = [];
+    public ObservableCollection<string> PdfPresetNames { get; } = [];
 
     // 固定ステップのショートカットプロパティ
     public PipelineStep? GrayscaleStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Grayscale);
@@ -226,6 +229,26 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _compressEmbeddedImages;
         set { _compressEmbeddedImages = value; OnPropertyChanged(); }
+    }
+
+    private bool _resizeEmbeddedImagesByPpi;
+    public bool ResizeEmbeddedImagesByPpi
+    {
+        get => _resizeEmbeddedImagesByPpi;
+        set { _resizeEmbeddedImagesByPpi = value; OnPropertyChanged(); }
+    }
+
+    private int _targetImagePpi = 220;
+    public int TargetImagePpi
+    {
+        get => _targetImagePpi;
+        set
+        {
+            var next = Math.Clamp(value, 72, 600);
+            if (_targetImagePpi == next) return;
+            _targetImagePpi = next;
+            OnPropertyChanged();
+        }
     }
 
     private bool _convertToWebP;
@@ -488,6 +511,57 @@ public class MainViewModel : INotifyPropertyChanged
     public string PdfOutputSummary
         => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, PdfFiles.Count);
 
+    private string _selectedImagePresetName = "";
+    public string SelectedImagePresetName
+    {
+        get => _selectedImagePresetName;
+        set
+        {
+            if (_selectedImagePresetName == value) return;
+            _selectedImagePresetName = value;
+            OnPropertyChanged();
+            if (SaveImagePresetCommand is RelayCommand command)
+                command.RaiseCanExecuteChanged();
+
+            if (!_suppressNotifications && ImagePresetNames.Contains(value))
+                LoadPreset("Image", value, "画像変換");
+        }
+    }
+
+    private string _selectedOfficePresetName = "";
+    public string SelectedOfficePresetName
+    {
+        get => _selectedOfficePresetName;
+        set
+        {
+            if (_selectedOfficePresetName == value) return;
+            _selectedOfficePresetName = value;
+            OnPropertyChanged();
+            if (SaveOfficePresetCommand is RelayCommand command)
+                command.RaiseCanExecuteChanged();
+
+            if (!_suppressNotifications && OfficePresetNames.Contains(value))
+                LoadPreset("Office", value, "Office変換");
+        }
+    }
+
+    private string _selectedPdfPresetName = "";
+    public string SelectedPdfPresetName
+    {
+        get => _selectedPdfPresetName;
+        set
+        {
+            if (_selectedPdfPresetName == value) return;
+            _selectedPdfPresetName = value;
+            OnPropertyChanged();
+            if (SavePdfPresetCommand is RelayCommand command)
+                command.RaiseCanExecuteChanged();
+
+            if (!_suppressNotifications && PdfPresetNames.Contains(value))
+                LoadPreset("Pdf", value, "PDF最適化");
+        }
+    }
+
     // --- 設定ウィンドウの管理 ---
     // View 側がここに SettingsWindow を開く処理を登録する
     public Action<string>? RequestOpenSettings { get; set; }
@@ -545,9 +619,15 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand RemovePdfFileCommand { get; }
     public ICommand ClearPdfFilesCommand { get; }
     public ICommand ProcessPdfOptimizeCommand { get; }
+    public ICommand RunOrCancelImageCommand { get; }
+    public ICommand RunOrCancelOfficeCommand { get; }
+    public ICommand RunOrCancelPdfCommand { get; }
     public ICommand CancelCommand { get; }
     public ICommand BrowseCompositeCommand { get; }
     public ICommand ToggleDebugCommand { get; }
+    public ICommand SaveImagePresetCommand { get; }
+    public ICommand SaveOfficePresetCommand { get; }
+    public ICommand SavePdfPresetCommand { get; }
 
     public MainViewModel(string? settingsPath = null)
     {
@@ -563,19 +643,25 @@ public class MainViewModel : INotifyPropertyChanged
         BrowseOutputCommand = new RelayCommand(BrowseOutput, _ => !IsProcessing);
         BrowseToolPathCommand = new RelayCommand(BrowseToolPath, _ => !IsProcessing);
         ProcessCommand = new RelayCommand(async _ => await ProcessAsync(), _ => !IsProcessing && Files.Count > 0);
+        RunOrCancelImageCommand = new RelayCommand(async _ => await RunImageOrCancelAsync(), _ => IsProcessing || Files.Count > 0);
         OpenModalCommand = new RelayCommand(OpenModal, _ => !IsProcessing);
         BrowseCompositeCommand = new RelayCommand(BrowseComposite, _ => !IsProcessing);
         ToggleDebugCommand = new RelayCommand(_ => IsDebugVisible = !IsDebugVisible);
+        SaveImagePresetCommand = new RelayCommand(SaveImagePreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedImagePresetName));
+        SaveOfficePresetCommand = new RelayCommand(SaveOfficePreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedOfficePresetName));
+        SavePdfPresetCommand = new RelayCommand(SavePdfPreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedPdfPresetName));
         AddOptimizeFilesCommand = new RelayCommand(AddOptimizeFiles, _ => !IsProcessing);
         AddOptimizeFolderCommand = new RelayCommand(AddOptimizeFolder, _ => !IsProcessing);
         RemoveOptimizeFileCommand = new RelayCommand(RemoveOptimizeFile, _ => !IsProcessing);
         ClearOptimizeFilesCommand = new RelayCommand(ClearOptimizeFiles, _ => !IsProcessing);
         ProcessOptimizeCommand = new RelayCommand(async _ => await ProcessOptimizeAsync(), _ => !IsProcessing && OptimizeFiles.Count > 0);
+        RunOrCancelOfficeCommand = new RelayCommand(async _ => await RunOfficeOrCancelAsync(), _ => IsProcessing || OptimizeFiles.Count > 0);
         AddPdfFilesCommand = new RelayCommand(AddPdfFiles, _ => !IsProcessing);
         AddPdfFolderCommand = new RelayCommand(AddPdfFolder, _ => !IsProcessing);
         RemovePdfFileCommand = new RelayCommand(RemovePdfFile, _ => !IsProcessing);
         ClearPdfFilesCommand = new RelayCommand(ClearPdfFiles, _ => !IsProcessing);
         ProcessPdfOptimizeCommand = new RelayCommand(async _ => await ProcessPdfOptimizeAsync(), _ => !IsProcessing && PdfFiles.Count > 0);
+        RunOrCancelPdfCommand = new RelayCommand(async _ => await RunPdfOrCancelAsync(), _ => IsProcessing || PdfFiles.Count > 0);
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsProcessing);
 
         // ファイルリスト変更時に空表示を更新
@@ -590,6 +676,7 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IsOptimizeFileListEmpty));
             OnPropertyChanged(nameof(OptimizeOutputSummary));
             ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)RunOrCancelOfficeCommand).RaiseCanExecuteChanged();
         };
 
         PdfFiles.CollectionChanged += (_, _) =>
@@ -597,6 +684,7 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IsPdfFileListEmpty));
             OnPropertyChanged(nameof(PdfOutputSummary));
             ((RelayCommand)ProcessPdfOptimizeCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)RunOrCancelPdfCommand).RaiseCanExecuteChanged();
         };
 
         // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
@@ -637,6 +725,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         // 設定の読み込み
         LoadSettings(settingsPath);
+        LoadPresetNames();
+        LoadLastUsedPresets();
         _suppressNotifications = false;
     }
 
@@ -997,6 +1087,39 @@ public class MainViewModel : INotifyPropertyChanged
         StatusText = Properties.Loc.StatusCancelling;
     }
 
+    private async Task RunImageOrCancelAsync()
+    {
+        if (IsProcessing)
+        {
+            Cancel();
+            return;
+        }
+
+        await ProcessAsync();
+    }
+
+    private async Task RunOfficeOrCancelAsync()
+    {
+        if (IsProcessing)
+        {
+            Cancel();
+            return;
+        }
+
+        await ProcessOptimizeAsync();
+    }
+
+    private async Task RunPdfOrCancelAsync()
+    {
+        if (IsProcessing)
+        {
+            Cancel();
+            return;
+        }
+
+        await ProcessPdfOptimizeAsync();
+    }
+
     private void RefreshCommands()
     {
         ((RelayCommand)CancelCommand).RaiseCanExecuteChanged();
@@ -1010,24 +1133,31 @@ public class MainViewModel : INotifyPropertyChanged
         ((RelayCommand)MoveStepDownCommand).RaiseCanExecuteChanged();
         ((RelayCommand)BrowseOutputCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ProcessCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RunOrCancelImageCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenModalCommand).RaiseCanExecuteChanged();
         ((RelayCommand)AddOptimizeFilesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)AddOptimizeFolderCommand).RaiseCanExecuteChanged();
         ((RelayCommand)RemoveOptimizeFileCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ClearOptimizeFilesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RunOrCancelOfficeCommand).RaiseCanExecuteChanged();
         ((RelayCommand)AddPdfFilesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)AddPdfFolderCommand).RaiseCanExecuteChanged();
         ((RelayCommand)RemovePdfFileCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ClearPdfFilesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ProcessPdfOptimizeCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RunOrCancelPdfCommand).RaiseCanExecuteChanged();
         ((RelayCommand)BrowseCompositeCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)SaveImagePresetCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)SaveOfficePresetCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)SavePdfPresetCommand).RaiseCanExecuteChanged();
     }
 
     private void UpdateSummaries()
     {
         OnPropertyChanged(nameof(OutputSummary));
         ((RelayCommand)ProcessCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RunOrCancelImageCommand).RaiseCanExecuteChanged();
     }
 
     private void OpenModal(object? parameter)
@@ -1241,6 +1371,8 @@ public class MainViewModel : INotifyPropertyChanged
         var stripOfficeMetadata = StripOfficeMetadata;
         var cleanUnusedObjects = CleanUnusedObjects;
         var compressEmbeddedImages = CompressEmbeddedImages;
+        var resizeEmbeddedImagesByPpi = ResizeEmbeddedImagesByPpi;
+        var targetImagePpi = TargetImagePpi;
 
         var convertToWebP = ConvertToWebP;
         var convertOfficeToPdf = ConvertOfficeToPdf;
@@ -1317,6 +1449,7 @@ public class MainViewModel : INotifyPropertyChanged
                             var passStrip = enableOfficeOptimize && stripOfficeMetadata;
                             var passClean = enableOfficeOptimize && cleanUnusedObjects;
                             var shouldCompressImages = enableOfficeOptimize && compressEmbeddedImages;
+                            var passResizeImagesByPpi = enableOfficeOptimize && resizeEmbeddedImagesByPpi;
                             var passConvertToWebP = enableOfficeOptimize && convertToWebP;
                             var passCompressMedia = enableOfficeOptimize && compressMedia;
                             var passResetCellSelection = enableOfficeOptimize && resetCellSelection;
@@ -1340,6 +1473,8 @@ public class MainViewModel : INotifyPropertyChanged
                                 oxipngLevel,
                                 useJpegli,
                                 cjpegliPath,
+                                resizeImagesByPpi: passResizeImagesByPpi,
+                                targetImagePpi: targetImagePpi,
                                 resetCellSelection: passResetCellSelection,
                                 logAction: LogDebug);
                         }
@@ -1688,6 +1823,150 @@ public class MainViewModel : INotifyPropertyChanged
         return Path.Combine(appData, "FileMill", "settings.ini");
     }
 
+    private static string GetPresetDirectoryPath(string presetType)
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(appData, "FileMill", "presets", presetType.ToLowerInvariant());
+    }
+
+    private static string SanitizePresetName(string name)
+    {
+        var sanitized = name.Trim();
+        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+            sanitized = sanitized.Replace(invalidChar, '_');
+        return sanitized;
+    }
+
+    private static string GetPresetFilePath(string presetType, string presetName)
+    {
+        return Path.Combine(GetPresetDirectoryPath(presetType), SanitizePresetName(presetName) + ".ini");
+    }
+
+    private void LoadPresetNames()
+    {
+        LoadPresetNames(ImagePresetNames, "Image");
+        LoadPresetNames(OfficePresetNames, "Office");
+        LoadPresetNames(PdfPresetNames, "Pdf");
+    }
+
+    private void LoadPresetNames(ObservableCollection<string> target, string presetType)
+    {
+        target.Clear();
+
+        var dir = GetPresetDirectoryPath(presetType);
+        if (!Directory.Exists(dir))
+            return;
+
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(dir, "*.ini")
+                         .OrderBy(Path.GetFileNameWithoutExtension, StringComparer.OrdinalIgnoreCase))
+            {
+                target.Add(Path.GetFileNameWithoutExtension(file));
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to load {presetType} presets: {ex.Message}");
+        }
+    }
+
+    private void LoadPreset(string presetType, string presetName, string displayName, bool updateStatus = true)
+    {
+        var sanitizedName = SanitizePresetName(presetName);
+        if (string.IsNullOrWhiteSpace(sanitizedName))
+            return;
+
+        var path = GetPresetFilePath(presetType, sanitizedName);
+        if (!File.Exists(path))
+            return;
+
+        LoadSettings(path);
+        if (updateStatus)
+            StatusText = $"{displayName}プリセットを適用しました: {sanitizedName}";
+    }
+
+    private void LoadLastUsedPresets()
+    {
+        LoadLastUsedPreset("Image", SelectedImagePresetName, ImagePresetNames, name => SelectedImagePresetName = name, "画像変換");
+        LoadLastUsedPreset("Office", SelectedOfficePresetName, OfficePresetNames, name => SelectedOfficePresetName = name, "Office変換");
+        LoadLastUsedPreset("Pdf", SelectedPdfPresetName, PdfPresetNames, name => SelectedPdfPresetName = name, "PDF最適化");
+    }
+
+    private void LoadLastUsedPreset(string presetType, string selectedPresetName, ObservableCollection<string> availablePresetNames, Action<string> selectPreset, string displayName)
+    {
+        var presetName = SanitizePresetName(selectedPresetName);
+        var matchedPresetName = string.IsNullOrWhiteSpace(presetName)
+            ? null
+            : availablePresetNames.FirstOrDefault(name => string.Equals(name, presetName, StringComparison.OrdinalIgnoreCase));
+
+        if (string.IsNullOrWhiteSpace(matchedPresetName))
+        {
+            selectPreset("");
+            return;
+        }
+
+        selectPreset(matchedPresetName);
+        LoadPreset(presetType, matchedPresetName, displayName, updateStatus: false);
+    }
+
+    private void SaveImagePreset(object? parameter)
+    {
+        SavePreset(
+            "Image",
+            SelectedImagePresetName,
+            name => SelectedImagePresetName = name,
+            () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: false, includeImage: true),
+            "画像変換");
+    }
+
+    private void SaveOfficePreset(object? parameter)
+    {
+        SavePreset(
+            "Office",
+            SelectedOfficePresetName,
+            name => SelectedOfficePresetName = name,
+            () => CreateSettingsData(includeGeneral: false, includeOffice: true, includePdf: false, includeImage: false),
+            "Office変換");
+    }
+
+    private void SavePdfPreset(object? parameter)
+    {
+        SavePreset(
+            "Pdf",
+            SelectedPdfPresetName,
+            name => SelectedPdfPresetName = name,
+            () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: true, includeImage: false),
+            "PDF最適化");
+    }
+
+    private void SavePreset(
+        string presetType,
+        string selectedPresetName,
+        Action<string> selectPreset,
+        Func<Dictionary<string, Dictionary<string, string>>> createData,
+        string displayName)
+    {
+        var presetName = SanitizePresetName(selectedPresetName);
+        if (string.IsNullOrWhiteSpace(presetName))
+        {
+            StatusText = "プリセット名を入力してください。";
+            return;
+        }
+
+        try
+        {
+            SettingsService.Save(GetPresetFilePath(presetType, presetName), createData());
+            LoadPresetNames();
+            selectPreset(presetName);
+            StatusText = $"{displayName}プリセットを保存しました: {presetName}";
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to save {presetType} preset: {ex.Message}");
+        }
+    }
+
     public void LoadSettings(string? customPath = null)
     {
         try
@@ -1728,9 +2007,15 @@ public class MainViewModel : INotifyPropertyChanged
                     WindowState = ws == WindowState.Minimized ? WindowState.Normal : ws;
                 if (general.TryGetValue("SelectedTabIndex", out val) && int.TryParse(val, out var idx))
                     SelectedTabIndex = idx;
+                if (general.TryGetValue("LastImagePresetName", out val))
+                    SelectedImagePresetName = val;
+                if (general.TryGetValue("LastOfficePresetName", out val))
+                    SelectedOfficePresetName = val;
+                if (general.TryGetValue("LastPdfPresetName", out val))
+                    SelectedPdfPresetName = val;
             }
 
-            if (data.TryGetValue("File", out var opt))
+            if (data.TryGetValue("Office", out var opt))
             {
                 if (opt.TryGetValue("EnableOfficeOptimize", out var val))
                     EnableOfficeOptimize = bool.TryParse(val, out var b) ? b : EnableOfficeOptimize;
@@ -1752,6 +2037,10 @@ public class MainViewModel : INotifyPropertyChanged
                     WebPQuality = int.TryParse(val, out var i) ? i : WebPQuality;
                 if (opt.TryGetValue("CompressEmbeddedImages", out val))
                     CompressEmbeddedImages = bool.TryParse(val, out var b) ? b : CompressEmbeddedImages;
+                if (opt.TryGetValue("ResizeEmbeddedImagesByPpi", out val))
+                    ResizeEmbeddedImagesByPpi = bool.TryParse(val, out var b) ? b : ResizeEmbeddedImagesByPpi;
+                if (opt.TryGetValue("TargetImagePpi", out val))
+                    TargetImagePpi = int.TryParse(val, out var i) ? i : TargetImagePpi;
                 if (opt.TryGetValue("CompressMedia", out val))
                     CompressMedia = bool.TryParse(val, out var b) ? b : CompressMedia;
                 if (opt.TryGetValue("MediaVideoCrf", out val))
@@ -1952,12 +2241,16 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public void SaveSettings(string? customPath = null)
+    private Dictionary<string, Dictionary<string, string>> CreateSettingsData(
+        bool includeGeneral,
+        bool includeOffice = true,
+        bool includePdf = true,
+        bool includeImage = true)
     {
-        try
-        {
-            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
+        if (includeGeneral)
+        {
             var general = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["OutputDirectory"] = OutputDirectory ?? "",
@@ -1972,10 +2265,16 @@ public class MainViewModel : INotifyPropertyChanged
                 ["WindowLeft"] = WindowLeft.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["WindowTop"] = WindowTop.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["WindowState"] = (WindowState == WindowState.Minimized ? WindowState.Normal : WindowState).ToString(),
-                ["SelectedTabIndex"] = SelectedTabIndex.ToString()
+                ["SelectedTabIndex"] = SelectedTabIndex.ToString(),
+                ["LastImagePresetName"] = SelectedImagePresetName ?? "",
+                ["LastOfficePresetName"] = SelectedOfficePresetName ?? "",
+                ["LastPdfPresetName"] = SelectedPdfPresetName ?? ""
             };
             data["General"] = general;
+        }
 
+        if (includeOffice)
+        {
             var opt = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["EnableOfficeOptimize"] = EnableOfficeOptimize.ToString(),
@@ -1989,6 +2288,8 @@ public class MainViewModel : INotifyPropertyChanged
                 ["ConvertOfficeToPdfA"] = ConvertOfficeToPdfA.ToString(),
                 ["WebPQuality"] = WebPQuality.ToString(),
                 ["CompressEmbeddedImages"] = CompressEmbeddedImages.ToString(),
+                ["ResizeEmbeddedImagesByPpi"] = ResizeEmbeddedImagesByPpi.ToString(),
+                ["TargetImagePpi"] = TargetImagePpi.ToString(),
                 ["CompressMedia"] = CompressMedia.ToString(),
                 ["MediaVideoCrf"] = MediaVideoCrf.ToString(),
                 ["MediaVideoCodec"] = MediaVideoCodec ?? "",
@@ -2000,8 +2301,11 @@ public class MainViewModel : INotifyPropertyChanged
                 ["UseJpegli"] = UseJpegli.ToString(),
                 ["CjpegliPath"] = CjpegliPath ?? ""
             };
-            data["File"] = opt;
+            data["Office"] = opt;
+        }
 
+        if (includePdf)
+        {
             var pdf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["QpdfPath"] = QpdfPath ?? "",
@@ -2017,8 +2321,10 @@ public class MainViewModel : INotifyPropertyChanged
                 ["Linearize"] = PdfLinearize.ToString()
             };
             data["Pdf"] = pdf;
+        }
 
-            // 有効ステップのみ種別をセクション名にして保存
+        if (includeImage)
+        {
             var enabledSteps = Steps.Where(s => s.Enabled).ToList();
             var pipeline = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -2032,9 +2338,17 @@ public class MainViewModel : INotifyPropertyChanged
                 SaveStepProperties(step, stepData);
                 data["Image." + step.Type.ToString()] = stepData;
             }
+        }
 
+        return data;
+    }
+
+    public void SaveSettings(string? customPath = null)
+    {
+        try
+        {
             var path = customPath ?? GetSettingsFilePath();
-            SettingsService.Save(path, data);
+            SettingsService.Save(path, CreateSettingsData(includeGeneral: true));
         }
         catch (Exception ex)
         {

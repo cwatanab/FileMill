@@ -27,6 +27,8 @@
     <SolidColorBrush x:Key="GearButtonPressedForeground" Color="#0078D4"/>
     <SolidColorBrush x:Key="ToolbarButtonHoverBackground" Color="#E5E5E5"/>
     <SolidColorBrush x:Key="ToolbarButtonPressedBackground" Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="ButtonBackground" Color="White"/>
+    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#D0D0D0"/>
     <SolidColorBrush x:Key="SettingsBackground" Color="White"/>
     <SolidColorBrush x:Key="SettingsBorderBrush" Color="#DFDFDF"/>
     <SolidColorBrush x:Key="TabBackground" Color="Transparent"/>
@@ -196,16 +198,33 @@
                                 </ControlTemplate>
                             </ToggleButton.Template>
                         </ToggleButton>
-                        <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" 
+                        <ContentPresenter x:Name="ContentSite"
+                                          Content="{TemplateBinding SelectionBoxItem}" 
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" 
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" 
+                                          Grid.Column="0"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                           IsHitTestVisible="false" 
                                           Margin="{TemplateBinding Padding}" 
                                           SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Grid.Column="0"
+                                 Margin="{TemplateBinding Padding}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                 IsReadOnly="{Binding IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}"
+                                 Padding="0"
+                                 Visibility="Hidden"
+                                 VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="true">
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Opacity" Value="0.5"/>
                         </Trigger>
@@ -455,8 +474,8 @@
 
     <Style TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="6,3"/>
         <Setter Property="Cursor" Value="Hand"/>

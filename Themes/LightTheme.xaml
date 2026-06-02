@@ -25,6 +25,8 @@
     <SolidColorBrush x:Key="GearButtonPressedForeground" Color="#0078D4"/>
     <SolidColorBrush x:Key="ToolbarButtonHoverBackground" Color="#E5E5E5"/>
     <SolidColorBrush x:Key="ToolbarButtonPressedBackground" Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="ButtonBackground" Color="White"/>
+    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#D0D0D0"/>
     <SolidColorBrush x:Key="SettingsBackground" Color="White"/>
     <SolidColorBrush x:Key="SettingsBorderBrush" Color="#DFDFDF"/>
     <SolidColorBrush x:Key="TabBackground" Color="Transparent"/>

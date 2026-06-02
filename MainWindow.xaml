@@ -321,7 +321,13 @@
 
         <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" BorderThickness="0" Background="Transparent" Padding="0" Margin="0,2,0,0">
 
-            <TabItem Header="画像変換" FontSize="13" Padding="16,6">
+            <TabItem FontSize="13" Padding="16,6">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="🖼" Margin="0,0,6,0"/>
+                        <TextBlock Text="画像変換"/>
+                    </StackPanel>
+                </TabItem.Header>
 
                 <DockPanel>
 
@@ -339,9 +345,9 @@
 
                                     <ColumnDefinition Width="Auto"/>
 
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="2*"/>
 
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
 
                                 </Grid.ColumnDefinitions>
 
@@ -381,7 +387,7 @@
 
                                 <!-- 中央：出力先 -->
 
-                                <Grid Grid.Column="1" Margin="16,0" MaxWidth="560">
+                                <Grid Grid.Column="1" Margin="16,0" MinWidth="240">
 
                                     <Grid.ColumnDefinitions>
 
@@ -405,33 +411,80 @@
 
                                 <!-- 右側：変換実行ボタン -->
 
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Grid Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="300">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" MinWidth="150" Height="24" Margin="0,0,6,0"
+                                              IsEditable="True"
+                                              ItemsSource="{Binding ImagePresetNames}"
+                                              Text="{Binding SelectedImagePresetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              ToolTip="プリセット"/>
+                                    <Button Grid.Column="1" Command="{Binding SaveImagePresetCommand}" ToolTip="現在の画像変換設定をプリセット保存" Style="{StaticResource ToolbarButtonStyle}" Margin="0,0,8,0">
+                                        <TextBlock Text="💾" FontSize="14"/>
+                                    </Button>
 
-                                    <Button Command="{Binding ProcessCommand}" ToolTip="変換開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
+                                    <Button Grid.Column="2" Command="{Binding RunOrCancelImageCommand}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                <Setter Property="Background" Value="{DynamicResource AccentBackground}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}"/>
+                                                <Setter Property="ToolTip" Value="変換開始"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}"/>
+                                                        <Setter Property="ToolTip" Value="処理をキャンセル"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
 
-                                        <StackPanel Orientation="Horizontal">
+                                        <Grid>
 
-                                            <TextBlock Text="▶" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
 
-                                            <TextBlock Text="変換" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <TextBlock Text="▶" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                        </StackPanel>
+                                                <TextBlock Text="変換" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                                <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                        </Grid>
 
                                     </Button>
 
-                                    <Button Command="{Binding CancelCommand}" ToolTip="処理をキャンセル" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Width="100" Height="28">
-
-                                        <StackPanel Orientation="Horizontal">
-
-                                            <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-
-                                            <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
-
-                                        </StackPanel>
-
-                                    </Button>
-
-                                </StackPanel>
+                                </Grid>
 
                             </Grid>
 
@@ -1039,7 +1092,13 @@
 
             
 
-            <TabItem Header="Office ファイル変換" FontSize="13" Padding="16,6">
+            <TabItem FontSize="13" Padding="16,6">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="📊" Margin="0,0,6,0"/>
+                        <TextBlock Text="Office ファイル変換"/>
+                    </StackPanel>
+                </TabItem.Header>
 
                 <DockPanel>
 
@@ -1057,9 +1116,9 @@
 
                                     <ColumnDefinition Width="Auto"/>
 
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="2*"/>
 
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
 
                                 </Grid.ColumnDefinitions>
 
@@ -1099,7 +1158,7 @@
 
                                 <!-- 中央：出力先 -->
 
-                                <Grid Grid.Column="1" Margin="16,0" MaxWidth="560">
+                                <Grid Grid.Column="1" Margin="16,0" MinWidth="240">
 
                                     <Grid.ColumnDefinitions>
 
@@ -1123,33 +1182,80 @@
 
                                 <!-- 右側：変換実行ボタン -->
 
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Grid Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="300">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" MinWidth="150" Height="24" Margin="0,0,6,0"
+                                              IsEditable="True"
+                                              ItemsSource="{Binding OfficePresetNames}"
+                                              Text="{Binding SelectedOfficePresetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              ToolTip="プリセット"/>
+                                    <Button Grid.Column="1" Command="{Binding SaveOfficePresetCommand}" ToolTip="現在のOffice変換設定をプリセット保存" Style="{StaticResource ToolbarButtonStyle}" Margin="0,0,8,0">
+                                        <TextBlock Text="💾" FontSize="14"/>
+                                    </Button>
 
-                                    <Button Command="{Binding ProcessOptimizeCommand}" ToolTip="変換を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
+                                    <Button Grid.Column="2" Command="{Binding RunOrCancelOfficeCommand}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                <Setter Property="Background" Value="{DynamicResource AccentBackground}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}"/>
+                                                <Setter Property="ToolTip" Value="変換を開始"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}"/>
+                                                        <Setter Property="ToolTip" Value="処理をキャンセル"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
 
-                                        <StackPanel Orientation="Horizontal">
+                                        <Grid>
 
-                                            <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
 
-                                            <TextBlock Text="変換実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                        </StackPanel>
+                                                <TextBlock Text="変換実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                                <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                        </Grid>
 
                                     </Button>
 
-                                    <Button Command="{Binding CancelCommand}" ToolTip="処理をキャンセル" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Width="100" Height="28">
-
-                                        <StackPanel Orientation="Horizontal">
-
-                                            <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-
-                                            <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
-
-                                        </StackPanel>
-
-                                    </Button>
-
-                                </StackPanel>
+                                </Grid>
 
                             </Grid>
 
@@ -1457,55 +1563,129 @@
 
                                     <!-- 1. Office最適化 -->
 
-                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,6">
+                                        <StackPanel>
+                                            <CheckBox x:Name="OfficeOptimizeCheck" Content="Office最適化" IsChecked="{Binding EnableOfficeOptimize, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
+                                            <StackPanel Margin="20,6,0,0" Visibility="{Binding IsChecked, ElementName=OfficeOptimizeCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <CheckBox Content="作成者・メタデータの削除" IsChecked="{Binding StripOfficeMetadata, Mode=TwoWay}" Margin="0,4" FontSize="11" ToolTip="作成者、最終保存者、編集履歴などを削除します。"/>
+                                                <CheckBox Content="未使用オブジェクトのクリーンアップ" IsChecked="{Binding CleanUnusedObjects, Mode=TwoWay}" Margin="0,4" FontSize="11" ToolTip="Officeファイルを再パックして不要なデータを減らします。"/>
 
-                                        <Grid>
+                                                <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,6,0,0">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Excel固有" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,2"/>
+                                                        <CheckBox Content="選択セルをA1に変更" IsChecked="{Binding ResetCellSelection, Mode=TwoWay}" Margin="0,4" FontSize="11" ToolTip="すべてのシートの選択セルとスクロール位置をA1にリセットします。"/>
+                                                    </StackPanel>
+                                                </Border>
 
-                                            <Grid.ColumnDefinitions>
+                                                <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,6,0,0">
+                                                    <StackPanel>
+                                                        <TextBlock Text="埋め込み画像" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,2"/>
+                                                        <CheckBox Content="文書内の画像を圧縮" IsChecked="{Binding CompressEmbeddedImages, Mode=TwoWay}" Margin="0,4" FontSize="11" ToolTip="WordやPowerPoint内の画像を圧縮し、画像WebP変換がオンならWebP化します。"/>
+                                                        <CheckBox x:Name="OfficeResizeImagePpiCheck" Content="画像解像度を PPI で制限" IsChecked="{Binding ResizeEmbeddedImagesByPpi, Mode=TwoWay}" Margin="0,4" FontSize="11" ToolTip="Office上の表示サイズから実効PPIを計算し、指定PPIを超える画像だけ縮小します。"/>
+                                                        <StackPanel Margin="20,2,0,4" Visibility="{Binding IsChecked, ElementName=OfficeResizeImagePpiCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="目標 PPI" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                            <Grid Margin="0,2,0,0">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="56"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Slider Minimum="72" Maximum="600" Value="{Binding TargetImagePpi}" TickFrequency="10" IsSnapToTickEnabled="True"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding TargetImagePpi, StringFormat={}{0} PPI}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                        <CheckBox x:Name="OfficeWebPConvertCheck" Content="画像を WebP 形式に変換" IsChecked="{Binding ConvertToWebP, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,4" FontSize="11"/>
+                                                        <StackPanel Margin="20,2,0,4" Visibility="{Binding IsChecked, ElementName=OfficeWebPConvertCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="WebP品質" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                            <Grid Margin="0,2,0,0">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="35"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Slider Minimum="10" Maximum="100" Value="{Binding WebPQuality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding WebPQuality}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                        <CheckBox x:Name="OfficeUseOxipngCheck" Content="PNG最適化に oxipng を使う" IsChecked="{Binding UseOxipng, Mode=TwoWay}" Margin="0,4" FontSize="11"/>
+                                                        <StackPanel Margin="20,2,0,4" Visibility="{Binding IsChecked, ElementName=OfficeUseOxipngCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="oxipng 最適化レベル" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                            <Grid Margin="0,2,0,0">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="30"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Slider Minimum="0" Maximum="6" Value="{Binding OxipngLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding OxipngLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                        <CheckBox Content="JPEGエンコードに jpegli を使う" IsChecked="{Binding UseJpegli, Mode=TwoWay}" Margin="0,4" FontSize="11" ToolTip="cjpegli による高品質JPEG最適化を有効にします"/>
+                                                    </StackPanel>
+                                                </Border>
 
-                                                <ColumnDefinition Width="*"/>
-
-                                                <ColumnDefinition Width="Auto"/>
-
-                                            </Grid.ColumnDefinitions>
-
-                                            <CheckBox Content="Office最適化" IsChecked="{Binding EnableOfficeOptimize, Mode=TwoWay}" VerticalAlignment="Center" FontSize="12"/>
-
-                                            <Button Grid.Column="1" Style="{StaticResource GearButtonStyle}" Command="{Binding OpenModalCommand}" CommandParameter="OfficeOptimize"/>
-
-                                        </Grid>
-
+                                                <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,6,0,0">
+                                                    <StackPanel>
+                                                        <TextBlock Text="埋め込みメディア" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,2"/>
+                                                        <CheckBox x:Name="OfficeCompressMediaCheck" Content="埋め込み動画を圧縮する" IsChecked="{Binding CompressMedia, Mode=TwoWay}" Margin="0,4" FontSize="11"/>
+                                                        <StackPanel Margin="20,2,0,0" Visibility="{Binding IsChecked, ElementName=OfficeCompressMediaCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="ビデオ品質 (CRF)" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                            <Grid Margin="0,2,0,6">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="35"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Slider Minimum="0" Maximum="51" Value="{Binding MediaVideoCrf}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding MediaVideoCrf}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                                            </Grid>
+                                                            <Grid Margin="0,4">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="72"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="映像" VerticalAlignment="Center" FontSize="11"/>
+                                                                <ComboBox Grid.Column="1" SelectedIndex="{Binding MediaVideoCodecIndex}">
+                                                                    <ComboBoxItem Content="libx264 (H.264)" FontSize="11"/>
+                                                                    <ComboBoxItem Content="libx265 (HEVC)" FontSize="11"/>
+                                                                    <ComboBoxItem Content="libvpx-vp9" FontSize="11"/>
+                                                                    <ComboBoxItem Content="libaom-av1" FontSize="11"/>
+                                                                </ComboBox>
+                                                            </Grid>
+                                                            <Grid Margin="0,4">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="72"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="音声" VerticalAlignment="Center" FontSize="11"/>
+                                                                <ComboBox Grid.Column="1" SelectedIndex="{Binding MediaAudioCodecIndex}">
+                                                                    <ComboBoxItem Content="aac (AAC)" FontSize="11"/>
+                                                                    <ComboBoxItem Content="libopus (Opus)" FontSize="11"/>
+                                                                    <ComboBoxItem Content="copy (コピー)" FontSize="11"/>
+                                                                </ComboBox>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </Border>
 
                                     <!-- 2. PDF変換 -->
-                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
-
-                                        <Grid>
-
-                                            <Grid.ColumnDefinitions>
-
-                                                <ColumnDefinition Width="*"/>
-
-                                                <ColumnDefinition Width="Auto"/>
-
-                                            </Grid.ColumnDefinitions>
-
-                                            <CheckBox Content="PDFへ変換"
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,6">
+                                        <StackPanel>
+                                            <CheckBox x:Name="OfficePdfConvertCheck"
+                                                      Content="PDFへ変換"
                                                       IsChecked="{Binding ConvertOfficeToPdf, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsOfficePdfConversionAvailable}"
                                                       ToolTip="{Binding OfficePdfConversionToolTip}"
                                                       VerticalAlignment="Center"
                                                       FontSize="12"/>
-
-                                            <Button Grid.Column="1"
-                                                    Style="{StaticResource GearButtonStyle}"
-                                                    Command="{Binding OpenModalCommand}"
-                                                    CommandParameter="OfficePdf"
-                                                    IsEnabled="{Binding IsOfficePdfConversionAvailable}"
-                                                    ToolTip="{Binding OfficePdfConversionToolTip}"/>
-
-                                        </Grid>
-
+                                            <StackPanel Margin="20,6,0,0" Visibility="{Binding IsChecked, ElementName=OfficePdfConvertCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <CheckBox Content="PDF/A 準拠"
+                                                          IsChecked="{Binding ConvertOfficeToPdfA, Mode=TwoWay}"
+                                                          IsEnabled="{Binding IsOfficePdfConversionAvailable}"
+                                                          Margin="0,4"
+                                                          FontSize="11"
+                                                          ToolTip="Word と PowerPoint は PDF/A として出力します。Excel は Microsoft Office Interop の制約により PDF/A 指定に対応していません。"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </Border>
 
 
@@ -1521,7 +1701,13 @@
                 </DockPanel>
             </TabItem>
 
-            <TabItem Header="PDF ファイル最適化" FontSize="13" Padding="16,6">
+            <TabItem FontSize="13" Padding="16,6">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="📕" Margin="0,0,6,0"/>
+                        <TextBlock Text="PDF ファイル最適化"/>
+                    </StackPanel>
+                </TabItem.Header>
 
                 <DockPanel>
 
@@ -1535,9 +1721,9 @@
 
                                     <ColumnDefinition Width="Auto"/>
 
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="2*"/>
 
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
 
                                 </Grid.ColumnDefinitions>
 
@@ -1569,7 +1755,7 @@
 
                                 </StackPanel>
 
-                                <Grid Grid.Column="1" Margin="16,0" MaxWidth="560">
+                                <Grid Grid.Column="1" Margin="16,0" MinWidth="240">
 
                                     <Grid.ColumnDefinitions>
 
@@ -1589,33 +1775,80 @@
 
                                 </Grid>
 
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Grid Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="310">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" MinWidth="150" Height="24" Margin="0,0,6,0"
+                                              IsEditable="True"
+                                              ItemsSource="{Binding PdfPresetNames}"
+                                              Text="{Binding SelectedPdfPresetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              ToolTip="プリセット"/>
+                                    <Button Grid.Column="1" Command="{Binding SavePdfPresetCommand}" ToolTip="現在のPDF最適化設定をプリセット保存" Style="{StaticResource ToolbarButtonStyle}" Margin="0,0,8,0">
+                                        <TextBlock Text="💾" FontSize="14"/>
+                                    </Button>
 
-                                    <Button Command="{Binding ProcessPdfOptimizeCommand}" ToolTip="PDF 最適化を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="110" Height="28" Margin="0,0,8,0">
+                                    <Button Grid.Column="2" Command="{Binding RunOrCancelPdfCommand}" BorderThickness="1" Width="110" Height="28" Margin="0,0,8,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                <Setter Property="Background" Value="{DynamicResource AccentBackground}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}"/>
+                                                <Setter Property="ToolTip" Value="PDF 最適化を開始"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}"/>
+                                                        <Setter Property="ToolTip" Value="処理をキャンセル"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
 
-                                        <StackPanel Orientation="Horizontal">
+                                        <Grid>
 
-                                            <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
 
-                                            <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                        </StackPanel>
+                                                <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                                <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                        </Grid>
 
                                     </Button>
 
-                                    <Button Command="{Binding CancelCommand}" ToolTip="処理をキャンセル" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Width="100" Height="28">
-
-                                        <StackPanel Orientation="Horizontal">
-
-                                            <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-
-                                            <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
-
-                                        </StackPanel>
-
-                                    </Button>
-
-                                </StackPanel>
+                                </Grid>
 
                             </Grid>
 

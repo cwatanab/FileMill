@@ -1,202 +1,71 @@
 # FileMill
 
-FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一括変換と、Office Open XML ファイルの軽量化（最適化）および PDF 変換を行います。
+FileMill は、画像・Office ファイル・PDF をまとめて変換、軽量化する Windows 向けデスクトップアプリです。
 
-本アプリは、画像一括変換ソフト「Ralpha」のレイアウト・UI思想を踏襲して画像変換機能を提供し、Office Open XML最適化ツール「OptiOpenXML」の処理思想を取り入れ、それぞれを現代的な画像フォーマット（WebP、AVIF等）に対応させて統合したものです。
+ドラッグ＆ドロップでファイルを並べ、必要な処理を選び、まとめて実行できます。日々の資料整理、画像の一括加工、Office 文書の軽量化、PDF 配布前の最適化をひとつの画面で扱えるようにしています。
 
-## 主な機能
+## 特徴
 
-- 画像ファイルまたはフォルダのドラッグ＆ドロップ登録
-- 画像変換パイプライン（各ステップは右サイドバーのチェックボックスで有効化、歯車ボタンで詳細設定）
-  - Exif 自動回転
-  - リサイズ（幅・高さ・フィットモード・拡大許可）
-  - グレースケール化
-  - トリミング（幅・高さ指定）
-  - 回転（90°/180°/270°、対象: 全体 or 縦横比に応じて自動）
-  - 余白追加（サイズ・背景色 RGB）
-  - アンシャープマスク（シグマ値）
-  - 色調補正（明度・コントラスト）
-  - トーンカーブ（ガンマ補正）
-  - 減色（色数指定）
-  - 画像合成 / ウォーターマーク（合成画像パス・XY オフセット）
-  - 最適化（メタデータ削除、WebP 変換品質など）
-  - JPEG / PNG / WebP / AVIF / TIFF への出力形式変換
-- Office ファイル変換
-  - `.docx` / `.xlsx` / `.pptx` のメタデータ削除、再パック、埋め込み画像圧縮・WebP 変換
-  - Office ファイル内の埋め込み動画の圧縮最適化 (`ffmpeg` 連携)
-  - `.docx` / `.xlsx` / `.pptx` の PDF 変換（Microsoft Office Interop 連携）
-  - Word / PowerPoint の PDF/A 変換（Excel は Interop API の制約により PDF/A 指定には非対応）
-- PDF ファイル最適化
-  - qpdf を使用した PDF の画像最適化、ストリーム圧縮、オブジェクトストリーム生成、リニアライズ
-- 設定の永続化と外部ツール連携
-  - ウィンドウ位置・サイズ・タブ、全変換パラメータ（Crop / Rotate / Padding / Sharpen / ColorAdjust / ToneCurve / Composite など）を `settings.ini` に自動保存
-  - `oxipng` (PNG ロスレス最適化), `jpegli` (高品質 JPEG エンコード), `ffmpeg` (動画圧縮), `qpdf` (PDF 最適化) との連携
-    - デフォルトでは実行ファイルと同じディレクトリの `tools/` フォルダ以下 (`tools/oxipng.exe`, `tools/cjpegli.exe`, `tools/ffmpeg.exe`, `tools/qpdf.exe`) を参照
-    - パスは `設定 > オプション` の「外部ツール パス」セクションで変更可能
+- 画像の一括変換、リサイズ、回転、色調補正、ウォーターマーク、メタデータ削除
+- Word / Excel / PowerPoint ファイルの軽量化、PDF 変換、埋め込み画像・動画の最適化
+- PDF の画像最適化、ストリーム圧縮、リニアライズ
+- 画像変換・Office 変換・PDF 最適化ごとのプリセット保存
+- 最後に使ったプリセットを起動時に自動ロード
+- WebP / AVIF などの現代的な画像形式に対応
+- oxipng、jpegli、ffmpeg、qpdf などの外部ツール連携
+
+## こんな用途に
+
+- 会議資料や提案書を配布前に軽くしたい
+- 大量の画像を同じ条件でリサイズ、変換したい
+- PowerPoint や Word を PDF / PDF/A として出力したい
+- PDF を Web 配布向けに圧縮、最適化したい
+- 毎回同じ変換条件をプリセットとして使い回したい
+
+## 3 つの作業モード
+
+### 画像変換
+
+JPEG / PNG / WebP / AVIF / TIFF などの画像を対象に、リサイズ、トリミング、回転、余白追加、色調補正、シャープ、減色、合成、形式変換をまとめて実行できます。
+
+### Office ファイル変換
+
+`.docx` / `.xlsx` / `.pptx` を対象に、メタデータ削除、再パック、埋め込み画像の圧縮、画像解像度の PPI 制限、WebP 変換、動画圧縮、PDF 変換を行えます。
+
+### PDF ファイル最適化
+
+qpdf を使って、PDF の画像再圧縮、ストリーム圧縮、オブジェクトストリーム生成、リニアライズを行えます。Web 配布や共有前の軽量化に向いています。
 
 ## 動作環境
 
 - Windows
-- .NET 10 SDK
+- .NET 10
 - x64 環境
 
-画像処理には `NetVips` と `NetVips.Native.win-x64` を使用しています。NuGet パッケージはビルド時に復元されます。
+Office ファイルの PDF 変換には、対象形式に対応した Microsoft Office が必要です。PDF 最適化には qpdf、動画圧縮には ffmpeg を使用します。
 
 ## ビルド
 
-リポジトリ直下で次を実行します。
-
-```bat
-.\build.bat
+```bash
+make build
 ```
 
-バッチファイルは次の処理を行います。
-
-1. `FileMill.csproj` の NuGet パッケージを復元する
-2. `Release` 構成でビルドする
-3. 出力先を表示する
-
-手動で実行する場合は次のコマンドでもビルドできます。
+手動で実行する場合:
 
 ```bat
 dotnet restore FileMill.csproj
 dotnet build FileMill.csproj --configuration Release
 ```
 
-出力先は次のディレクトリです。
+## 詳細仕様
 
-```text
-bin\Release\net10.0-windows
-```
+詳しい使い方、対応形式、外部ツール、リリース手順、開発メモは次のドキュメントに分けています。
 
-## 実行
-
-ビルド後、次の実行ファイルを起動します。
-
-```text
-bin\Release\net10.0-windows\FileMill.exe
-```
-
-開発中は次のコマンドでも起動できます。
-
-```bat
-dotnet run --project FileMill.csproj
-```
-
-## 画像変換の使い方
-
-1. `画像変換` タブを開く
-2. 画像ファイルまたはフォルダを追加する
-3. 出力先フォルダを選択する (ツールバー中央)
-4. 必要に応じて `設定 > オプション` メニューからファイル名生成規則などを変更する
-5. 有効にする処理オプションのチェックを入れ、歯車ボタンから詳細設定を調整する
-6. `変換` を実行する
-
-ファイル名生成規則では、入力した文字列（サフィックス）が元のファイル名の末尾に付与されます。既定値は `_converted` です。
-
-出力ファイル名が既存ファイルと重複する場合は、末尾に `_1`, `_2` のような連番が付きます。
-
-## Office ファイル変換の使い方
-
-1. `Office ファイル変換` タブを開く
-2. Office ファイル (`.docx` / `.xlsx` / `.pptx`) を追加する
-3. 出力先フォルダを選択する (ツールバー中央)
-4. 有効にする変換オプションのチェックを入れ、歯車ボタンから詳細設定（メタデータ削除、WebP変換、品質、動画CRF等）を調整する
-5. PDF に変換する場合は `PDFへ変換` をオンにする
-   PDF/A として出力する場合は、PDF 変換の歯車ボタンから `PDF/A 準拠` をオンにする
-6. `変換実行` を押す
-
-最適化後のファイルは、元ファイルと同じフォルダに `_optimized` を付けて保存されます（出力先が空欄の場合）。重複する場合は `_optimized_1`, `_optimized_2` のような連番が付きます。
-PDF 変換後のファイルは `_converted.pdf` として保存されます。Microsoft Office Interop が利用できない環境では、PDF 変換オプションは無効になります。
-PDF/A 変換は Word と PowerPoint で有効です。Excel の Microsoft Office Interop API には PDF/A 指定がないため、Excel ファイルで `PDF/A 準拠` をオンにするとエラーになります。
-
-画像を WebP 形式に変換する設定をオンにすると、Office ファイル内の埋め込み画像も WebP に差し替えます。
-
-## PDF ファイル最適化の使い方
-
-1. `PDF ファイル最適化` タブを開く
-2. PDF ファイルを追加する
-3. 出力先フォルダを選択する (ツールバー中央)
-4. 右側の PDF 最適化オプションを調整する
-5. `最適化実行` を押す
-
-最適化後のファイルは、元ファイルと同じフォルダに `_optimized.pdf` を付けて保存されます（出力先が空欄の場合）。重複する場合は `_optimized_1.pdf`, `_optimized_2.pdf` のような連番が付きます。
-
-PDF 最適化には `qpdf.exe` が必要です。既定では `tools/qpdf.exe` を参照し、見つからない場合は PATH 上の `qpdf.exe` と `C:\Program Files\qpdf\bin\qpdf.exe` も探します。パスは `設定 > オプション` の「外部ツール パス」から変更できます。
-
-### Office ファイル内画像の WebP 変換
-
-`.docx`, `.xlsx`, `.pptx` は ZIP ベースの Office Open XML パッケージとして処理します。埋め込み画像の WebP 変換を行う場合、単に画像ファイルだけを置き換えるのではなく、パッケージ内の参照情報も更新します。
-
-- 画像パーツを WebP に変換し、拡張子を `.webp` に変更する
-- `[Content_Types].xml` に `image/webp` の ContentType を追加または修正する
-- `.rels` の画像参照先を `.webp` に更新する
-- `.rels` の参照先に `#fragment` や `?query` が含まれる場合は、その末尾情報を維持する
-- 作成者や更新者などのメタデータを削除する場合も、Open XML の型付き値を壊さない形で処理する
-
-PowerPoint で `コンテンツに問題が見つかりました` と表示される場合は、古い最適化結果ではなく、現在のビルドで再度最適化してください。既存の最適化済みファイルを再処理するより、元の PPTX から作り直すほうが安全です。
-
-WebP に対応していない古い Office 環境では、ファイル自体が正常でも画像が表示されない可能性があります。PowerPoint での利用を前提にする場合は、配布先の Office バージョンで開けることを確認してください。
-
-## 対応形式
-
-画像変換の入力は、UI では次の拡張子を対象にしています。
-
-```text
-.jpg .jpeg .png .webp .avif .tif .tiff .gif .svg .bmp .heic .heif
-```
-
-実際に読み込める形式は libvips の対応状況に依存します。画像変換の出力形式は次のとおりです。
-
-```text
-JPEG PNG WebP AVIF TIFF
-```
-
-Office ファイル変換では、Office Open XML 形式の `.docx`, `.xlsx`, `.pptx` を処理対象にしています。
-
-## プロジェクト構成
-
-```text
-FileMill.csproj                 WPF アプリのプロジェクト定義
-build.bat                       Release ビルド用バッチファイル
-App.xaml / App.xaml.cs          アプリケーション定義 (設定永続化テストを含む)
-MainWindow.xaml                 メイン画面の UI (設定モーダル・サイドバーバインディング)
-MainWindow.xaml.cs              ドラッグ＆ドロップ、ソート、画面イベント
-ViewModels/MainViewModel.cs     画面状態、コマンド、変換・最適化フロー
-Services/ImageProcessingService.cs
-                                画像処理、Office パッケージ最適化
-Models/                         画面表示用モデルと処理ステップ定義
-Converters/                     WPF バインディング用コンバーター
-                                (BooleanToVisibility, StringEqualsToVisibility,
-                                 EnumToBoolean)
-```
-
-## 開発メモ
-
-- UI は WPF / XAML で構成されています。
-- MVVM 形式をベースに、画面操作は `MainViewModel` のコマンドへ集約しています。
-- 画像処理と Office Open XML パッケージ処理は `ImageProcessingService` に集約しています。
-- 設定は `App.xaml.cs` の `LoadSettings` / `SaveSettings` で `settings.ini` に読み書きします。
-- 回転ターゲットの RadioButton バインドには `EnumToBooleanConverter` を使用しています。
-- `bin/` と `obj/` はビルド生成物のため Git 管理対象外です。
-
-### テスト
-
-次のコマンドで設定永続化・モーダル状態・リスト管理の自動テストを実行できます。
-
-```bat
-dotnet run --project FileMill.csproj -- --test-settings
-```
-
-3 つのスイートすべてが `passed` と表示されれば正常です。
+- [詳細仕様](docs/specification.md)
 
 ## 謝辞
 
-本アプリの開発にあたり、以下の素晴らしいソフトウェアとその制作者様に深く感謝の意を表します。
+FileMill は、画像一括変換ソフト **Ralpha / RalphaPlus** の軽快な画面設計と、Office Open XML 最適化ツール **OptiOpenXML** の処理思想を参考にしています。
 
-- **Ralpha / RalphaPlus** (にるぽ / Nilposoft 氏)
-  - 軽快で使いやすい画像変換の画面レイアウトおよび機能デザインの参考にさせていただきました。
-  - 公式サイト: [Nilposoft](http://nilposoft.info/ralpha/ralphaplus64.html)
-- **OptiOpenXML**
-  - Word, Excel, PowerPoint などの Office Open XML 文書の軽量化・最適化処理の設計・アイデアの参考にさせていただきました。
-  - 紹介・解説ページ: [OptiOpenXML](https://www.hiskip.com/free/freesoft/doc/office/14978.html)
+- [Ralpha / RalphaPlus](http://nilposoft.info/ralpha/ralphaplus64.html)
+- [OptiOpenXML](https://www.hiskip.com/free/freesoft/doc/office/14978.html)

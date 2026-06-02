@@ -17,6 +17,8 @@ public class ImageProcessingService
     private const int WordPdfExportFormat = 17;
     private const int ExcelPdfExportType = 0;
     private const int PowerPointPdfFixedFormatType = 2;
+    private const int PowerPointSaveAsPdfFileType = 32;
+    private const double EmusPerInch = 914400d;
 
     private static readonly Lazy<OfficePdfInteropAvailability> CachedOfficePdfInteropAvailability = new(() => new OfficePdfInteropAvailability(
         HasComProgId("Word.Application"),
@@ -438,25 +440,32 @@ public class ImageProcessingService
     }
 
     private sealed record PackageImageReplacement(string EntryName, byte[] Data);
+    private readonly record struct PackageImageTargetSize(int Width, int Height);
 
-    private static long OptimizeOpenXmlPackage(string inputPath, string outputPath, bool stripMetadata, bool repackPackage, bool compressImages, bool convertImagesToWebP, int imageQuality, bool compressMedia, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec,
+    private static long OptimizeOpenXmlPackage(string inputPath, string outputPath, bool stripMetadata, bool repackPackage, bool compressImages, bool convertImagesToWebP, int imageQuality, bool resizeImagesByPpi, int targetImagePpi, bool compressMedia, string ffmpegPath, int videoCrf, string videoCodec, string audioCodec,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
         bool useJpegli = false, string cjpegliPath = "cjpegli", bool resetCellSelection = false, Action<string>? logAction = null)
     {
-        if (!stripMetadata && !repackPackage && !compressImages && !compressMedia && !resetCellSelection)
+        if (!stripMetadata && !repackPackage && !compressImages && !resizeImagesByPpi && !compressMedia && !resetCellSelection)
         {
-            File.Copy(inputPath, outputPath, true);
-            return new FileInfo(outputPath).Length;
+            return CopyFile(inputPath, outputPath);
         }
 
-        var compressionLevel = repackPackage ? CompressionLevel.SmallestSize : CompressionLevel.Optimal;
+        if (stripMetadata && !repackPackage && !compressImages && !resizeImagesByPpi && !compressMedia && !resetCellSelection)
+        {
+            using var probe = ZipFile.OpenRead(inputPath);
+            if (!probe.Entries.Any(entry => IsOpenXmlMetadataEntry(entry.FullName)))
+                return CopyFile(inputPath, outputPath);
+        }
+
+        var compressionLevel = repackPackage ? CompressionLevel.SmallestSize : CompressionLevel.NoCompression;
 
         using (var source = ZipFile.OpenRead(inputPath))
         using (var output = File.Create(outputPath))
         using (var destination = new ZipArchive(output, ZipArchiveMode.Create))
         {
-            var imageReplacements = compressImages
-                ? BuildPackageImageReplacements(source, imageQuality, convertImagesToWebP, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction)
+            var imageReplacements = compressImages || resizeImagesByPpi
+                ? BuildPackageImageReplacements(source, imageQuality, compressImages, convertImagesToWebP, resizeImagesByPpi, targetImagePpi, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction)
                 : new Dictionary<string, PackageImageReplacement>(StringComparer.OrdinalIgnoreCase);
             var imageEntryRenames = imageReplacements
                 .Where(kvp => !PackagePathEquals(kvp.Key, kvp.Value.EntryName))
@@ -521,7 +530,9 @@ public class ImageProcessingService
         return new FileInfo(outputPath).Length;
     }
 
-    private static Dictionary<string, PackageImageReplacement> BuildPackageImageReplacements(ZipArchive source, int quality, bool convertToWebP,
+    private static long CopyFile(string inputPath, string outputPath) { File.Copy(inputPath, outputPath, true); return new FileInfo(outputPath).Length; }
+
+    private static Dictionary<string, PackageImageReplacement> BuildPackageImageReplacements(ZipArchive source, int quality, bool compressImages, bool convertToWebP, bool resizeImagesByPpi, int targetImagePpi,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
         bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
@@ -529,6 +540,9 @@ public class ImageProcessingService
         var usedEntryNames = source.Entries
             .Select(entry => NormalizePackagePath(entry.FullName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var targetSizes = resizeImagesByPpi
+            ? BuildPackageImageTargetSizes(source, targetImagePpi)
+            : new Dictionary<string, PackageImageTargetSize>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in source.Entries)
         {
@@ -541,7 +555,10 @@ public class ImageProcessingService
                 : entryName;
 
             using var stream = entry.Open();
-            var replacement = TryOptimizePackageImage(stream, entryName, outputEntryName, quality, convertToWebP, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction);
+            var imageTargetSize = targetSizes.TryGetValue(entryName, out var targetSize)
+                ? targetSize
+                : (PackageImageTargetSize?)null;
+            var replacement = TryOptimizePackageImage(stream, entryName, outputEntryName, quality, compressImages, convertToWebP, imageTargetSize, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, logAction);
             if (replacement != null)
             {
                 replacements[entryName] = replacement;
@@ -550,6 +567,59 @@ public class ImageProcessingService
         }
 
         return replacements;
+    }
+
+    private static Dictionary<string, PackageImageTargetSize> BuildPackageImageTargetSizes(ZipArchive source, int targetPpi)
+    {
+        targetPpi = Math.Clamp(targetPpi, 72, 600);
+        var targetSizes = new Dictionary<string, PackageImageTargetSize>(StringComparer.OrdinalIgnoreCase);
+        var unknownSizeTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in source.Entries)
+        {
+            if (string.IsNullOrEmpty(entry.Name) || !IsOfficeXmlPart(entry.FullName))
+                continue;
+
+            var entryName = NormalizePackagePath(entry.FullName);
+            var relationships = LoadRelationshipTargets(source, entryName);
+            if (relationships.Count == 0)
+                continue;
+
+            try
+            {
+                using var stream = entry.Open();
+                var document = XDocument.Load(stream, LoadOptions.PreserveWhitespace);
+                foreach (var blip in document.Descendants().Where(element => element.Name.LocalName.Equals("blip", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var relationId = blip.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName.Equals("embed", StringComparison.OrdinalIgnoreCase))?.Value;
+                    if (string.IsNullOrWhiteSpace(relationId) || !relationships.TryGetValue(relationId, out var imageEntryName))
+                        continue;
+
+                    if (!TryGetBlipDisplaySizePixels(blip, targetPpi, out var width, out var height))
+                    {
+                        unknownSizeTargets.Add(imageEntryName);
+                        continue;
+                    }
+
+                    if (targetSizes.TryGetValue(imageEntryName, out var current))
+                    {
+                        width = Math.Max(width, current.Width);
+                        height = Math.Max(height, current.Height);
+                    }
+
+                    targetSizes[imageEntryName] = new PackageImageTargetSize(width, height);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BuildPackageImageTargetSizes failed for {entryName}: {ex.Message}");
+            }
+        }
+
+        foreach (var imageEntryName in unknownSizeTargets)
+            targetSizes.Remove(imageEntryName);
+
+        return targetSizes;
     }
 
     private static void WriteEntry(ZipArchive destination, string entryName, CompressionLevel compressionLevel, DateTimeOffset lastWriteTime, byte[] data)
@@ -572,6 +642,118 @@ public class ImageProcessingService
     {
         var ext = Path.GetExtension(entryName).ToLowerInvariant();
         return ext is ".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp" or ".tif" or ".tiff";
+    }
+
+    private static bool IsOfficeXmlPart(string entryName)
+    {
+        var normalized = NormalizePackagePath(entryName);
+        return normalized.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+               && !normalized.Equals("[Content_Types].xml", StringComparison.OrdinalIgnoreCase)
+               && !normalized.StartsWith("docProps/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, string> LoadRelationshipTargets(ZipArchive source, string sourceEntryName)
+    {
+        var relationships = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var relationshipEntryName = GetRelationshipEntryName(sourceEntryName);
+        var relationshipEntry = source.GetEntry(relationshipEntryName);
+        if (relationshipEntry == null)
+            return relationships;
+
+        var baseDirectory = GetPackageEntryDirectory(sourceEntryName);
+        try
+        {
+            using var stream = relationshipEntry.Open();
+            var document = XDocument.Load(stream, LoadOptions.PreserveWhitespace);
+            foreach (var relationship in document.Descendants().Where(element => element.Name.LocalName.Equals("Relationship", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (string.Equals(relationship.Attribute("TargetMode")?.Value, "External", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var id = relationship.Attribute("Id")?.Value;
+                var target = relationship.Attribute("Target")?.Value;
+                if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(target))
+                    continue;
+
+                var (targetPath, _) = SplitPackageTarget(target);
+                var resolvedTarget = ResolvePackageTarget(baseDirectory, targetPath);
+                if (!string.IsNullOrEmpty(resolvedTarget) && IsPackageImage(resolvedTarget))
+                    relationships[id] = resolvedTarget;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadRelationshipTargets failed for {relationshipEntryName}: {ex.Message}");
+        }
+
+        return relationships;
+    }
+
+    private static bool TryGetBlipDisplaySizePixels(XElement blip, int targetPpi, out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+
+        if (!TryGetBlipDisplaySizeEmu(blip, out var cx, out var cy))
+            return false;
+
+        width = Math.Max(1, (int)Math.Ceiling(cx / EmusPerInch * targetPpi));
+        height = Math.Max(1, (int)Math.Ceiling(cy / EmusPerInch * targetPpi));
+        return width > 0 && height > 0;
+    }
+
+    private static bool TryGetBlipDisplaySizeEmu(XElement blip, out long cx, out long cy)
+    {
+        cx = 0;
+        cy = 0;
+
+        foreach (var ancestor in blip.Ancestors())
+        {
+            var sizeElement = FindDisplaySizeElement(ancestor);
+            if (TryReadEmuSize(sizeElement, out cx, out cy))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static XElement? FindDisplaySizeElement(XElement container)
+    {
+        var directExtent = container.Elements().FirstOrDefault(IsSizeElement);
+        if (directExtent != null)
+            return directExtent;
+
+        var transformExtent = container.Descendants().FirstOrDefault(element =>
+            element.Name.LocalName.Equals("ext", StringComparison.OrdinalIgnoreCase)
+            && element.Parent?.Name.LocalName.Equals("xfrm", StringComparison.OrdinalIgnoreCase) == true
+            && HasEmuSize(element));
+        if (transformExtent != null)
+            return transformExtent;
+
+        return container.Descendants().FirstOrDefault(IsSizeElement);
+    }
+
+    private static bool IsSizeElement(XElement element)
+    {
+        return (element.Name.LocalName.Equals("extent", StringComparison.OrdinalIgnoreCase)
+                || element.Name.LocalName.Equals("ext", StringComparison.OrdinalIgnoreCase))
+               && HasEmuSize(element);
+    }
+
+    private static bool HasEmuSize(XElement element)
+        => element.Attribute("cx") != null && element.Attribute("cy") != null;
+
+    private static bool TryReadEmuSize(XElement? element, out long cx, out long cy)
+    {
+        cx = 0;
+        cy = 0;
+        if (element == null)
+            return false;
+
+        return long.TryParse(element.Attribute("cx")?.Value, out cx)
+               && long.TryParse(element.Attribute("cy")?.Value, out cy)
+               && cx > 0
+               && cy > 0;
     }
 
     private static readonly HashSet<string> MediaVideoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mov", ".avi", ".mp4" };
@@ -1013,7 +1195,7 @@ public class ImageProcessingService
             property.Remove();
     }
 
-    private static PackageImageReplacement? TryOptimizePackageImage(Stream stream, string entryName, string outputEntryName, int quality, bool convertToWebP,
+    private static PackageImageReplacement? TryOptimizePackageImage(Stream stream, string entryName, string outputEntryName, int quality, bool compressImage, bool convertToWebP, PackageImageTargetSize? targetSize,
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
         bool useJpegli = false, string cjpegliPath = "cjpegli", Action<string>? logAction = null)
     {
@@ -1023,15 +1205,37 @@ public class ImageProcessingService
             stream.CopyTo(input);
             var original = input.ToArray();
             using var image = Image.NewFromBuffer(original, "");
+            Image? resizedImage = null;
+            var processed = image;
+            var resized = false;
+
+            if (targetSize is { } size && size.Width > 0 && size.Height > 0 && image.Width > 0 && image.Height > 0)
+            {
+                var scale = Math.Min(size.Width / (double)image.Width, size.Height / (double)image.Height);
+                if (scale < 0.999)
+                {
+                    resizedImage = image.Resize(scale);
+                    processed = resizedImage;
+                    resized = true;
+                    logAction?.Invoke($"[Office画像] {Path.GetFileName(entryName)}: {image.Width}x{image.Height} -> {processed.Width}x{processed.Height}");
+                }
+            }
+
+            if (!compressImage && !convertToWebP && !resized)
+            {
+                resizedImage?.Dispose();
+                return null;
+            }
 
             byte[] optimized;
             var ext = Path.GetExtension(entryName).ToLowerInvariant();
             if (convertToWebP)
             {
-                optimized = image.WebpsaveBuffer(
+                optimized = processed.WebpsaveBuffer(
                     q: Math.Clamp(quality, 10, 100),
                     effort: 4,
                     keep: Enums.ForeignKeep.None);
+                resizedImage?.Dispose();
                 return new PackageImageReplacement(outputEntryName, optimized);
             }
 
@@ -1043,7 +1247,7 @@ public class ImageProcessingService
                     var tempJpg = Path.Combine(Path.GetTempPath(), "FileMill_temp_" + Guid.NewGuid().ToString("N") + ".jpg");
                     try
                     {
-                        image.Pngsave(tempPng, compression: 1);
+                        processed.Pngsave(tempPng, compression: 1);
                         var ok = RunCjpegli(tempPng, tempJpg, cjpegliPath, Math.Clamp(quality, 10, 100), logAction);
                         if (ok && File.Exists(tempJpg))
                         {
@@ -1051,7 +1255,7 @@ public class ImageProcessingService
                         }
                         else
                         {
-                            optimized = image.JpegsaveBuffer(
+                            optimized = processed.JpegsaveBuffer(
                                 q: Math.Clamp(quality, 10, 100),
                                 optimizeCoding: true,
                                 keep: Enums.ForeignKeep.None);
@@ -1065,7 +1269,7 @@ public class ImageProcessingService
                 }
                 else
                 {
-                    optimized = image.JpegsaveBuffer(
+                    optimized = processed.JpegsaveBuffer(
                         q: Math.Clamp(quality, 10, 100),
                         optimizeCoding: true,
                         keep: Enums.ForeignKeep.None);
@@ -1078,7 +1282,7 @@ public class ImageProcessingService
                     var tempPng = Path.Combine(Path.GetTempPath(), "FileMill_temp_" + Guid.NewGuid().ToString("N") + ".png");
                     try
                     {
-                        image.Pngsave(tempPng, compression: 1, keep: Enums.ForeignKeep.None);
+                        processed.Pngsave(tempPng, compression: 1, keep: Enums.ForeignKeep.None);
                         RunOxipng(tempPng, oxipngPath, oxipngLevel, true, logAction);
                         optimized = File.ReadAllBytes(tempPng);
                     }
@@ -1089,7 +1293,7 @@ public class ImageProcessingService
                 }
                 else
                 {
-                    optimized = image.PngsaveBuffer(
+                    optimized = processed.PngsaveBuffer(
                         compression: 9,
                         filter: Enums.ForeignPngFilter.All,
                         keep: Enums.ForeignKeep.None);
@@ -1097,17 +1301,19 @@ public class ImageProcessingService
             }
             else if (ext == ".webp")
             {
-                optimized = image.WebpsaveBuffer(
+                optimized = processed.WebpsaveBuffer(
                     q: Math.Clamp(quality, 10, 100),
                     effort: 4,
                     keep: Enums.ForeignKeep.None);
             }
             else
             {
+                resizedImage?.Dispose();
                 return null;
             }
 
-            return optimized.Length < original.Length
+            resizedImage?.Dispose();
+            return resized || (compressImage && optimized.Length < original.Length)
                 ? new PackageImageReplacement(outputEntryName, optimized)
                 : null;
         }
@@ -1204,6 +1410,22 @@ public class ImageProcessingService
         var baseName = Path.GetFileNameWithoutExtension(entryName);
         var dir = entryName.Contains('/') ? entryName[..entryName.LastIndexOf('/')] : "";
         return GetUniqueEntryName(JoinPackagePath(dir, baseName + ".webp"), usedEntryNames);
+    }
+
+    private static string GetRelationshipEntryName(string sourceEntryName)
+    {
+        var normalized = NormalizePackagePath(sourceEntryName);
+        var slash = normalized.LastIndexOf('/');
+        var directory = slash >= 0 ? normalized[..slash] : "";
+        var fileName = slash >= 0 ? normalized[(slash + 1)..] : normalized;
+        return JoinPackagePath(JoinPackagePath(directory, "_rels"), fileName + ".rels");
+    }
+
+    private static string GetPackageEntryDirectory(string entryName)
+    {
+        var normalized = NormalizePackagePath(entryName);
+        var slash = normalized.LastIndexOf('/');
+        return slash >= 0 ? normalized[..slash] : "";
     }
 
     private static string GetRelationshipSourceDirectory(string relationshipEntryName)
@@ -1335,6 +1557,8 @@ public class ImageProcessingService
 
     private static void ConvertOfficeToPdfCore(string inputPath, string outputPath, string extension, bool usePdfA, Action<string>? logAction)
     {
+        inputPath = Path.GetFullPath(inputPath);
+        outputPath = Path.GetFullPath(outputPath);
         logAction?.Invoke($"PDF変換: {Path.GetFileName(inputPath)} -> {Path.GetFileName(outputPath)}{(usePdfA ? " (PDF/A)" : "")}");
 
         switch (extension)
@@ -1420,7 +1644,7 @@ public class ImageProcessingService
 
             presentations = powerPoint.Presentations;
             presentation = ((dynamic)presentations).Open(inputPath, -1, 0, 0);
-            ((dynamic)presentation).ExportAsFixedFormat(Path: outputPath, FixedFormatType: PowerPointPdfFixedFormatType, UseISO19005_1: usePdfA);
+            ExportPowerPointPresentationToPdf((dynamic)presentation, outputPath, usePdfA);
         }
         finally
         {
@@ -1429,6 +1653,40 @@ public class ImageProcessingService
             ReleaseComObject(presentation);
             ReleaseComObject(presentations);
             ReleaseComObject(app);
+        }
+    }
+
+    private static void ExportPowerPointPresentationToPdf(dynamic presentation, string outputPath, bool usePdfA)
+    {
+        try
+        {
+            if (usePdfA)
+            {
+                presentation.ExportAsFixedFormat(
+                    outputPath,
+                    PowerPointPdfFixedFormatType,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    Type.Missing,
+                    true);
+            }
+            else
+            {
+                presentation.ExportAsFixedFormat(outputPath, PowerPointPdfFixedFormatType);
+            }
+        }
+        catch (Exception) when (!usePdfA)
+        {
+            presentation.SaveAs(outputPath, PowerPointSaveAsPdfFileType, 0);
         }
     }
 
@@ -1507,7 +1765,7 @@ public class ImageProcessingService
     /// </summary>
     public long Optimize(string inputPath, string outputPath, bool stripMetadata, bool cleanUnused, bool compressImages, bool convertToWebP, int webpQuality, bool compressMedia = false, string ffmpegPath = "ffmpeg", int videoCrf = 23, string videoCodec = "libx264", string audioCodec = "libmp3lame",
         bool useOxipng = false, string oxipngPath = "oxipng", int oxipngLevel = 2,
-        bool useJpegli = false, string cjpegliPath = "cjpegli", bool resetCellSelection = false, Action<string>? logAction = null)
+        bool useJpegli = false, string cjpegliPath = "cjpegli", bool resizeImagesByPpi = false, int targetImagePpi = 220, bool resetCellSelection = false, Action<string>? logAction = null)
     {
         var ext = Path.GetExtension(inputPath).ToLowerInvariant();
         var dir = Path.GetDirectoryName(outputPath);
@@ -1517,7 +1775,7 @@ public class ImageProcessingService
         // 1. Office Open XML ファイルの場合
         if (ext == ".docx" || ext == ".xlsx" || ext == ".pptx")
         {
-            return OptimizeOpenXmlPackage(inputPath, outputPath, stripMetadata, cleanUnused, compressImages, convertToWebP, webpQuality, compressMedia, ffmpegPath, videoCrf, videoCodec, audioCodec, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, resetCellSelection: resetCellSelection, logAction: logAction);
+            return OptimizeOpenXmlPackage(inputPath, outputPath, stripMetadata, cleanUnused, compressImages, convertToWebP, webpQuality, resizeImagesByPpi, targetImagePpi, compressMedia, ffmpegPath, videoCrf, videoCodec, audioCodec, useOxipng, oxipngPath, oxipngLevel, useJpegli, cjpegliPath, resetCellSelection: resetCellSelection, logAction: logAction);
         }
 
         // 2. 画像ファイルの場合 (JPEG, PNG, WEBP, AVIF 等)
