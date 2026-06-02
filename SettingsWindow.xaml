@@ -400,6 +400,16 @@
                         </Border>
                     </StackPanel>
 
+                    <!-- Office PDF 変換設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=OfficePdf}">
+                        <CheckBox Content="PDF/A 準拠"
+                                  IsChecked="{Binding ConvertOfficeToPdfA, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsOfficePdfConversionAvailable}"
+                                  Margin="0,6"
+                                  FontSize="12"
+                                  ToolTip="Word と PowerPoint は PDF/A として出力します。Excel は Microsoft Office Interop の制約により PDF/A 指定に対応していません。"/>
+                    </StackPanel>
+
                     <!-- オプション設定 -->
                     <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Options}">
                         <Grid Margin="0,4">
@@ -470,6 +480,16 @@
                                     <TextBlock Text="ffmpeg" VerticalAlignment="Center" FontSize="11" Width="70"/>
                                     <TextBox Grid.Column="1" Text="{Binding FfmpegPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
                                     <Button Grid.Column="2" Content="..." Width="28" Command="{Binding BrowseToolPathCommand}" CommandParameter="ffmpeg" Margin="4,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="qpdf" VerticalAlignment="Center" FontSize="11" Width="70"/>
+                                    <TextBox Grid.Column="1" Text="{Binding QpdfPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+                                    <Button Grid.Column="2" Content="..." Width="28" Command="{Binding BrowseToolPathCommand}" CommandParameter="qpdf" Margin="4,0,0,0"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

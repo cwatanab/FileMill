@@ -49,16 +49,16 @@
 
   <!-- Tabs -->
   <data name="TabImageConversion" xml:space="preserve"><value>Image Conversion</value></data>
-  <data name="TabFileOptimization" xml:space="preserve"><value>Office File Optimization</value></data>
+  <data name="TabFileOptimization" xml:space="preserve"><value>Office File Conversion</value></data>
 
   <!-- Toolbar -->
   <data name="ToolbarOutput" xml:space="preserve"><value>Output:</value></data>
   <data name="ToolbarConvert" xml:space="preserve"><value>Convert</value></data>
-  <data name="ToolbarOptimize" xml:space="preserve"><value>Optimize</value></data>
+  <data name="ToolbarOptimize" xml:space="preserve"><value>Convert</value></data>
 
   <!-- Sidebar headers -->
   <data name="SidebarProcessingOptions" xml:space="preserve"><value>Processing Options</value></data>
-  <data name="SidebarOptimizeOptions" xml:space="preserve"><value>Optimization Options</value></data>
+  <data name="SidebarOptimizeOptions" xml:space="preserve"><value>Conversion Options</value></data>
 
   <!-- Pipeline steps -->
   <data name="StepExifAutoRotate" xml:space="preserve"><value>Auto-Rotate (Exif)</value></data>
@@ -77,6 +77,8 @@
 
   <!-- File optimization options -->
   <data name="OptOfficeOptimize" xml:space="preserve"><value>Office Optimize</value></data>
+  <data name="OptConvertToPdf" xml:space="preserve"><value>Convert to PDF</value></data>
+  <data name="OptConvertToPdfA" xml:space="preserve"><value>PDF/A compliant</value></data>
   <data name="OptImageOptimize" xml:space="preserve"><value>Image Optimize</value></data>
   <data name="OptMediaOptimize" xml:space="preserve"><value>Media Optimize</value></data>
   <data name="OptResetCellSelection" xml:space="preserve"><value>Reset selected cell to A1</value></data>
@@ -159,6 +161,7 @@ With gratitude to all developers and contributors.</value></data>
   <data name="ModalTitleRotate" xml:space="preserve"><value>Rotate Settings</value></data>
   <data name="ModalTitleComposite" xml:space="preserve"><value>Composite Settings</value></data>
   <data name="ModalTitleOfficeOptimize" xml:space="preserve"><value>Office Optimize Settings</value></data>
+  <data name="ModalTitleOfficePdf" xml:space="preserve"><value>PDF Conversion Settings</value></data>
   <data name="ModalTitleImageOptimize" xml:space="preserve"><value>Image Optimize Settings</value></data>
   <data name="ModalTitleMediaOptimize" xml:space="preserve"><value>Media Optimize Settings</value></data>
   <data name="ModalTitleOptions" xml:space="preserve"><value>Options</value></data>
@@ -175,9 +178,15 @@ With gratitude to all developers and contributors.</value></data>
   <data name="StatusOptimizingPackage" xml:space="preserve"><value>Optimizing package...</value></data>
   <data name="StatusCompleted" xml:space="preserve"><value>Completed</value></data>
   <data name="StatusErrorState" xml:space="preserve"><value>Error</value></data>
-  <data name="StatusOptimizingProgress" xml:space="preserve"><value>Optimizing... ({0}/{1})</value></data>
-  <data name="StatusOptimizeCancelled" xml:space="preserve"><value>Optimization was cancelled</value></data>
-  <data name="StatusOptimizeDone" xml:space="preserve"><value>Optimization done: {0} succeeded, {1} failed</value></data>
+  <data name="StatusConvertingToPdf" xml:space="preserve"><value>Converting to PDF</value></data>
+  <data name="StatusOptimizingPdf" xml:space="preserve"><value>Optimizing PDF</value></data>
+  <data name="StatusOfficePdfInteropUnavailable" xml:space="preserve"><value>Microsoft Office Interop required for {0} PDF conversion is unavailable.</value></data>
+  <data name="StatusOfficePdfAUnsupportedForExcel" xml:space="preserve"><value>Excel Microsoft Office Interop API does not support PDF/A export.</value></data>
+  <data name="StatusOptimizingProgress" xml:space="preserve"><value>Processing... ({0}/{1})</value></data>
+  <data name="StatusOptimizeCancelled" xml:space="preserve"><value>Office file conversion was cancelled</value></data>
+  <data name="StatusOptimizeDone" xml:space="preserve"><value>Office file conversion done: {0} succeeded, {1} failed</value></data>
+  <data name="StatusPdfOptimizeCancelled" xml:space="preserve"><value>PDF file optimization was cancelled</value></data>
+  <data name="StatusPdfOptimizeDone" xml:space="preserve"><value>PDF file optimization done: {0} succeeded, {1} failed</value></data>
   <data name="MsgConfirmClearImageList" xml:space="preserve"><value>Do you want to remove all image files from the list?</value></data>
   <data name="MsgConfirmClearList" xml:space="preserve"><value>Do you want to remove all files from the list?</value></data>
   <data name="TitleConfirm" xml:space="preserve"><value>Confirm</value></data>
@@ -194,5 +203,9 @@ With gratitude to all developers and contributors.</value></data>
   <data name="DlgFilterCompositeImages" xml:space="preserve"><value>Image Files|*.jpg;*.jpeg;*.png;*.webp;*.bmp|All Files|*.*</value></data>
   <data name="DlgTitleSelectOfficeFiles" xml:space="preserve"><value>Select Office Files</value></data>
   <data name="DlgFilterOfficeFiles" xml:space="preserve"><value>Office Files|*.docx;*.xlsx;*.pptx|All Files|*.*</value></data>
+  <data name="DlgTitleSelectPdfFiles" xml:space="preserve"><value>Select PDF Files</value></data>
+  <data name="DlgFilterPdfFiles" xml:space="preserve"><value>PDF Files|*.pdf|All Files|*.*</value></data>
   <data name="DlgTitleAddFolder" xml:space="preserve"><value>Add Folder</value></data>
+  <data name="TooltipOfficePdfAvailable" xml:space="preserve"><value>Convert to PDF using Microsoft Office Interop. Available: {0}</value></data>
+  <data name="TooltipOfficePdfUnavailable" xml:space="preserve"><value>PDF conversion is disabled because Microsoft Office Interop is unavailable.</value></data>
 </root>

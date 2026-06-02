@@ -49,16 +49,16 @@
 
   <!-- Tabs -->
   <data name="TabImageConversion" xml:space="preserve"><value>画像変換</value></data>
-  <data name="TabFileOptimization" xml:space="preserve"><value>Officeファイル最適化</value></data>
+  <data name="TabFileOptimization" xml:space="preserve"><value>Office ファイル変換</value></data>
 
   <!-- Toolbar -->
   <data name="ToolbarOutput" xml:space="preserve"><value>出力先</value></data>
   <data name="ToolbarConvert" xml:space="preserve"><value>変換</value></data>
-  <data name="ToolbarOptimize" xml:space="preserve"><value>最適化実行</value></data>
+  <data name="ToolbarOptimize" xml:space="preserve"><value>変換実行</value></data>
 
   <!-- Sidebar headers -->
   <data name="SidebarProcessingOptions" xml:space="preserve"><value>処理オプション</value></data>
-  <data name="SidebarOptimizeOptions" xml:space="preserve"><value>最適化オプション</value></data>
+  <data name="SidebarOptimizeOptions" xml:space="preserve"><value>変換オプション</value></data>
 
   <!-- Pipeline steps -->
   <data name="StepExifAutoRotate" xml:space="preserve"><value>Exif自動回転</value></data>
@@ -77,6 +77,8 @@
 
   <!-- File optimization options -->
   <data name="OptOfficeOptimize" xml:space="preserve"><value>Office最適化</value></data>
+  <data name="OptConvertToPdf" xml:space="preserve"><value>PDFへ変換</value></data>
+  <data name="OptConvertToPdfA" xml:space="preserve"><value>PDF/A 準拠</value></data>
   <data name="OptImageOptimize" xml:space="preserve"><value>画像最適化</value></data>
   <data name="OptMediaOptimize" xml:space="preserve"><value>メディア最適化</value></data>
   <data name="OptResetCellSelection" xml:space="preserve"><value>選択セルをA1に変更する</value></data>
@@ -164,6 +166,7 @@
   <data name="ModalTitleRotate" xml:space="preserve"><value>回転</value></data>
   <data name="ModalTitleComposite" xml:space="preserve"><value>画像合成設定</value></data>
   <data name="ModalTitleOfficeOptimize" xml:space="preserve"><value>Office最適化設定</value></data>
+  <data name="ModalTitleOfficePdf" xml:space="preserve"><value>PDF変換設定</value></data>
   <data name="ModalTitleImageOptimize" xml:space="preserve"><value>画像最適化設定</value></data>
   <data name="ModalTitleMediaOptimize" xml:space="preserve"><value>メディア最適化設定</value></data>
   <data name="ModalTitleOptions" xml:space="preserve"><value>オプション設定</value></data>
@@ -180,9 +183,15 @@
   <data name="StatusOptimizingPackage" xml:space="preserve"><value>パッケージ最適化中</value></data>
   <data name="StatusCompleted" xml:space="preserve"><value>完了</value></data>
   <data name="StatusErrorState" xml:space="preserve"><value>エラー</value></data>
-  <data name="StatusOptimizingProgress" xml:space="preserve"><value>最適化中... ({0}/{1})</value></data>
-  <data name="StatusOptimizeCancelled" xml:space="preserve"><value>最適化がキャンセルされました</value></data>
-  <data name="StatusOptimizeDone" xml:space="preserve"><value>最適化完了: {0} 成功, {1} 失敗</value></data>
+  <data name="StatusConvertingToPdf" xml:space="preserve"><value>PDF 変換中</value></data>
+  <data name="StatusOptimizingPdf" xml:space="preserve"><value>PDF 最適化中</value></data>
+  <data name="StatusOfficePdfInteropUnavailable" xml:space="preserve"><value>{0} の PDF 変換に必要な Microsoft Office Interop が利用できません。</value></data>
+  <data name="StatusOfficePdfAUnsupportedForExcel" xml:space="preserve"><value>Excel の Microsoft Office Interop API では PDF/A 指定に対応していません。</value></data>
+  <data name="StatusOptimizingProgress" xml:space="preserve"><value>処理中... ({0}/{1})</value></data>
+  <data name="StatusOptimizeCancelled" xml:space="preserve"><value>Office ファイル変換がキャンセルされました</value></data>
+  <data name="StatusOptimizeDone" xml:space="preserve"><value>Office ファイル変換完了: {0} 成功, {1} 失敗</value></data>
+  <data name="StatusPdfOptimizeCancelled" xml:space="preserve"><value>PDF ファイル最適化がキャンセルされました</value></data>
+  <data name="StatusPdfOptimizeDone" xml:space="preserve"><value>PDF ファイル最適化完了: {0} 成功, {1} 失敗</value></data>
   <data name="MsgConfirmClearImageList" xml:space="preserve"><value>リストからすべての画像ファイルを削除しますか？</value></data>
   <data name="MsgConfirmClearList" xml:space="preserve"><value>リストからすべてのファイルを削除しますか？</value></data>
   <data name="TitleConfirm" xml:space="preserve"><value>確認</value></data>
@@ -199,5 +208,9 @@
   <data name="DlgFilterCompositeImages" xml:space="preserve"><value>画像ファイル|*.jpg;*.jpeg;*.png;*.webp;*.bmp|すべてのファイル|*.*</value></data>
   <data name="DlgTitleSelectOfficeFiles" xml:space="preserve"><value>ファイルを選択 (Office)</value></data>
   <data name="DlgFilterOfficeFiles" xml:space="preserve"><value>Office ファイル|*.docx;*.xlsx;*.pptx|すべてのファイル|*.*</value></data>
+  <data name="DlgTitleSelectPdfFiles" xml:space="preserve"><value>PDFファイルを選択</value></data>
+  <data name="DlgFilterPdfFiles" xml:space="preserve"><value>PDFファイル|*.pdf|すべてのファイル|*.*</value></data>
   <data name="DlgTitleAddFolder" xml:space="preserve"><value>フォルダを追加</value></data>
+  <data name="TooltipOfficePdfAvailable" xml:space="preserve"><value>Microsoft Office Interop を使用して PDF に変換します。利用可能: {0}</value></data>
+  <data name="TooltipOfficePdfUnavailable" xml:space="preserve"><value>Microsoft Office Interop が利用できないため、PDF 変換は無効です。</value></data>
 </root>

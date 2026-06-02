@@ -40,3 +40,13 @@ libvips (LGPL v2.1+)
   libvips is bundled via NetVips.Native.win-x64 and distributed under the
   GNU Lesser General Public License v2.1 or later. The source code can be
   obtained from https://github.com/libvips/libvips.
+
+qpdf (Apache 2.0)
+  URL: https://qpdf.sourceforge.io
+  License: LICENSE.qpdf.txt
+  Copyright (c) 2005-2021 Jay Berkenbilt
+  Copyright (c) 2022-2026 Jay Berkenbilt and Manfred Holger
+
+  qpdf is a PDF content transformation library and tool. It is distributed
+  under the Apache License, Version 2.0. Source code can be obtained from
+  https://github.com/qpdf/qpdf.

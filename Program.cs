@@ -8,9 +8,7 @@ public static class Program
     public static void Main(string[] args)
     {
         if (args.Length > 0 && args[0] == "--test-settings")
-        {
             Environment.Exit(0);
-        }
 
         var app = new App();
         app.InitializeComponent();

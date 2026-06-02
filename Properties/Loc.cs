@@ -56,6 +56,8 @@ public static class Loc
 
     // File optimization options
     public static string OptOfficeOptimize => RM.GetString("OptOfficeOptimize") ?? "";
+    public static string OptConvertToPdf => RM.GetString("OptConvertToPdf") ?? "";
+    public static string OptConvertToPdfA => RM.GetString("OptConvertToPdfA") ?? "";
     public static string OptImageOptimize => RM.GetString("OptImageOptimize") ?? "";
     public static string OptMediaOptimize => RM.GetString("OptMediaOptimize") ?? "";
 
@@ -129,6 +131,7 @@ public static class Loc
     public static string ModalTitleRotate => RM.GetString("ModalTitleRotate") ?? "";
     public static string ModalTitleComposite => RM.GetString("ModalTitleComposite") ?? "";
     public static string ModalTitleOfficeOptimize => RM.GetString("ModalTitleOfficeOptimize") ?? "";
+    public static string ModalTitleOfficePdf => RM.GetString("ModalTitleOfficePdf") ?? "";
     public static string ModalTitleImageOptimize => RM.GetString("ModalTitleImageOptimize") ?? "";
     public static string ModalTitleMediaOptimize => RM.GetString("ModalTitleMediaOptimize") ?? "";
     public static string ModalTitleOptions => RM.GetString("ModalTitleOptions") ?? "";
@@ -144,11 +147,17 @@ public static class Loc
     public static string StatusDoneMsg => RM.GetString("StatusDoneMsg") ?? "";
     public static string StatusCancelled => RM.GetString("StatusCancelled") ?? "";
     public static string StatusOptimizingPackage => RM.GetString("StatusOptimizingPackage") ?? "";
+    public static string StatusConvertingToPdf => RM.GetString("StatusConvertingToPdf") ?? "";
+    public static string StatusOptimizingPdf => RM.GetString("StatusOptimizingPdf") ?? "";
+    public static string StatusOfficePdfInteropUnavailable => RM.GetString("StatusOfficePdfInteropUnavailable") ?? "";
+    public static string StatusOfficePdfAUnsupportedForExcel => RM.GetString("StatusOfficePdfAUnsupportedForExcel") ?? "";
     public static string StatusCompleted => RM.GetString("StatusCompleted") ?? "";
     public static string StatusErrorState => RM.GetString("StatusErrorState") ?? "";
     public static string StatusOptimizingProgress => RM.GetString("StatusOptimizingProgress") ?? "";
     public static string StatusOptimizeCancelled => RM.GetString("StatusOptimizeCancelled") ?? "";
     public static string StatusOptimizeDone => RM.GetString("StatusOptimizeDone") ?? "";
+    public static string StatusPdfOptimizeCancelled => RM.GetString("StatusPdfOptimizeCancelled") ?? "";
+    public static string StatusPdfOptimizeDone => RM.GetString("StatusPdfOptimizeDone") ?? "";
     public static string MsgConfirmClearImageList => RM.GetString("MsgConfirmClearImageList") ?? "";
     public static string MsgConfirmClearList => RM.GetString("MsgConfirmClearList") ?? "";
     public static string TitleConfirm => RM.GetString("TitleConfirm") ?? "";
@@ -165,5 +174,9 @@ public static class Loc
     public static string DlgFilterCompositeImages => RM.GetString("DlgFilterCompositeImages") ?? "";
     public static string DlgTitleSelectOfficeFiles => RM.GetString("DlgTitleSelectOfficeFiles") ?? "";
     public static string DlgFilterOfficeFiles => RM.GetString("DlgFilterOfficeFiles") ?? "";
+    public static string DlgTitleSelectPdfFiles => RM.GetString("DlgTitleSelectPdfFiles") ?? "";
+    public static string DlgFilterPdfFiles => RM.GetString("DlgFilterPdfFiles") ?? "";
     public static string DlgTitleAddFolder => RM.GetString("DlgTitleAddFolder") ?? "";
+    public static string TooltipOfficePdfAvailable => RM.GetString("TooltipOfficePdfAvailable") ?? "";
+    public static string TooltipOfficePdfUnavailable => RM.GetString("TooltipOfficePdfUnavailable") ?? "";
 }

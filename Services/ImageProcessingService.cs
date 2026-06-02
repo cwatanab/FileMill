@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Xml.Linq;
 using NetVips;
 using FileMill.Models;
@@ -12,6 +14,45 @@ namespace FileMill.Services;
 
 public class ImageProcessingService
 {
+    private const int WordPdfExportFormat = 17;
+    private const int ExcelPdfExportType = 0;
+    private const int PowerPointPdfFixedFormatType = 2;
+
+    private static readonly Lazy<OfficePdfInteropAvailability> CachedOfficePdfInteropAvailability = new(() => new OfficePdfInteropAvailability(
+        HasComProgId("Word.Application"),
+        HasComProgId("Excel.Application"),
+        HasComProgId("PowerPoint.Application")));
+
+    public static bool IsOfficePdfConversionAvailable => CachedOfficePdfInteropAvailability.Value.IsAnyAvailable;
+
+    public static bool IsOfficePdfConversionAvailableForExtension(string extension)
+    {
+        var availability = CachedOfficePdfInteropAvailability.Value;
+        return extension.ToLowerInvariant() switch
+        {
+            ".docx" => availability.Word,
+            ".xlsx" => availability.Excel,
+            ".pptx" => availability.PowerPoint,
+            _ => false
+        };
+    }
+
+    public static string OfficePdfConversionAvailabilityMessage
+    {
+        get
+        {
+            var availability = CachedOfficePdfInteropAvailability.Value;
+            if (!availability.IsAnyAvailable)
+                return Properties.Loc.TooltipOfficePdfUnavailable;
+
+            var availableApps = new List<string>();
+            if (availability.Word) availableApps.Add("Word");
+            if (availability.Excel) availableApps.Add("Excel");
+            if (availability.PowerPoint) availableApps.Add("PowerPoint");
+            return string.Format(Properties.Loc.TooltipOfficePdfAvailable, string.Join(", ", availableApps));
+        }
+    }
+
     /// <summary>
     /// 画像を処理し、出力先に保存する。
     /// </summary>
@@ -1258,6 +1299,210 @@ public class ImageProcessingService
         => string.Equals(NormalizePackagePath(left), NormalizePackagePath(right), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Microsoft Office COM Interop を使って Office Open XML ファイルを PDF に変換する。
+    /// </summary>
+    public long ConvertOfficeToPdf(string inputPath, string outputPath, bool usePdfA, Action<string>? logAction = null)
+    {
+        var ext = Path.GetExtension(inputPath).ToLowerInvariant();
+        if (!IsOfficePdfConversionAvailableForExtension(ext))
+            throw new NotSupportedException(string.Format(Properties.Loc.StatusOfficePdfInteropUnavailable, ext));
+
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                ConvertOfficeToPdfCore(inputPath, outputPath, ext, usePdfA, logAction);
+            }
+            catch (Exception ex)
+            {
+                error = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        if (error != null)
+            throw new Exception($"PDF変換エラー: {error.Message}", error);
+
+        return new FileInfo(outputPath).Length;
+    }
+
+    private static void ConvertOfficeToPdfCore(string inputPath, string outputPath, string extension, bool usePdfA, Action<string>? logAction)
+    {
+        logAction?.Invoke($"PDF変換: {Path.GetFileName(inputPath)} -> {Path.GetFileName(outputPath)}{(usePdfA ? " (PDF/A)" : "")}");
+
+        switch (extension)
+        {
+            case ".docx":
+                ConvertWordToPdf(inputPath, outputPath, usePdfA);
+                break;
+            case ".xlsx":
+                ConvertExcelToPdf(inputPath, outputPath, usePdfA);
+                break;
+            case ".pptx":
+                ConvertPowerPointToPdf(inputPath, outputPath, usePdfA);
+                break;
+            default:
+                throw new NotSupportedException($"PDF変換対象外の形式です: {extension}");
+        }
+    }
+
+    private static void ConvertWordToPdf(string inputPath, string outputPath, bool usePdfA)
+    {
+        object? app = null;
+        object? documents = null;
+        object? document = null;
+        try
+        {
+            app = CreateOfficeApplication("Word.Application", "Word");
+            dynamic word = app;
+            word.Visible = false;
+            word.DisplayAlerts = 0;
+
+            documents = word.Documents;
+            document = ((dynamic)documents).Open(inputPath, false, true, false);
+            ((dynamic)document).ExportAsFixedFormat(OutputFileName: outputPath, ExportFormat: WordPdfExportFormat, OpenAfterExport: false, UseISO19005_1: usePdfA);
+        }
+        finally
+        {
+            TryCloseComDocument(document);
+            TryQuitComApplication(app);
+            ReleaseComObject(document);
+            ReleaseComObject(documents);
+            ReleaseComObject(app);
+        }
+    }
+
+    private static void ConvertExcelToPdf(string inputPath, string outputPath, bool usePdfA)
+    {
+        if (usePdfA)
+            throw new NotSupportedException(Properties.Loc.StatusOfficePdfAUnsupportedForExcel);
+
+        object? app = null;
+        object? workbooks = null;
+        object? workbook = null;
+        try
+        {
+            app = CreateOfficeApplication("Excel.Application", "Excel");
+            dynamic excel = app;
+            excel.Visible = false;
+            excel.DisplayAlerts = false;
+
+            workbooks = excel.Workbooks;
+            workbook = ((dynamic)workbooks).Open(inputPath, 0, true);
+            ((dynamic)workbook).ExportAsFixedFormat(ExcelPdfExportType, outputPath);
+        }
+        finally
+        {
+            TryCloseComDocument(workbook);
+            TryQuitComApplication(app);
+            ReleaseComObject(workbook);
+            ReleaseComObject(workbooks);
+            ReleaseComObject(app);
+        }
+    }
+
+    private static void ConvertPowerPointToPdf(string inputPath, string outputPath, bool usePdfA)
+    {
+        object? app = null;
+        object? presentations = null;
+        object? presentation = null;
+        try
+        {
+            app = CreateOfficeApplication("PowerPoint.Application", "PowerPoint");
+            dynamic powerPoint = app;
+
+            presentations = powerPoint.Presentations;
+            presentation = ((dynamic)presentations).Open(inputPath, -1, 0, 0);
+            ((dynamic)presentation).ExportAsFixedFormat(Path: outputPath, FixedFormatType: PowerPointPdfFixedFormatType, UseISO19005_1: usePdfA);
+        }
+        finally
+        {
+            TryCloseComDocument(presentation);
+            TryQuitComApplication(app);
+            ReleaseComObject(presentation);
+            ReleaseComObject(presentations);
+            ReleaseComObject(app);
+        }
+    }
+
+    private static object CreateOfficeApplication(string progId, string appName)
+    {
+        var type = Type.GetTypeFromProgID(progId, throwOnError: false)
+            ?? throw new InvalidOperationException($"{appName} の Microsoft Office Interop が利用できません。");
+        return Activator.CreateInstance(type)
+            ?? throw new InvalidOperationException($"{appName} を起動できませんでした。");
+    }
+
+    private static bool HasComProgId(string progId)
+    {
+        try
+        {
+            return Type.GetTypeFromProgID(progId, throwOnError: false) != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void TryCloseComDocument(object? document)
+    {
+        if (document == null)
+            return;
+
+        try
+        {
+            ((dynamic)document).Close(false);
+        }
+        catch
+        {
+            try
+            {
+                ((dynamic)document).Close();
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private static void TryQuitComApplication(object? app)
+    {
+        if (app == null)
+            return;
+
+        try
+        {
+            ((dynamic)app).Quit();
+        }
+        catch
+        {
+        }
+    }
+
+    private static void ReleaseComObject(object? comObject)
+    {
+        if (comObject == null)
+            return;
+
+        try
+        {
+            if (Marshal.IsComObject(comObject))
+                Marshal.FinalReleaseComObject(comObject);
+        }
+        catch
+        {
+        }
+    }
+
+    /// <summary>
     /// ファイルを最適化（Office Open XMLのクリーンアップ、画像圧縮、WebP変換）し、処理後のファイルサイズを返す。
     /// </summary>
     public long Optimize(string inputPath, string outputPath, bool stripMetadata, bool cleanUnused, bool compressImages, bool convertToWebP, int webpQuality, bool compressMedia = false, string ffmpegPath = "ffmpeg", int videoCrf = 23, string videoCodec = "libx264", string audioCodec = "libmp3lame",
@@ -1458,5 +1703,10 @@ public class ImageProcessingService
             logAction?.Invoke($"[cjpegli] エラー: {ex.Message}");
             return false;
         }
+    }
+
+    private sealed record OfficePdfInteropAvailability(bool Word, bool Excel, bool PowerPoint)
+    {
+        public bool IsAnyAvailable => Word || Excel || PowerPoint;
     }
 }

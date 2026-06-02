@@ -1039,7 +1039,7 @@
 
             
 
-            <TabItem Header="ファイル最適化" FontSize="13" Padding="16,6">
+            <TabItem Header="Office ファイル変換" FontSize="13" Padding="16,6">
 
                 <DockPanel>
 
@@ -1121,17 +1121,17 @@
 
 
 
-                                <!-- 右側：最適化実行ボタン -->
+                                <!-- 右側：変換実行ボタン -->
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
 
-                                    <Button Command="{Binding ProcessOptimizeCommand}" ToolTip="最適化を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
+                                    <Button Command="{Binding ProcessOptimizeCommand}" ToolTip="変換を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="100" Height="28" Margin="0,0,8,0">
 
                                         <StackPanel Orientation="Horizontal">
 
                                             <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
 
-                                            <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="変換実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
 
                                         </StackPanel>
 
@@ -1309,7 +1309,7 @@
 
 
 
-                                                <GridViewColumn x:Name="ColOptOptimizedSize" Header="最適化後" Width="95">
+                                                <GridViewColumn x:Name="ColOptOptimizedSize" Header="出力後" Width="95">
 
                                                     <GridViewColumn.CellTemplate>
 
@@ -1449,7 +1449,7 @@
 
                         <!-- 右側：設定オプション（画像変換タブと統一されたスタイル） -->
 
-                        <GroupBox Grid.Column="2" Header="最適化オプション" Padding="4">
+                        <GroupBox Grid.Column="2" Header="変換オプション" Padding="4">
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
 
@@ -1477,6 +1477,37 @@
 
                                     </Border>
 
+                                    <!-- 2. PDF変換 -->
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,3">
+
+                                        <Grid>
+
+                                            <Grid.ColumnDefinitions>
+
+                                                <ColumnDefinition Width="*"/>
+
+                                                <ColumnDefinition Width="Auto"/>
+
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Content="PDFへ変換"
+                                                      IsChecked="{Binding ConvertOfficeToPdf, Mode=TwoWay}"
+                                                      IsEnabled="{Binding IsOfficePdfConversionAvailable}"
+                                                      ToolTip="{Binding OfficePdfConversionToolTip}"
+                                                      VerticalAlignment="Center"
+                                                      FontSize="12"/>
+
+                                            <Button Grid.Column="1"
+                                                    Style="{StaticResource GearButtonStyle}"
+                                                    Command="{Binding OpenModalCommand}"
+                                                    CommandParameter="OfficePdf"
+                                                    IsEnabled="{Binding IsOfficePdfConversionAvailable}"
+                                                    ToolTip="{Binding OfficePdfConversionToolTip}"/>
+
+                                        </Grid>
+
+                                    </Border>
+
 
 
 
@@ -1488,6 +1519,500 @@
 
                     </Grid>
                 </DockPanel>
+            </TabItem>
+
+            <TabItem Header="PDF ファイル最適化" FontSize="13" Padding="16,6">
+
+                <DockPanel>
+
+                    <StackPanel DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}">
+
+                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="8,4">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+
+                                    <ColumnDefinition Width="Auto"/>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                    <ColumnDefinition Width="Auto"/>
+
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal" Grid.Column="0">
+
+                                    <Button Command="{Binding AddPdfFilesCommand}" ToolTip="ファイルを追加" Style="{StaticResource ToolbarButtonStyle}">
+
+                                        <TextBlock Text="📁＋" FontSize="14"/>
+
+                                    </Button>
+
+                                    <Button Command="{Binding AddPdfFolderCommand}" ToolTip="フォルダを追加" Style="{StaticResource ToolbarButtonStyle}" Margin="6,0,0,0">
+
+                                        <TextBlock Text="📂＋" FontSize="14"/>
+
+                                    </Button>
+
+                                    <Button Command="{Binding ClearPdfFilesCommand}" ToolTip="すべて削除" Style="{StaticResource ToolbarButtonStyle}" Margin="6,0,0,0">
+
+                                        <TextBlock Text="🗑" FontSize="14"/>
+
+                                    </Button>
+
+                                    <Button Command="{Binding RemovePdfFileCommand}" CommandParameter="{Binding SelectedItem, ElementName=PdfFileListView}" ToolTip="選択したファイルを削除" Style="{StaticResource ToolbarButtonStyle}" Margin="6,0,0,0">
+
+                                        <TextBlock Text="❌" FontSize="14"/>
+
+                                    </Button>
+
+                                </StackPanel>
+
+                                <Grid Grid.Column="1" Margin="16,0" MaxWidth="560">
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="Auto"/>
+
+                                        <ColumnDefinition Width="*"/>
+
+                                        <ColumnDefinition Width="Auto"/>
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="出力先" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource ControlForegroundDim}" FontSize="12"/>
+
+                                    <TextBox Grid.Column="1" Text="{Binding OutputDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" FontSize="11" Padding="4,0"/>
+
+                                    <Button Grid.Column="2" Content="..." Width="28" Height="24" Margin="4,0,0,0" Command="{Binding BrowseOutputCommand}"/>
+
+                                </Grid>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+
+                                    <Button Command="{Binding ProcessPdfOptimizeCommand}" ToolTip="PDF 最適化を開始" Background="{DynamicResource AccentBackground}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Width="110" Height="28" Margin="0,0,8,0">
+
+                                        <StackPanel Orientation="Horizontal">
+
+                                            <TextBlock Text="⚡" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="最適化実行" Foreground="{DynamicResource AccentForeground}" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                                        </StackPanel>
+
+                                    </Button>
+
+                                    <Button Command="{Binding CancelCommand}" ToolTip="処理をキャンセル" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Width="100" Height="28">
+
+                                        <StackPanel Orientation="Horizontal">
+
+                                            <TextBlock Text="■" Foreground="{DynamicResource ControlForeground}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="キャンセル" Foreground="{DynamicResource ControlForeground}" VerticalAlignment="Center"/>
+
+                                        </StackPanel>
+
+                                    </Button>
+
+                                </StackPanel>
+
+                            </Grid>
+
+                        </Border>
+
+                    </StackPanel>
+
+                    <Grid Margin="8">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="*"/>
+
+                            <ColumnDefinition Width="4"/>
+
+                            <ColumnDefinition Width="280" MinWidth="240" MaxWidth="420"/>
+
+                        </Grid.ColumnDefinitions>
+
+                        <GroupBox Grid.Column="0" Header="最適化対象PDFリスト" Padding="4">
+
+                            <Border x:Name="PdfFileListDropBorder" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource ControlBackground}"
+
+                                    AllowDrop="True" DragEnter="PdfFileList_DragEnter" DragOver="PdfFileList_DragOver" DragLeave="PdfFileList_DragLeave" Drop="PdfFileList_Drop">
+
+                                <Grid>
+
+                                    <TextBlock Text="ここに PDF ファイルをドラッグ＆ドロップしてください"
+
+                                               FontSize="13" Foreground="{DynamicResource ControlForegroundDim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20">
+
+                                        <TextBlock.Style>
+
+                                            <Style TargetType="TextBlock">
+
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+
+                                                <Style.Triggers>
+
+                                                    <DataTrigger Binding="{Binding IsPdfFileListEmpty}" Value="True">
+
+                                                        <Setter Property="Visibility" Value="Visible"/>
+
+                                                    </DataTrigger>
+
+                                                </Style.Triggers>
+
+                                            </Style>
+
+                                        </TextBlock.Style>
+
+                                    </TextBlock>
+
+                                    <ListView x:Name="PdfFileListView" ItemsSource="{Binding PdfFiles}" BorderThickness="0" SelectionMode="Extended">
+
+                                        <ListView.Resources>
+
+                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
+
+                                                <EventSetter Event="Click" Handler="PdfFileListHeader_Click"/>
+
+                                            </Style>
+
+                                        </ListView.Resources>
+
+                                        <ListView.View>
+
+                                            <GridView>
+
+                                                <GridViewColumn Width="40">
+
+                                                    <GridViewColumnHeader>
+
+                                                        <CheckBox x:Name="HeaderAllCheckPdf" Checked="HeaderAllCheckPdf_Checked" Unchecked="HeaderAllCheckPdf_Unchecked" HorizontalAlignment="Center"/>
+
+                                                    </GridViewColumnHeader>
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" HorizontalAlignment="Center"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfName" Header="名前" Width="180">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FilePath}"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfFormat" Header="種類" Width="60">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding Format}" HorizontalAlignment="Center"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfOriginalSize" Header="元のサイズ" Width="95">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding OriginalSizeDisplay}" HorizontalAlignment="Right"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfOptimizedSize" Header="最適化後" Width="95">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding OptimizedSizeDisplay}" HorizontalAlignment="Right"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfSavings" Header="削減率" Width="75">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding SavingDisplay}" HorizontalAlignment="Center" Foreground="{DynamicResource SavingsForeground}"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfStatus" Header="状態" Width="65">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center">
+
+                                                                <TextBlock.Style>
+
+                                                                    <Style TargetType="TextBlock">
+
+                                                                        <Style.Triggers>
+
+                                                                            <DataTrigger Binding="{Binding Status}" Value="完了">
+
+                                                                                <Setter Property="Foreground" Value="{DynamicResource StatusSuccessBrush}"/>
+
+                                                                            </DataTrigger>
+
+                                                                            <DataTrigger Binding="{Binding Status}" Value="処理中">
+
+                                                                                <Setter Property="Foreground" Value="{DynamicResource StatusProcessingBrush}"/>
+
+                                                                            </DataTrigger>
+
+                                                                            <DataTrigger Binding="{Binding Status}" Value="エラー">
+
+                                                                                <Setter Property="Foreground" Value="{DynamicResource StatusErrorBrush}"/>
+
+                                                                            </DataTrigger>
+
+                                                                        </Style.Triggers>
+
+                                                                    </Style>
+
+                                                                </TextBlock.Style>
+
+                                                            </TextBlock>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                                <GridViewColumn x:Name="ColPdfPath" Header="パス" Width="200">
+
+                                                    <GridViewColumn.CellTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <TextBlock Text="{Binding FilePath}" TextTrimming="CharacterEllipsis"/>
+
+                                                        </DataTemplate>
+
+                                                    </GridViewColumn.CellTemplate>
+
+                                                </GridViewColumn>
+
+                                            </GridView>
+
+                                        </ListView.View>
+
+                                        <ListView.ItemContainerStyle>
+
+                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+
+                                                <Setter Property="ContextMenu">
+
+                                                    <Setter.Value>
+
+                                                        <ContextMenu>
+
+                                                            <MenuItem Header="削除(_D)" Command="{Binding DataContext.RemovePdfFileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+
+                                                        </ContextMenu>
+
+                                                    </Setter.Value>
+
+                                                </Setter>
+
+                                            </Style>
+
+                                        </ListView.ItemContainerStyle>
+
+                                    </ListView>
+
+                                </Grid>
+
+                            </Border>
+
+                        </GroupBox>
+
+                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent"/>
+
+                        <GroupBox Grid.Column="2" Header="PDF 最適化オプション" Padding="4">
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+
+                                <StackPanel Margin="2">
+
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,6">
+
+                                        <StackPanel>
+
+                                            <CheckBox x:Name="PdfOptimizeImagesCheck" Content="画像を最適化" IsChecked="{Binding PdfOptimizeImages, Mode=TwoWay}" FontSize="12"/>
+
+                                            <StackPanel Margin="20,6,0,0" Visibility="{Binding IsChecked, ElementName=PdfOptimizeImagesCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                                                <TextBlock Text="JPEG品質" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+
+                                                <Grid Margin="0,2,0,6">
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                        <ColumnDefinition Width="36"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Slider Minimum="1" Maximum="100" Value="{Binding PdfJpegQuality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+
+                                                    <TextBlock Grid.Column="1" Text="{Binding PdfJpegQuality}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+
+                                                </Grid>
+
+                                                <Grid Margin="0,4">
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="82"/>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Text="最小幅" VerticalAlignment="Center" FontSize="11"/>
+
+                                                    <TextBox Grid.Column="1" Text="{Binding PdfMinWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+
+                                                </Grid>
+
+                                                <Grid Margin="0,4">
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="82"/>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Text="最小高さ" VerticalAlignment="Center" FontSize="11"/>
+
+                                                    <TextBox Grid.Column="1" Text="{Binding PdfMinHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+
+                                                </Grid>
+
+                                                <Grid Margin="0,4">
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="82"/>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Text="最小面積" VerticalAlignment="Center" FontSize="11"/>
+
+                                                    <TextBox Grid.Column="1" Text="{Binding PdfMinArea, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+
+                                                </Grid>
+
+                                                <CheckBox Content="インライン画像を保持" IsChecked="{Binding PdfKeepInlineImages, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
+
+                                            </StackPanel>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,6">
+
+                                        <StackPanel>
+
+                                            <CheckBox x:Name="PdfCompressStreamsCheck" Content="ストリームを圧縮" IsChecked="{Binding PdfCompressStreams, Mode=TwoWay}" FontSize="12"/>
+
+                                            <StackPanel Margin="20,6,0,0" Visibility="{Binding IsChecked, ElementName=PdfCompressStreamsCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                                                <TextBlock Text="圧縮レベル" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+
+                                                <Grid Margin="0,2">
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                        <ColumnDefinition Width="28"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Slider Minimum="1" Maximum="9" Value="{Binding PdfCompressionLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+
+                                                    <TextBlock Grid.Column="1" Text="{Binding PdfCompressionLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+
+                                                </Grid>
+
+                                            </StackPanel>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                    <Border BorderBrush="{DynamicResource BorderBrushLight}" BorderThickness="0,0,0,1" Padding="4,6">
+
+                                        <StackPanel>
+
+                                            <CheckBox Content="オブジェクトストリームを生成" IsChecked="{Binding PdfGenerateObjectStreams, Mode=TwoWay}" Margin="0,2" FontSize="12"/>
+
+                                            <CheckBox Content="Web表示用にリニアライズ" IsChecked="{Binding PdfLinearize, Mode=TwoWay}" Margin="0,6,0,2" FontSize="12"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </StackPanel>
+
+                            </ScrollViewer>
+
+                        </GroupBox>
+
+                    </Grid>
+
+                </DockPanel>
+
             </TabItem>
         </TabControl>
     </DockPanel>

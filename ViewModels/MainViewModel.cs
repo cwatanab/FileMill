@@ -51,13 +51,20 @@ public class MainViewModel : INotifyPropertyChanged
         ".docx", ".xlsx", ".pptx"
     ];
 
+    private static readonly string[] PdfExtensions =
+    [
+        ".pdf"
+    ];
+
     private readonly ImageProcessingService _processingService = new();
+    private readonly PdfOptimizationService _pdfOptimizationService = new();
     private CancellationTokenSource? _cts;
     private bool _suppressNotifications;
 
     // --- ファイルリスト ---
     public ObservableCollection<ImageFile> Files { get; } = [];
     public ObservableCollection<OptimizeFile> OptimizeFiles { get; } = [];
+    public ObservableCollection<OptimizeFile> PdfFiles { get; } = [];
 
     // --- パイプライン ---
     public ObservableCollection<PipelineStep> Steps { get; } = [];
@@ -88,6 +95,7 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(OutputSummary));
             OnPropertyChanged(nameof(OptimizeOutputSummary));
+            OnPropertyChanged(nameof(PdfOutputSummary));
         }
     }
 
@@ -176,6 +184,13 @@ public class MainViewModel : INotifyPropertyChanged
         set { _cjpegliPath = value; OnPropertyChanged(); }
     }
 
+    private string _qpdfPath = "tools/qpdf.exe";
+    public string QpdfPath
+    {
+        get => _qpdfPath;
+        set { _qpdfPath = value; OnPropertyChanged(); }
+    }
+
     // --- 最適化一般設定 ---
     private bool _enableOfficeOptimize = true;
     public bool EnableOfficeOptimize
@@ -218,6 +233,100 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _convertToWebP;
         set { _convertToWebP = value; OnPropertyChanged(); }
+    }
+
+    private bool _convertOfficeToPdf;
+    public bool ConvertOfficeToPdf
+    {
+        get => _convertOfficeToPdf && IsOfficePdfConversionAvailable;
+        set
+        {
+            var next = value && IsOfficePdfConversionAvailable;
+            if (_convertOfficeToPdf == next) return;
+            _convertOfficeToPdf = next;
+            OnPropertyChanged();
+        }
+    }
+
+    private bool _convertOfficeToPdfA;
+    public bool ConvertOfficeToPdfA
+    {
+        get => _convertOfficeToPdfA;
+        set { _convertOfficeToPdfA = value; OnPropertyChanged(); }
+    }
+
+    public bool IsOfficePdfConversionAvailable => ImageProcessingService.IsOfficePdfConversionAvailable;
+    public string OfficePdfConversionToolTip => ImageProcessingService.OfficePdfConversionAvailabilityMessage;
+
+    // --- PDF最適化詳細 ---
+    private bool _pdfOptimizeImages;
+    public bool PdfOptimizeImages
+    {
+        get => _pdfOptimizeImages;
+        set { _pdfOptimizeImages = value; OnPropertyChanged(); }
+    }
+
+    private int _pdfJpegQuality = 85;
+    public int PdfJpegQuality
+    {
+        get => _pdfJpegQuality;
+        set { _pdfJpegQuality = value; OnPropertyChanged(); }
+    }
+
+    private int _pdfMinWidth = 128;
+    public int PdfMinWidth
+    {
+        get => _pdfMinWidth;
+        set { _pdfMinWidth = value; OnPropertyChanged(); }
+    }
+
+    private int _pdfMinHeight = 128;
+    public int PdfMinHeight
+    {
+        get => _pdfMinHeight;
+        set { _pdfMinHeight = value; OnPropertyChanged(); }
+    }
+
+    private int _pdfMinArea = 16384;
+    public int PdfMinArea
+    {
+        get => _pdfMinArea;
+        set { _pdfMinArea = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfKeepInlineImages;
+    public bool PdfKeepInlineImages
+    {
+        get => _pdfKeepInlineImages;
+        set { _pdfKeepInlineImages = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfCompressStreams = true;
+    public bool PdfCompressStreams
+    {
+        get => _pdfCompressStreams;
+        set { _pdfCompressStreams = value; OnPropertyChanged(); }
+    }
+
+    private int _pdfCompressionLevel = 6;
+    public int PdfCompressionLevel
+    {
+        get => _pdfCompressionLevel;
+        set { _pdfCompressionLevel = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfGenerateObjectStreams;
+    public bool PdfGenerateObjectStreams
+    {
+        get => _pdfGenerateObjectStreams;
+        set { _pdfGenerateObjectStreams = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfLinearize;
+    public bool PdfLinearize
+    {
+        get => _pdfLinearize;
+        set { _pdfLinearize = value; OnPropertyChanged(); }
     }
 
     private int _webpQuality = 85;
@@ -368,12 +477,16 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool IsFileListEmpty => Files.Count == 0;
     public bool IsOptimizeFileListEmpty => OptimizeFiles.Count == 0;
+    public bool IsPdfFileListEmpty => PdfFiles.Count == 0;
 
     public string OutputSummary
         => string.Format(Properties.Loc.SummaryOutput, OutputDirectory, Files.Count, Steps.Count(s => s.Enabled));
 
     public string OptimizeOutputSummary
         => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, OptimizeFiles.Count);
+
+    public string PdfOutputSummary
+        => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, PdfFiles.Count);
 
     // --- 設定ウィンドウの管理 ---
     // View 側がここに SettingsWindow を開く処理を登録する
@@ -427,6 +540,11 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand RemoveOptimizeFileCommand { get; }
     public ICommand ClearOptimizeFilesCommand { get; }
     public ICommand ProcessOptimizeCommand { get; }
+    public ICommand AddPdfFilesCommand { get; }
+    public ICommand AddPdfFolderCommand { get; }
+    public ICommand RemovePdfFileCommand { get; }
+    public ICommand ClearPdfFilesCommand { get; }
+    public ICommand ProcessPdfOptimizeCommand { get; }
     public ICommand CancelCommand { get; }
     public ICommand BrowseCompositeCommand { get; }
     public ICommand ToggleDebugCommand { get; }
@@ -453,6 +571,11 @@ public class MainViewModel : INotifyPropertyChanged
         RemoveOptimizeFileCommand = new RelayCommand(RemoveOptimizeFile, _ => !IsProcessing);
         ClearOptimizeFilesCommand = new RelayCommand(ClearOptimizeFiles, _ => !IsProcessing);
         ProcessOptimizeCommand = new RelayCommand(async _ => await ProcessOptimizeAsync(), _ => !IsProcessing && OptimizeFiles.Count > 0);
+        AddPdfFilesCommand = new RelayCommand(AddPdfFiles, _ => !IsProcessing);
+        AddPdfFolderCommand = new RelayCommand(AddPdfFolder, _ => !IsProcessing);
+        RemovePdfFileCommand = new RelayCommand(RemovePdfFile, _ => !IsProcessing);
+        ClearPdfFilesCommand = new RelayCommand(ClearPdfFiles, _ => !IsProcessing);
+        ProcessPdfOptimizeCommand = new RelayCommand(async _ => await ProcessPdfOptimizeAsync(), _ => !IsProcessing && PdfFiles.Count > 0);
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsProcessing);
 
         // ファイルリスト変更時に空表示を更新
@@ -467,6 +590,13 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IsOptimizeFileListEmpty));
             OnPropertyChanged(nameof(OptimizeOutputSummary));
             ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
+        };
+
+        PdfFiles.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsPdfFileListEmpty));
+            OnPropertyChanged(nameof(PdfOutputSummary));
+            ((RelayCommand)ProcessPdfOptimizeCommand).RaiseCanExecuteChanged();
         };
 
         // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
@@ -699,6 +829,7 @@ public class MainViewModel : INotifyPropertyChanged
             "oxipng" => OxipngPath,
             "cjpegli" => CjpegliPath,
             "ffmpeg" => FfmpegPath,
+            "qpdf" => QpdfPath,
             _ => ""
         };
 
@@ -726,6 +857,9 @@ public class MainViewModel : INotifyPropertyChanged
                 break;
             case "cjpegli":
                 CjpegliPath = dlg.FileName;
+                break;
+            case "qpdf":
+                QpdfPath = dlg.FileName;
                 break;
         }
     }
@@ -882,6 +1016,11 @@ public class MainViewModel : INotifyPropertyChanged
         ((RelayCommand)RemoveOptimizeFileCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ClearOptimizeFilesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)AddPdfFilesCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)AddPdfFolderCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)RemovePdfFileCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ClearPdfFilesCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ProcessPdfOptimizeCommand).RaiseCanExecuteChanged();
         ((RelayCommand)BrowseCompositeCommand).RaiseCanExecuteChanged();
     }
 
@@ -912,6 +1051,7 @@ public class MainViewModel : INotifyPropertyChanged
                 "Rotate" => Properties.Loc.ModalTitleRotate,
                 "Composite" => Properties.Loc.ModalTitleComposite,
                 "OfficeOptimize" => Properties.Loc.ModalTitleOfficeOptimize,
+                "OfficePdf" => Properties.Loc.ModalTitleOfficePdf,
 
                 "Options" => Properties.Loc.ModalTitleOptions,
                 _ => Properties.Loc.ModalTitleDefault
@@ -1000,6 +1140,82 @@ public class MainViewModel : INotifyPropertyChanged
         OptimizeFiles.Clear();
     }
 
+    public void AddPdfFileByPath(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            foreach (var filePath in Directory.GetFiles(path).Where(IsSupportedPdfFile).OrderBy(f => f))
+                AddPdfFileByPath(filePath);
+            return;
+        }
+
+        if (!IsSupportedPdfFile(path))
+            return;
+
+        if (!PdfFiles.Any(f => f.FilePath == path))
+        {
+            var fileInfo = new FileInfo(path);
+            var info = new OptimizeFile
+            {
+                FilePath = path,
+                OriginalSize = fileInfo.Length,
+                Status = Properties.Loc.StatusWaiting
+            };
+            PdfFiles.Add(info);
+        }
+    }
+
+    private static bool IsSupportedPdfFile(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        return PdfExtensions.Contains(ext);
+    }
+
+    private void AddPdfFiles(object? _)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = Properties.Loc.DlgTitleSelectPdfFiles,
+            Filter = Properties.Loc.DlgFilterPdfFiles,
+            Multiselect = true
+        };
+
+        if (dlg.ShowDialog() == true)
+        {
+            foreach (var path in dlg.FileNames)
+                AddPdfFileByPath(path);
+        }
+    }
+
+    private void AddPdfFolder(object? _)
+    {
+        var dlg = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = Properties.Loc.DlgTitleAddFolder,
+            Multiselect = false
+        };
+
+        if (dlg.ShowDialog() == true)
+            AddPdfFileByPath(dlg.FolderName);
+    }
+
+    private void RemovePdfFile(object? parameter)
+    {
+        if (parameter is OptimizeFile file)
+            PdfFiles.Remove(file);
+    }
+
+    private void ClearPdfFiles(object? _)
+    {
+        if (ConfirmOnClear)
+        {
+            var result = MessageBox.Show(Properties.Loc.MsgConfirmClearList, Properties.Loc.TitleConfirm, MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+                return;
+        }
+        PdfFiles.Clear();
+    }
+
     private async Task ProcessOptimizeAsync()
     {
         var targets = OptimizeFiles.Where(f => f.IsChecked).ToList();
@@ -1009,7 +1225,7 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        LogDebug($"最適化開始: {targets.Count} ファイル");
+        LogDebug($"Office ファイル変換開始: {targets.Count} ファイル");
 
         IsProcessing = true;
         ProgressValue = 0;
@@ -1027,6 +1243,8 @@ public class MainViewModel : INotifyPropertyChanged
         var compressEmbeddedImages = CompressEmbeddedImages;
 
         var convertToWebP = ConvertToWebP;
+        var convertOfficeToPdf = ConvertOfficeToPdf;
+        var convertOfficeToPdfA = ConvertOfficeToPdfA;
         var webPQuality = WebPQuality;
         var compressMedia = CompressMedia;
         var ffmpegPath = FfmpegPath;
@@ -1047,8 +1265,9 @@ public class MainViewModel : INotifyPropertyChanged
         {
             var originalPath = file.FilePath;
             var ext = Path.GetExtension(originalPath);
-            var outputExtension = Path.GetExtension(originalPath);
-            var targetPath = GetUniqueSuffixedPath(originalPath, "_optimized", outputExtension, outputDirectory, reservedOutputPaths);
+            var outputExtension = convertOfficeToPdf ? ".pdf" : Path.GetExtension(originalPath);
+            var outputSuffix = convertOfficeToPdf ? "_converted" : "_optimized";
+            var targetPath = GetUniqueSuffixedPath(originalPath, outputSuffix, outputExtension, outputDirectory, reservedOutputPaths);
             reservedOutputPaths.Add(targetPath);
             return new
             {
@@ -1064,7 +1283,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         var parallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = maxParallel > 0 ? maxParallel : Environment.ProcessorCount,
+            MaxDegreeOfParallelism = convertOfficeToPdf ? 1 : maxParallel > 0 ? maxParallel : Environment.ProcessorCount,
             CancellationToken = token
         };
 
@@ -1085,36 +1304,45 @@ public class MainViewModel : INotifyPropertyChanged
                         LogDebug($"処理開始: {file.FileName}");
                         var ext = item.Extension;
                         var targetPath = item.TargetPath;
-                        tempPath = targetPath + "." + Guid.NewGuid().ToString("N")[..8] + ".tmp";
+                        tempPath = GetTemporarySiblingPath(targetPath);
 
-                        var passStrip = enableOfficeOptimize && stripOfficeMetadata;
-                        var passClean = enableOfficeOptimize && cleanUnusedObjects;
-                        var shouldCompressImages = enableOfficeOptimize && compressEmbeddedImages;
-                        var passConvertToWebP = enableOfficeOptimize && convertToWebP;
-                        var passCompressMedia = enableOfficeOptimize && compressMedia;
-                        var passResetCellSelection = enableOfficeOptimize && resetCellSelection;
+                        long optimizedSize;
+                        if (convertOfficeToPdf)
+                        {
+                            file.Status = Properties.Loc.StatusConvertingToPdf;
+                            optimizedSize = _processingService.ConvertOfficeToPdf(originalPath, tempPath, convertOfficeToPdfA, LogDebug);
+                        }
+                        else
+                        {
+                            var passStrip = enableOfficeOptimize && stripOfficeMetadata;
+                            var passClean = enableOfficeOptimize && cleanUnusedObjects;
+                            var shouldCompressImages = enableOfficeOptimize && compressEmbeddedImages;
+                            var passConvertToWebP = enableOfficeOptimize && convertToWebP;
+                            var passCompressMedia = enableOfficeOptimize && compressMedia;
+                            var passResetCellSelection = enableOfficeOptimize && resetCellSelection;
 
-                        file.Status = Properties.Loc.StatusOptimizingPackage;
-                        long optimizedSize = _processingService.Optimize(
-                            originalPath, 
-                            tempPath, 
-                            passStrip, 
-                            passClean, 
-                            shouldCompressImages, 
-                            passConvertToWebP, 
-                            webPQuality,
-                            passCompressMedia,
-                            ffmpegPath,
-                            mediaVideoCrf,
-                            mediaVideoCodec,
-                            mediaAudioCodec,
-                            useOxipng,
-                            oxipngPath,
-                            oxipngLevel,
-                            useJpegli,
-                            cjpegliPath,
-                            resetCellSelection: passResetCellSelection,
-                            logAction: LogDebug);
+                            file.Status = Properties.Loc.StatusOptimizingPackage;
+                            optimizedSize = _processingService.Optimize(
+                                originalPath, 
+                                tempPath, 
+                                passStrip, 
+                                passClean, 
+                                shouldCompressImages, 
+                                passConvertToWebP, 
+                                webPQuality,
+                                passCompressMedia,
+                                ffmpegPath,
+                                mediaVideoCrf,
+                                mediaVideoCodec,
+                                mediaAudioCodec,
+                                useOxipng,
+                                oxipngPath,
+                                oxipngLevel,
+                                useJpegli,
+                                cjpegliPath,
+                                resetCellSelection: passResetCellSelection,
+                                logAction: LogDebug);
+                        }
 
                         int retries = 5;
                         while (retries > 0)
@@ -1182,11 +1410,11 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (OperationCanceledException)
         {
-            LogDebug("最適化処理がキャンセルされました。");
+            LogDebug("Office ファイル変換処理がキャンセルされました。");
         }
         catch (AggregateException ae) when (ae.InnerExceptions.Any(e => e is OperationCanceledException))
         {
-            LogDebug("最適化処理がキャンセルされました。");
+            LogDebug("Office ファイル変換処理がキャンセルされました。");
         }
         finally
         {
@@ -1198,11 +1426,183 @@ public class MainViewModel : INotifyPropertyChanged
             if (isCancelled)
             {
                 StatusText = Properties.Loc.StatusOptimizeCancelled;
-                LogDebug($"最適化キャンセル: {success} 成功, {errors} 失敗");
+                LogDebug($"Office ファイル変換キャンセル: {success} 成功, {errors} 失敗");
             }
             else
             {
                 StatusText = string.Format(Properties.Loc.StatusOptimizeDone, success, errors);
+                LogDebug(StatusText);
+                if (PlaySoundOnComplete)
+                {
+                    System.Media.SystemSounds.Asterisk.Play();
+                }
+            }
+        }
+    }
+
+    private async Task ProcessPdfOptimizeAsync()
+    {
+        var targets = PdfFiles.Where(f => f.IsChecked).ToList();
+        if (targets.Count == 0)
+        {
+            StatusText = Properties.Loc.StatusNoFiles;
+            return;
+        }
+
+        LogDebug($"PDF ファイル最適化開始: {targets.Count} ファイル");
+
+        IsProcessing = true;
+        ProgressValue = 0;
+        ProgressMax = targets.Count;
+
+        int success = 0;
+        int errors = 0;
+        int processed = 0;
+
+        var outputDirectory = OutputDirectory;
+        var maxParallel = MaxDegreeOfParallelism;
+        var qpdfPath = QpdfPath;
+        var options = new PdfOptimizationOptions
+        {
+            OptimizeImages = PdfOptimizeImages,
+            JpegQuality = PdfJpegQuality,
+            MinWidth = PdfMinWidth,
+            MinHeight = PdfMinHeight,
+            MinArea = PdfMinArea,
+            KeepInlineImages = PdfKeepInlineImages,
+            CompressStreams = PdfCompressStreams,
+            CompressionLevel = PdfCompressionLevel,
+            GenerateObjectStreams = PdfGenerateObjectStreams,
+            Linearize = PdfLinearize
+        };
+
+        var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var workItems = targets.Select(file =>
+        {
+            var originalPath = file.FilePath;
+            var targetPath = GetUniqueSuffixedPath(originalPath, "_optimized", ".pdf", outputDirectory, reservedOutputPaths);
+            reservedOutputPaths.Add(targetPath);
+            return new
+            {
+                File = file,
+                OriginalPath = originalPath,
+                TargetPath = targetPath
+            };
+        }).ToList();
+
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = maxParallel > 0 ? maxParallel : Environment.ProcessorCount,
+            CancellationToken = token
+        };
+
+        try
+        {
+            await Parallel.ForEachAsync(workItems, parallelOptions, async (item, ct) =>
+            {
+                ct.ThrowIfCancellationRequested();
+                var file = item.File;
+                file.Status = Properties.Loc.StatusProcessing;
+                file.IsProcessing = true;
+                string? tempPath = null;
+                try
+                {
+                    LogDebug($"PDF処理開始: {file.FileName}");
+                    tempPath = GetTemporarySiblingPath(item.TargetPath);
+                    file.Status = Properties.Loc.StatusOptimizingPdf;
+
+                    var optimizedSize = await _pdfOptimizationService.OptimizeAsync(
+                        item.OriginalPath,
+                        tempPath,
+                        options,
+                        qpdfPath,
+                        ct,
+                        LogDebug);
+
+                    int retries = 5;
+                    while (retries > 0)
+                    {
+                        try
+                        {
+                            File.Move(tempPath, item.TargetPath);
+                            break;
+                        }
+                        catch (IOException)
+                        {
+                            retries--;
+                            if (retries == 0) throw;
+                            GC.Collect();
+                            GC.WaitForPendingFinalizers();
+                            await Task.Delay(100, ct);
+                        }
+                    }
+
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        file.FilePath = item.TargetPath;
+                    });
+
+                    tempPath = null;
+                    file.OptimizedSize = optimizedSize;
+                    file.Status = Properties.Loc.StatusCompleted;
+                    LogDebug($"OK  {file.FileName} ({file.OriginalSize} -> {optimizedSize} bytes)");
+                    Interlocked.Increment(ref success);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    file.Status = Properties.Loc.StatusErrorState;
+                    Interlocked.Increment(ref errors);
+                    LogDebug($"ERR {file.FileName}: {ex.Message}");
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        StatusText = string.Format(Properties.Loc.StatusErrorMsg, file.FileName, ex.Message);
+                    });
+
+                    if (tempPath != null && File.Exists(tempPath))
+                    {
+                        try { File.Delete(tempPath); } catch {}
+                    }
+                }
+                finally
+                {
+                    var current = Interlocked.Increment(ref processed);
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        StatusText = string.Format(Properties.Loc.StatusOptimizingProgress, current, targets.Count);
+                        ProgressValue = current;
+                    });
+                    file.IsProcessing = false;
+                }
+            });
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+        catch (OperationCanceledException)
+        {
+            LogDebug("PDF ファイル最適化処理がキャンセルされました。");
+        }
+        finally
+        {
+            var isCancelled = token.IsCancellationRequested;
+            _cts?.Dispose();
+            _cts = null;
+            IsProcessing = false;
+
+            if (isCancelled)
+            {
+                StatusText = Properties.Loc.StatusPdfOptimizeCancelled;
+                LogDebug($"PDF ファイル最適化キャンセル: {success} 成功, {errors} 失敗");
+            }
+            else
+            {
+                StatusText = string.Format(Properties.Loc.StatusPdfOptimizeDone, success, errors);
                 LogDebug(StatusText);
                 if (PlaySoundOnComplete)
                 {
@@ -1229,6 +1629,14 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         return candidate;
+    }
+
+    private static string GetTemporarySiblingPath(string targetPath)
+    {
+        var directory = Path.GetDirectoryName(targetPath) ?? "";
+        var fileName = Path.GetFileNameWithoutExtension(targetPath);
+        var extension = Path.GetExtension(targetPath);
+        return Path.Combine(directory, $"{fileName}.{Guid.NewGuid():N}{extension}");
     }
 
     // --- Window Size and Position and State ---
@@ -1336,6 +1744,10 @@ public class MainViewModel : INotifyPropertyChanged
 
                 if (opt.TryGetValue("ConvertToWebP", out val))
                     ConvertToWebP = bool.TryParse(val, out var b) ? b : ConvertToWebP;
+                if (opt.TryGetValue("ConvertOfficeToPdf", out val))
+                    ConvertOfficeToPdf = bool.TryParse(val, out var b) ? b : ConvertOfficeToPdf;
+                if (opt.TryGetValue("ConvertOfficeToPdfA", out val))
+                    ConvertOfficeToPdfA = bool.TryParse(val, out var b) ? b : ConvertOfficeToPdfA;
                 if (opt.TryGetValue("WebPQuality", out val))
                     WebPQuality = int.TryParse(val, out var i) ? i : WebPQuality;
                 if (opt.TryGetValue("CompressEmbeddedImages", out val))
@@ -1361,6 +1773,32 @@ public class MainViewModel : INotifyPropertyChanged
                 if (opt.TryGetValue("CjpegliPath", out var pathVal2))
                     CjpegliPath = pathVal2;
 
+            }
+
+            if (data.TryGetValue("Pdf", out var pdf))
+            {
+                if (pdf.TryGetValue("QpdfPath", out var qpdfPath))
+                    QpdfPath = qpdfPath;
+                if (pdf.TryGetValue("OptimizeImages", out var val))
+                    PdfOptimizeImages = bool.TryParse(val, out var b) ? b : PdfOptimizeImages;
+                if (pdf.TryGetValue("JpegQuality", out val))
+                    PdfJpegQuality = int.TryParse(val, out var i) ? i : PdfJpegQuality;
+                if (pdf.TryGetValue("MinWidth", out val))
+                    PdfMinWidth = int.TryParse(val, out var i) ? i : PdfMinWidth;
+                if (pdf.TryGetValue("MinHeight", out val))
+                    PdfMinHeight = int.TryParse(val, out var i) ? i : PdfMinHeight;
+                if (pdf.TryGetValue("MinArea", out val))
+                    PdfMinArea = int.TryParse(val, out var i) ? i : PdfMinArea;
+                if (pdf.TryGetValue("KeepInlineImages", out val))
+                    PdfKeepInlineImages = bool.TryParse(val, out var b) ? b : PdfKeepInlineImages;
+                if (pdf.TryGetValue("CompressStreams", out val))
+                    PdfCompressStreams = bool.TryParse(val, out var b) ? b : PdfCompressStreams;
+                if (pdf.TryGetValue("CompressionLevel", out val))
+                    PdfCompressionLevel = int.TryParse(val, out var i) ? i : PdfCompressionLevel;
+                if (pdf.TryGetValue("GenerateObjectStreams", out val))
+                    PdfGenerateObjectStreams = bool.TryParse(val, out var b) ? b : PdfGenerateObjectStreams;
+                if (pdf.TryGetValue("Linearize", out val))
+                    PdfLinearize = bool.TryParse(val, out var b) ? b : PdfLinearize;
             }
 
             // 保存された有効ステップのプロパティをデフォルトステップに上書き適用
@@ -1547,6 +1985,8 @@ public class MainViewModel : INotifyPropertyChanged
                 ["ResetCellSelection"] = ResetCellSelection.ToString(),
 
                 ["ConvertToWebP"] = ConvertToWebP.ToString(),
+                ["ConvertOfficeToPdf"] = ConvertOfficeToPdf.ToString(),
+                ["ConvertOfficeToPdfA"] = ConvertOfficeToPdfA.ToString(),
                 ["WebPQuality"] = WebPQuality.ToString(),
                 ["CompressEmbeddedImages"] = CompressEmbeddedImages.ToString(),
                 ["CompressMedia"] = CompressMedia.ToString(),
@@ -1561,6 +2001,22 @@ public class MainViewModel : INotifyPropertyChanged
                 ["CjpegliPath"] = CjpegliPath ?? ""
             };
             data["File"] = opt;
+
+            var pdf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["QpdfPath"] = QpdfPath ?? "",
+                ["OptimizeImages"] = PdfOptimizeImages.ToString(),
+                ["JpegQuality"] = PdfJpegQuality.ToString(),
+                ["MinWidth"] = PdfMinWidth.ToString(),
+                ["MinHeight"] = PdfMinHeight.ToString(),
+                ["MinArea"] = PdfMinArea.ToString(),
+                ["KeepInlineImages"] = PdfKeepInlineImages.ToString(),
+                ["CompressStreams"] = PdfCompressStreams.ToString(),
+                ["CompressionLevel"] = PdfCompressionLevel.ToString(),
+                ["GenerateObjectStreams"] = PdfGenerateObjectStreams.ToString(),
+                ["Linearize"] = PdfLinearize.ToString()
+            };
+            data["Pdf"] = pdf;
 
             // 有効ステップのみ種別をセクション名にして保存
             var enabledSteps = Steps.Where(s => s.Enabled).ToList();

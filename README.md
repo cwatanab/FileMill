@@ -1,6 +1,6 @@
 # FileMill
 
-FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一括変換と、Office Open XML ファイルの軽量化（最適化）を行います。
+FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一括変換と、Office Open XML ファイルの軽量化（最適化）および PDF 変換を行います。
 
 本アプリは、画像一括変換ソフト「Ralpha」のレイアウト・UI思想を踏襲して画像変換機能を提供し、Office Open XML最適化ツール「OptiOpenXML」の処理思想を取り入れ、それぞれを現代的な画像フォーマット（WebP、AVIF等）に対応させて統合したものです。
 
@@ -21,13 +21,17 @@ FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一
   - 画像合成 / ウォーターマーク（合成画像パス・XY オフセット）
   - 最適化（メタデータ削除、WebP 変換品質など）
   - JPEG / PNG / WebP / AVIF / TIFF への出力形式変換
-- ファイル最適化
+- Office ファイル変換
   - `.docx` / `.xlsx` / `.pptx` のメタデータ削除、再パック、埋め込み画像圧縮・WebP 変換
   - Office ファイル内の埋め込み動画の圧縮最適化 (`ffmpeg` 連携)
+  - `.docx` / `.xlsx` / `.pptx` の PDF 変換（Microsoft Office Interop 連携）
+  - Word / PowerPoint の PDF/A 変換（Excel は Interop API の制約により PDF/A 指定には非対応）
+- PDF ファイル最適化
+  - qpdf を使用した PDF の画像最適化、ストリーム圧縮、オブジェクトストリーム生成、リニアライズ
 - 設定の永続化と外部ツール連携
   - ウィンドウ位置・サイズ・タブ、全変換パラメータ（Crop / Rotate / Padding / Sharpen / ColorAdjust / ToneCurve / Composite など）を `settings.ini` に自動保存
-  - `oxipng` (PNG ロスレス最適化), `jpegli` (高品質 JPEG エンコード), `ffmpeg` (動画圧縮) との連携
-    - デフォルトでは実行ファイルと同じディレクトリの `tools/` フォルダ以下 (`tools/oxipng.exe`, `tools/cjpegli.exe`, `tools/ffmpeg.exe`) を参照
+  - `oxipng` (PNG ロスレス最適化), `jpegli` (高品質 JPEG エンコード), `ffmpeg` (動画圧縮), `qpdf` (PDF 最適化) との連携
+    - デフォルトでは実行ファイルと同じディレクトリの `tools/` フォルダ以下 (`tools/oxipng.exe`, `tools/cjpegli.exe`, `tools/ffmpeg.exe`, `tools/qpdf.exe`) を参照
     - パスは `設定 > オプション` の「外部ツール パス」セクションで変更可能
 
 ## 動作環境
@@ -92,17 +96,33 @@ dotnet run --project FileMill.csproj
 
 出力ファイル名が既存ファイルと重複する場合は、末尾に `_1`, `_2` のような連番が付きます。
 
-## ファイル最適化の使い方
+## Office ファイル変換の使い方
 
-1. `ファイル最適化` タブを開く
+1. `Office ファイル変換` タブを開く
 2. Office ファイル (`.docx` / `.xlsx` / `.pptx`) を追加する
 3. 出力先フォルダを選択する (ツールバー中央)
-4. 有効にする最適化オプションのチェックを入れ、歯車ボタンから詳細設定（メタデータ削除、WebP変換、品質、動画CRF等）を調整する
-5. `最適化実行` を押す
+4. 有効にする変換オプションのチェックを入れ、歯車ボタンから詳細設定（メタデータ削除、WebP変換、品質、動画CRF等）を調整する
+5. PDF に変換する場合は `PDFへ変換` をオンにする
+   PDF/A として出力する場合は、PDF 変換の歯車ボタンから `PDF/A 準拠` をオンにする
+6. `変換実行` を押す
 
 最適化後のファイルは、元ファイルと同じフォルダに `_optimized` を付けて保存されます（出力先が空欄の場合）。重複する場合は `_optimized_1`, `_optimized_2` のような連番が付きます。
+PDF 変換後のファイルは `_converted.pdf` として保存されます。Microsoft Office Interop が利用できない環境では、PDF 変換オプションは無効になります。
+PDF/A 変換は Word と PowerPoint で有効です。Excel の Microsoft Office Interop API には PDF/A 指定がないため、Excel ファイルで `PDF/A 準拠` をオンにするとエラーになります。
 
 画像を WebP 形式に変換する設定をオンにすると、Office ファイル内の埋め込み画像も WebP に差し替えます。
+
+## PDF ファイル最適化の使い方
+
+1. `PDF ファイル最適化` タブを開く
+2. PDF ファイルを追加する
+3. 出力先フォルダを選択する (ツールバー中央)
+4. 右側の PDF 最適化オプションを調整する
+5. `最適化実行` を押す
+
+最適化後のファイルは、元ファイルと同じフォルダに `_optimized.pdf` を付けて保存されます（出力先が空欄の場合）。重複する場合は `_optimized_1.pdf`, `_optimized_2.pdf` のような連番が付きます。
+
+PDF 最適化には `qpdf.exe` が必要です。既定では `tools/qpdf.exe` を参照し、見つからない場合は PATH 上の `qpdf.exe` と `C:\Program Files\qpdf\bin\qpdf.exe` も探します。パスは `設定 > オプション` の「外部ツール パス」から変更できます。
 
 ### Office ファイル内画像の WebP 変換
 
@@ -132,7 +152,7 @@ WebP に対応していない古い Office 環境では、ファイル自体が�
 JPEG PNG WebP AVIF TIFF
 ```
 
-ファイル最適化では、Office Open XML 形式の `.docx`, `.xlsx`, `.pptx` を処理対象にしています。
+Office ファイル変換では、Office Open XML 形式の `.docx`, `.xlsx`, `.pptx` を処理対象にしています。
 
 ## プロジェクト構成
 

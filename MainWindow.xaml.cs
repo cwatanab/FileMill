@@ -219,7 +219,7 @@ public partial class MainWindow : Window
     private void UpdateHeaderArrows(GridViewColumnHeader active)
     {
         var arrow = _lastSortDir == ListSortDirection.Ascending ? " ▲" : " ▼";
-        var cols = new[] { ColName, ColDim, ColSize, ColFormat, ColDateModified, ColDateTaken, ColPath, ColOptName, ColOptFormat, ColOptOriginalSize, ColOptOptimizedSize, ColOptSavings, ColOptStatus, ColOptPath };
+        var cols = new[] { ColName, ColDim, ColSize, ColFormat, ColDateModified, ColDateTaken, ColPath, ColOptName, ColOptFormat, ColOptOriginalSize, ColOptOptimizedSize, ColOptSavings, ColOptStatus, ColOptPath, ColPdfName, ColPdfFormat, ColPdfOriginalSize, ColPdfOptimizedSize, ColPdfSavings, ColPdfStatus, ColPdfPath };
         foreach (var col in cols)
         {
             if (col == null) continue;
@@ -386,6 +386,124 @@ public partial class MainWindow : Window
         _lastSortColumn = sortProp;
 
         var view = CollectionViewSource.GetDefaultView(VM.OptimizeFiles);
+        using (view.DeferRefresh())
+        {
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new SortDescription(sortProp, _lastSortDir));
+        }
+
+        UpdateHeaderArrows(header);
+    }
+
+    private void HeaderAllCheckPdf_Checked(object sender, RoutedEventArgs e)
+    {
+        if (VM?.PdfFiles == null) return;
+        foreach (var file in VM.PdfFiles)
+        {
+            file.IsChecked = true;
+        }
+    }
+
+    private void HeaderAllCheckPdf_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (VM?.PdfFiles == null) return;
+        foreach (var file in VM.PdfFiles)
+        {
+            file.IsChecked = false;
+        }
+    }
+
+    private void PdfFileList_DragEnter(object sender, DragEventArgs e)
+    {
+        if (HasPdfFiles(e))
+        {
+            e.Effects = DragDropEffects.Copy;
+            PdfFileListDropBorder.Background = (Brush)TryFindResource("DragOverBackground");
+            PdfFileListDropBorder.BorderBrush = (Brush)TryFindResource("DragOverBorderBrush");
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void PdfFileList_DragOver(object sender, DragEventArgs e)
+    {
+        if (HasPdfFiles(e))
+            e.Effects = DragDropEffects.Copy;
+        else
+            e.Effects = DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void PdfFileList_DragLeave(object sender, DragEventArgs e)
+    {
+        ResetPdfFileListHighlight();
+        e.Handled = true;
+    }
+
+    private void PdfFileList_Drop(object sender, DragEventArgs e)
+    {
+        ResetPdfFileListHighlight();
+
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        {
+            foreach (var path in paths.Where(p => Directory.Exists(p) || IsPdfFile(p)))
+                VM.AddPdfFileByPath(path);
+        }
+        e.Handled = true;
+    }
+
+    private static bool HasPdfFiles(DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            return false;
+
+        return e.Data.GetData(DataFormats.FileDrop) is string[] paths
+               && paths.Any(p => Directory.Exists(p) || IsPdfFile(p));
+    }
+
+    private static bool IsPdfFile(string path)
+        => string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
+
+    private void ResetPdfFileListHighlight()
+    {
+        if (PdfFileListDropBorder != null)
+        {
+            PdfFileListDropBorder.Background = (Brush)TryFindResource("ControlBackground");
+            PdfFileListDropBorder.BorderBrush = (Brush)TryFindResource("BorderBrush");
+        }
+    }
+
+    private void PdfFileListHeader_Click(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is not GridViewColumnHeader header || header.Column == null)
+            return;
+
+        string? sortProp = header.Column switch
+        {
+            _ when header.Column == ColPdfName => nameof(OptimizeFile.FileName),
+            _ when header.Column == ColPdfFormat => nameof(OptimizeFile.Format),
+            _ when header.Column == ColPdfOriginalSize => nameof(OptimizeFile.OriginalSize),
+            _ when header.Column == ColPdfOptimizedSize => nameof(OptimizeFile.OptimizedSize),
+            _ when header.Column == ColPdfStatus => nameof(OptimizeFile.Status),
+            _ when header.Column == ColPdfPath => nameof(OptimizeFile.FilePath),
+            _ => null
+        };
+
+        if (sortProp == null) return;
+
+        if (_lastSortColumn == sortProp)
+            _lastSortDir = _lastSortDir == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+        else
+            _lastSortDir = ListSortDirection.Ascending;
+
+        _lastSortColumn = sortProp;
+
+        var view = CollectionViewSource.GetDefaultView(VM.PdfFiles);
         using (view.DeferRefresh())
         {
             view.SortDescriptions.Clear();
