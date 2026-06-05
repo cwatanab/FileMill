@@ -9,6 +9,7 @@
     <UseAppHost>true</UseAppHost>
     <StartupObject>FileMill.Program</StartupObject>
     <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,35 +11,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using FileMill.Helpers;
 using FileMill.Models;
 using FileMill.Services;
+using static FileMill.Helpers.DialogHelper;
+using static FileMill.Helpers.SettingsValueReader;
 
 namespace FileMill.ViewModels;
-
-public class RelayCommand : ICommand
-{
-    private readonly Action<object?> _execute;
-    private readonly Func<object?, bool>? _canExecute;
-
-    public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
-    {
-        _execute = execute;
-        _canExecute = canExecute;
-    }
-
-    public RelayCommand(Action execute, Func<bool>? canExecute = null)
-        : this(_ => execute(), canExecute != null ? _ => canExecute() : null)
-    {
-    }
-
-    public event EventHandler? CanExecuteChanged;
-
-    public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
-
-    public void Execute(object? parameter) => _execute(parameter);
-
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-}
 
 public class MainViewModel : INotifyPropertyChanged
 {
@@ -60,6 +40,38 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly PdfOptimizationService _pdfOptimizationService = new();
     private CancellationTokenSource? _cts;
     private bool _suppressNotifications;
+    private static readonly string[] StepShortcutPropertyNames =
+    [
+        nameof(GrayscaleStep),
+        nameof(ExifAutoRotateStep),
+        nameof(CropStep),
+        nameof(RotateStep),
+        nameof(ResizeStep),
+        nameof(PaddingStep),
+        nameof(SharpenStep),
+        nameof(ColorAdjustStep),
+        nameof(ToneCurveStep),
+        nameof(FormatStep),
+        nameof(OptimizeStep),
+        nameof(PosterizeStep),
+        nameof(CompositeStep)
+    ];
+    private static readonly (PipelineStepType Type, bool Enabled)[] DefaultSteps =
+    [
+        (PipelineStepType.ExifAutoRotate, true),
+        (PipelineStepType.Crop, false),
+        (PipelineStepType.Rotate, false),
+        (PipelineStepType.Resize, true),
+        (PipelineStepType.Padding, false),
+        (PipelineStepType.Grayscale, false),
+        (PipelineStepType.Sharpen, false),
+        (PipelineStepType.ColorAdjust, false),
+        (PipelineStepType.ToneCurve, false),
+        (PipelineStepType.Posterize, false),
+        (PipelineStepType.Composite, false),
+        (PipelineStepType.FormatConvert, true),
+        (PipelineStepType.Optimize, true)
+    ];
 
     // --- ファイルリスト ---
     public ObservableCollection<ImageFile> Files { get; } = [];
@@ -73,19 +85,22 @@ public class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<string> PdfPresetNames { get; } = [];
 
     // 固定ステップのショートカットプロパティ
-    public PipelineStep? GrayscaleStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Grayscale);
-    public PipelineStep? ExifAutoRotateStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.ExifAutoRotate);
-    public PipelineStep? CropStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Crop);
-    public PipelineStep? RotateStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Rotate);
-    public PipelineStep? ResizeStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Resize);
-    public PipelineStep? PaddingStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Padding);
-    public PipelineStep? SharpenStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Sharpen);
-    public PipelineStep? ColorAdjustStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.ColorAdjust);
-    public PipelineStep? ToneCurveStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.ToneCurve);
-    public PipelineStep? FormatStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.FormatConvert);
-    public PipelineStep? OptimizeStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Optimize);
-    public PipelineStep? PosterizeStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Posterize);
-    public PipelineStep? CompositeStep => Steps.FirstOrDefault(s => s.Type == PipelineStepType.Composite);
+    public PipelineStep? GrayscaleStep => GetStep(PipelineStepType.Grayscale);
+    public PipelineStep? ExifAutoRotateStep => GetStep(PipelineStepType.ExifAutoRotate);
+    public PipelineStep? CropStep => GetStep(PipelineStepType.Crop);
+    public PipelineStep? RotateStep => GetStep(PipelineStepType.Rotate);
+    public PipelineStep? ResizeStep => GetStep(PipelineStepType.Resize);
+    public PipelineStep? PaddingStep => GetStep(PipelineStepType.Padding);
+    public PipelineStep? SharpenStep => GetStep(PipelineStepType.Sharpen);
+    public PipelineStep? ColorAdjustStep => GetStep(PipelineStepType.ColorAdjust);
+    public PipelineStep? ToneCurveStep => GetStep(PipelineStepType.ToneCurve);
+    public PipelineStep? FormatStep => GetStep(PipelineStepType.FormatConvert);
+    public PipelineStep? OptimizeStep => GetStep(PipelineStepType.Optimize);
+    public PipelineStep? PosterizeStep => GetStep(PipelineStepType.Posterize);
+    public PipelineStep? CompositeStep => GetStep(PipelineStepType.Composite);
+
+    private PipelineStep? GetStep(PipelineStepType type)
+        => Steps.FirstOrDefault(s => s.Type == type);
 
     // --- 出力先 ---
     private string _outputDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -786,8 +801,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (_selectedImagePresetName == value) return;
             _selectedImagePresetName = value;
             OnPropertyChanged();
-            if (SaveImagePresetCommand is RelayCommand command)
-                command.RaiseCanExecuteChanged();
+            RaiseCanExecuteChanged(SaveImagePresetCommand);
 
             if (!_suppressNotifications && ImagePresetNames.Contains(value))
                 LoadPreset("Image", value, "画像変換");
@@ -803,8 +817,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (_selectedOfficePresetName == value) return;
             _selectedOfficePresetName = value;
             OnPropertyChanged();
-            if (SaveOfficePresetCommand is RelayCommand command)
-                command.RaiseCanExecuteChanged();
+            RaiseCanExecuteChanged(SaveOfficePresetCommand);
 
             if (!_suppressNotifications && OfficePresetNames.Contains(value))
                 LoadPreset("Office", value, "Office変換");
@@ -820,8 +833,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (_selectedPdfPresetName == value) return;
             _selectedPdfPresetName = value;
             OnPropertyChanged();
-            if (SavePdfPresetCommand is RelayCommand command)
-                command.RaiseCanExecuteChanged();
+            RaiseCanExecuteChanged(SavePdfPresetCommand);
 
             if (!_suppressNotifications && PdfPresetNames.Contains(value))
                 LoadPreset("Pdf", value, "PDF変換");
@@ -931,60 +943,22 @@ public class MainViewModel : INotifyPropertyChanged
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsProcessing);
 
         // ファイルリスト変更時に空表示を更新
-        Files.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(IsFileListEmpty));
-            UpdateSummaries();
-        };
+        Files.CollectionChanged += (_, _) => OnImageFilesChanged();
 
-        OptimizeFiles.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(IsOptimizeFileListEmpty));
-            OnPropertyChanged(nameof(OptimizeOutputSummary));
-            ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
-            ((RelayCommand)RunOrCancelOfficeCommand).RaiseCanExecuteChanged();
-        };
+        OptimizeFiles.CollectionChanged += (_, _) => OnOfficeFilesChanged();
 
-        PdfFiles.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(IsPdfFileListEmpty));
-            OnPropertyChanged(nameof(PdfOutputSummary));
-            ((RelayCommand)ProcessPdfOptimizeCommand).RaiseCanExecuteChanged();
-            ((RelayCommand)RunOrCancelPdfCommand).RaiseCanExecuteChanged();
-        };
+        PdfFiles.CollectionChanged += (_, _) => OnPdfFilesChanged();
 
         // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
-        AddDefaultStep(PipelineStepType.ExifAutoRotate, true);
-        AddDefaultStep(PipelineStepType.Crop, false);
-        AddDefaultStep(PipelineStepType.Rotate, false);
-        AddDefaultStep(PipelineStepType.Resize, true);
-        AddDefaultStep(PipelineStepType.Padding, false);
-        AddDefaultStep(PipelineStepType.Grayscale, false);
-        AddDefaultStep(PipelineStepType.Sharpen, false);
-        AddDefaultStep(PipelineStepType.ColorAdjust, false);
-        AddDefaultStep(PipelineStepType.ToneCurve, false);
-        AddDefaultStep(PipelineStepType.Posterize, false);
-        AddDefaultStep(PipelineStepType.Composite, false);
-        AddDefaultStep(PipelineStepType.FormatConvert, true);
-        AddDefaultStep(PipelineStepType.Optimize, true);
+        foreach (var (type, enabled) in DefaultSteps)
+            AddDefaultStep(type, enabled);
 
         foreach (var step in Steps)
             step.PropertyChanged += Step_PropertyChanged;
 
         Steps.CollectionChanged += (_, e) =>
         {
-            if (e.NewItems != null)
-            {
-                foreach (PipelineStep step in e.NewItems)
-                    step.PropertyChanged += Step_PropertyChanged;
-            }
-
-            if (e.OldItems != null)
-            {
-                foreach (PipelineStep step in e.OldItems)
-                    step.PropertyChanged -= Step_PropertyChanged;
-            }
-
+            UpdateStepSubscriptions(e);
             NotifyStepShortcutsChanged();
             UpdateSummaries();
         };
@@ -1001,27 +975,51 @@ public class MainViewModel : INotifyPropertyChanged
         Steps.Add(new PipelineStep { Type = type, Enabled = enabled });
     }
 
+    private void OnImageFilesChanged()
+    {
+        OnPropertyChanged(nameof(IsFileListEmpty));
+        UpdateSummaries();
+    }
+
+    private void OnOfficeFilesChanged()
+    {
+        OnPropertyChanged(nameof(IsOptimizeFileListEmpty));
+        OnPropertyChanged(nameof(OptimizeOutputSummary));
+        RaiseCanExecuteChanged(ProcessOptimizeCommand, RunOrCancelOfficeCommand);
+    }
+
+    private void OnPdfFilesChanged()
+    {
+        OnPropertyChanged(nameof(IsPdfFileListEmpty));
+        OnPropertyChanged(nameof(PdfOutputSummary));
+        RaiseCanExecuteChanged(ProcessPdfOptimizeCommand, RunOrCancelPdfCommand);
+    }
+
     private void Step_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(PipelineStep.Enabled))
             UpdateSummaries();
     }
 
+    private void UpdateStepSubscriptions(NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (PipelineStep step in e.NewItems)
+                step.PropertyChanged += Step_PropertyChanged;
+        }
+
+        if (e.OldItems != null)
+        {
+            foreach (PipelineStep step in e.OldItems)
+                step.PropertyChanged -= Step_PropertyChanged;
+        }
+    }
+
     private void NotifyStepShortcutsChanged()
     {
-        OnPropertyChanged(nameof(GrayscaleStep));
-        OnPropertyChanged(nameof(ExifAutoRotateStep));
-        OnPropertyChanged(nameof(CropStep));
-        OnPropertyChanged(nameof(RotateStep));
-        OnPropertyChanged(nameof(ResizeStep));
-        OnPropertyChanged(nameof(PaddingStep));
-        OnPropertyChanged(nameof(SharpenStep));
-        OnPropertyChanged(nameof(ColorAdjustStep));
-        OnPropertyChanged(nameof(ToneCurveStep));
-        OnPropertyChanged(nameof(FormatStep));
-        OnPropertyChanged(nameof(OptimizeStep));
-        OnPropertyChanged(nameof(PosterizeStep));
-        OnPropertyChanged(nameof(CompositeStep));
+        foreach (var propertyName in StepShortcutPropertyNames)
+            OnPropertyChanged(propertyName);
     }
 
     // --- ファイル操作 ---
@@ -1053,10 +1051,10 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private static bool IsSupportedImage(string path)
-    {
-        var ext = Path.GetExtension(path);
-        return ImageExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
-    }
+        => HasSupportedExtension(path, ImageExtensions);
+
+    private static bool HasSupportedExtension(string path, IEnumerable<string> extensions)
+        => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
     private static IEnumerable<string> EnumerateImageFiles(string directory)
     {
@@ -1075,32 +1073,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void AddFiles(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = Properties.Loc.DlgTitleSelectImages,
-            Filter = Properties.Loc.DlgFilterImages,
-            Multiselect = true
-        };
-
-        if (dlg.ShowDialog() == true)
-        {
-            foreach (var path in dlg.FileNames)
-                AddFileByPath(path);
-        }
+        AddFilesFromDialog(Properties.Loc.DlgTitleSelectImages, Properties.Loc.DlgFilterImages, path => AddFileByPath(path));
     }
 
     private void AddFolder(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = Properties.Loc.DlgTitleAddImageFolder,
-            Multiselect = false
-        };
-
-        if (dlg.ShowDialog() == true)
-        {
-            AddFileByPath(dlg.FolderName);
-        }
+        AddFolderFromDialog(Properties.Loc.DlgTitleAddImageFolder, path => AddFileByPath(path));
     }
 
     private void RemoveFile(object? parameter)
@@ -1164,15 +1142,7 @@ public class MainViewModel : INotifyPropertyChanged
     // --- 出力先 ---
     private void BrowseOutput(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = Properties.Loc.DlgTitleSelectOutputFolder
-        };
-
-        if (dlg.ShowDialog() == true)
-        {
-            OutputDirectory = dlg.FolderName;
-        }
+        AddFolderFromDialog(Properties.Loc.DlgTitleSelectOutputFolder, path => OutputDirectory = path);
     }
 
     private void BrowseToolPath(object? parameter)
@@ -1180,7 +1150,20 @@ public class MainViewModel : INotifyPropertyChanged
         if (parameter is not string toolName)
             return;
 
-        var currentPath = toolName switch
+        var currentPath = GetToolPath(toolName);
+        var selectedPath = SelectFileFromDialog(
+            string.Format(Properties.Loc.DlgTitleSelectToolExecutable, toolName),
+            Properties.Loc.DlgFilterExecutable,
+            currentPath);
+
+        if (selectedPath == null)
+            return;
+
+        SetToolPath(toolName, selectedPath);
+    }
+
+    private string GetToolPath(string toolName)
+        => toolName switch
         {
             "oxipng" => OxipngPath,
             "cjpegli" => CjpegliPath,
@@ -1189,49 +1172,33 @@ public class MainViewModel : INotifyPropertyChanged
             _ => ""
         };
 
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = string.Format(Properties.Loc.DlgTitleSelectToolExecutable, toolName),
-            Filter = Properties.Loc.DlgFilterExecutable,
-            FileName = Path.GetFileName(currentPath)
-        };
-
-        var currentDirectory = Path.GetDirectoryName(currentPath);
-        if (!string.IsNullOrWhiteSpace(currentDirectory) && Directory.Exists(currentDirectory))
-            dlg.InitialDirectory = currentDirectory;
-
-        if (dlg.ShowDialog() != true)
-            return;
-
+    private void SetToolPath(string toolName, string path)
+    {
         switch (toolName)
         {
             case "ffmpeg":
-                FfmpegPath = dlg.FileName;
+                FfmpegPath = path;
                 break;
             case "oxipng":
-                OxipngPath = dlg.FileName;
+                OxipngPath = path;
                 break;
             case "cjpegli":
-                CjpegliPath = dlg.FileName;
+                CjpegliPath = path;
                 break;
             case "qpdf":
-                QpdfPath = dlg.FileName;
+                QpdfPath = path;
                 break;
         }
     }
 
     private void BrowseComposite(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = Properties.Loc.DlgTitleSelectCompositeImage,
-            Filter = Properties.Loc.DlgFilterCompositeImages
-        };
-        if (dlg.ShowDialog() == true)
+        var path = SelectFileFromDialog(Properties.Loc.DlgTitleSelectCompositeImage, Properties.Loc.DlgFilterCompositeImages);
+        if (path != null)
         {
             if (CompositeStep != null)
             {
-                CompositeStep.CompositePath = dlg.FileName;
+                CompositeStep.CompositePath = path;
             }
         }
     }
@@ -1253,12 +1220,7 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        IsProcessing = true;
-        ProgressValue = 0;
-        ProgressMax = targets.Count;
-
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+        var token = BeginProcessing(targets.Count);
 
         LogDebug($"変換開始: {targets.Count} ファイル, 有効ステップ: {string.Join(", ", enabledSteps.Select(s => s.DisplayName))}");
 
@@ -1282,27 +1244,18 @@ public class MainViewModel : INotifyPropertyChanged
                             ? ImageProcessingService.GetExtension(formatStep.TargetFormat)
                             : Path.GetExtension(file.FilePath);
 
-                        var outputPath = GetUniqueSuffixedPath(file.FilePath, FileNameRule, ext, OutputDirectory);
+                        var outputPath = OutputPathHelper.GetUniqueSuffixedPath(file.FilePath, FileNameRule, ext, OutputDirectory);
 
                         _processingService.Process(file.FilePath, outputPath, Steps, UseOxipng, OxipngPath, OxipngLevel, UseJpegli, CjpegliPath, logAction: LogDebug);
                         success++;
                         LogDebug($"OK  {file.FileName} → {Path.GetFileName(outputPath)}");
 
-                        Application.Current?.Dispatcher.Invoke(() =>
-                        {
-                            StatusText = string.Format(Properties.Loc.StatusProcessingProgress, i + 1, targets.Count, file.FileName);
-                            ProgressValue = i + 1;
-                        });
+                        UpdateImageProgress(i + 1, targets.Count, file.FileName);
                     }
                     catch (Exception ex)
                     {
                         errors++;
-                        LogDebug($"ERR {file.FileName}: {ex.Message}");
-
-                        Application.Current?.Dispatcher.Invoke(() =>
-                        {
-                            StatusText = string.Format(Properties.Loc.StatusErrorMsg, file.FileName, ex.Message);
-                        });
+                        ReportFileError(file.FileName, ex.Message);
                     }
                 }
             });
@@ -1313,10 +1266,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            var isCancelled = token.IsCancellationRequested;
-            _cts?.Dispose();
-            _cts = null;
-            IsProcessing = false;
+            var isCancelled = EndProcessing(token);
             if (isCancelled)
             {
                 StatusText = Properties.Loc.StatusCancelled;
@@ -1326,10 +1276,7 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 StatusText = string.Format(Properties.Loc.StatusDoneMsg, success, errors);
                 LogDebug($"変換完了: {success} 成功, {errors} 失敗");
-                if (PlaySoundOnComplete)
-                {
-                    System.Media.SystemSounds.Asterisk.Play();
-                }
+                PlayCompletionSoundIfEnabled();
             }
         }
     }
@@ -1342,28 +1289,15 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private async Task RunImageOrCancelAsync()
-    {
-        if (IsProcessing)
-        {
-            Cancel();
-            return;
-        }
-
-        await ProcessAsync();
-    }
+        => await RunOrCancelAsync(ProcessAsync);
 
     private async Task RunOfficeOrCancelAsync()
-    {
-        if (IsProcessing)
-        {
-            Cancel();
-            return;
-        }
-
-        await ProcessOptimizeAsync();
-    }
+        => await RunOrCancelAsync(ProcessOptimizeAsync);
 
     private async Task RunPdfOrCancelAsync()
+        => await RunOrCancelAsync(ProcessPdfOptimizeAsync);
+
+    private async Task RunOrCancelAsync(Func<Task> processAsync)
     {
         if (IsProcessing)
         {
@@ -1371,47 +1305,56 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        await ProcessPdfOptimizeAsync();
+        await processAsync();
     }
 
     private void RefreshCommands()
     {
-        ((RelayCommand)CancelCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddFilesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddFolderCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RemoveFileCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ClearFilesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddStepCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RemoveStepCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)MoveStepUpCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)MoveStepDownCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)BrowseOutputCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ProcessCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RunOrCancelImageCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)OpenModalCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddOptimizeFilesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddOptimizeFolderCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RemoveOptimizeFileCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ClearOptimizeFilesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ProcessOptimizeCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RunOrCancelOfficeCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddPdfFilesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)AddPdfFolderCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RemovePdfFileCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ClearPdfFilesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ProcessPdfOptimizeCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RunOrCancelPdfCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)BrowseCompositeCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)SaveImagePresetCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)SaveOfficePresetCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)SavePdfPresetCommand).RaiseCanExecuteChanged();
+        RaiseCanExecuteChanged(
+            CancelCommand,
+            AddFilesCommand,
+            AddFolderCommand,
+            RemoveFileCommand,
+            ClearFilesCommand,
+            AddStepCommand,
+            RemoveStepCommand,
+            MoveStepUpCommand,
+            MoveStepDownCommand,
+            BrowseOutputCommand,
+            ProcessCommand,
+            RunOrCancelImageCommand,
+            OpenModalCommand,
+            AddOptimizeFilesCommand,
+            AddOptimizeFolderCommand,
+            RemoveOptimizeFileCommand,
+            ClearOptimizeFilesCommand,
+            ProcessOptimizeCommand,
+            RunOrCancelOfficeCommand,
+            AddPdfFilesCommand,
+            AddPdfFolderCommand,
+            RemovePdfFileCommand,
+            ClearPdfFilesCommand,
+            ProcessPdfOptimizeCommand,
+            RunOrCancelPdfCommand,
+            BrowseCompositeCommand,
+            SaveImagePresetCommand,
+            SaveOfficePresetCommand,
+            SavePdfPresetCommand);
     }
 
     private void UpdateSummaries()
     {
         OnPropertyChanged(nameof(OutputSummary));
-        ((RelayCommand)ProcessCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)RunOrCancelImageCommand).RaiseCanExecuteChanged();
+        RaiseCanExecuteChanged(ProcessCommand, RunOrCancelImageCommand);
+    }
+
+    private static void RaiseCanExecuteChanged(params ICommand[] commands)
+    {
+        foreach (var command in commands)
+        {
+            if (command is RelayCommand relayCommand)
+                relayCommand.RaiseCanExecuteChanged();
+        }
     }
 
     private void OpenModal(object? parameter)
@@ -1419,36 +1362,38 @@ public class MainViewModel : INotifyPropertyChanged
         if (parameter is string type)
         {
             ActiveModalType = type;
-            ModalTitle = type switch
-            {
-                "Grayscale" => Properties.Loc.ModalTitleGrayscale,
-                "ExifAutoRotate" => Properties.Loc.ModalTitleExifAutoRotate,
-                "Crop" => Properties.Loc.ModalTitleCrop,
-                "Resize" => Properties.Loc.ModalTitleResize,
-                "Padding" => Properties.Loc.ModalTitlePadding,
-                "Sharpen" => Properties.Loc.ModalTitleSharpen,
-                "ColorAdjust" => Properties.Loc.ModalTitleColorAdjust,
-                "ToneCurve" => Properties.Loc.ModalTitleToneCurve,
-                "Format" => Properties.Loc.ModalTitleFormat,
-                "Optimize" => Properties.Loc.ModalTitleOptimize,
-                "Posterize" => Properties.Loc.ModalTitlePosterize,
-                "Rotate" => Properties.Loc.ModalTitleRotate,
-                "Composite" => Properties.Loc.ModalTitleComposite,
-                "OfficeOptimize" => Properties.Loc.ModalTitleOfficeOptimize,
-                "OfficePdf" => Properties.Loc.ModalTitleOfficePdf,
-                "PdfConvert" => Properties.Loc.ModalTitlePdfConvert,
-                "PdfImage" => Properties.Loc.ModalTitlePdfImage,
-                "PdfStream" => Properties.Loc.ModalTitlePdfStream,
-                "PdfStructure" => Properties.Loc.ModalTitlePdfStructure,
-                "PdfCompatibility" => Properties.Loc.ModalTitlePdfCompatibility,
-                "PdfRestrictions" => Properties.Loc.ModalTitlePdfRestrictions,
-
-                "Options" => Properties.Loc.ModalTitleOptions,
-                _ => Properties.Loc.ModalTitleDefault
-            };
+            ModalTitle = GetModalTitle(type);
             RequestOpenSettings?.Invoke(type);
         }
     }
+
+    private static string GetModalTitle(string modalType)
+        => modalType switch
+        {
+            "Grayscale" => Properties.Loc.ModalTitleGrayscale,
+            "ExifAutoRotate" => Properties.Loc.ModalTitleExifAutoRotate,
+            "Crop" => Properties.Loc.ModalTitleCrop,
+            "Resize" => Properties.Loc.ModalTitleResize,
+            "Padding" => Properties.Loc.ModalTitlePadding,
+            "Sharpen" => Properties.Loc.ModalTitleSharpen,
+            "ColorAdjust" => Properties.Loc.ModalTitleColorAdjust,
+            "ToneCurve" => Properties.Loc.ModalTitleToneCurve,
+            "Format" => Properties.Loc.ModalTitleFormat,
+            "Optimize" => Properties.Loc.ModalTitleOptimize,
+            "Posterize" => Properties.Loc.ModalTitlePosterize,
+            "Rotate" => Properties.Loc.ModalTitleRotate,
+            "Composite" => Properties.Loc.ModalTitleComposite,
+            "OfficeOptimize" => Properties.Loc.ModalTitleOfficeOptimize,
+            "OfficePdf" => Properties.Loc.ModalTitleOfficePdf,
+            "PdfConvert" => Properties.Loc.ModalTitlePdfConvert,
+            "PdfImage" => Properties.Loc.ModalTitlePdfImage,
+            "PdfStream" => Properties.Loc.ModalTitlePdfStream,
+            "PdfStructure" => Properties.Loc.ModalTitlePdfStructure,
+            "PdfCompatibility" => Properties.Loc.ModalTitlePdfCompatibility,
+            "PdfRestrictions" => Properties.Loc.ModalTitlePdfRestrictions,
+            "Options" => Properties.Loc.ModalTitleOptions,
+            _ => Properties.Loc.ModalTitleDefault
+        };
 
     // --- ファイル最適化機能用メソッド ---
     public void AddOptimizeFileByPath(string path)
@@ -1456,61 +1401,32 @@ public class MainViewModel : INotifyPropertyChanged
         if (!IsSupportedOptimizeFile(path))
             return;
 
-        if (!OptimizeFiles.Any(f => f.FilePath == path))
-        {
-            var fileInfo = new FileInfo(path);
-            var info = new OptimizeFile
-            {
-                FilePath = path,
-                OriginalSize = fileInfo.Length,
-                Status = Properties.Loc.StatusWaiting
-            };
-            OptimizeFiles.Add(info);
-        }
+        AddOptimizeFileInfo(OptimizeFiles, path);
     }
 
     private static bool IsSupportedOptimizeFile(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        return OptimizeDocumentExtensions.Contains(ext);
-    }
+        => HasSupportedExtension(path, OptimizeDocumentExtensions);
 
     private void AddOptimizeFiles(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = Properties.Loc.DlgTitleSelectOfficeFiles,
-            Filter = Properties.Loc.DlgFilterOfficeFiles,
-            Multiselect = true
-        };
-
-        if (dlg.ShowDialog() == true)
-        {
-            foreach (var path in dlg.FileNames)
-                AddOptimizeFileByPath(path);
-        }
+        AddFilesFromDialog(Properties.Loc.DlgTitleSelectOfficeFiles, Properties.Loc.DlgFilterOfficeFiles, AddOptimizeFileByPath);
     }
 
     private void AddOptimizeFolder(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = Properties.Loc.DlgTitleAddFolder,
-            Multiselect = false
-        };
+        AddFolderFromDialog(Properties.Loc.DlgTitleAddFolder, AddOptimizeFolderPath);
+    }
 
-        if (dlg.ShowDialog() == true)
-        {
-            var dir = dlg.FolderName;
-            if (Directory.Exists(dir))
-            {
-                var files = Directory.GetFiles(dir)
-                    .Where(IsSupportedOptimizeFile)
-                    .OrderBy(f => f);
-                foreach (var path in files)
-                    AddOptimizeFileByPath(path);
-            }
-        }
+    private void AddOptimizeFolderPath(string dir)
+    {
+        if (!Directory.Exists(dir))
+            return;
+
+        var files = Directory.GetFiles(dir)
+            .Where(IsSupportedOptimizeFile)
+            .OrderBy(f => f);
+        foreach (var path in files)
+            AddOptimizeFileByPath(path);
     }
 
     private void RemoveOptimizeFile(object? parameter)
@@ -1521,12 +1437,9 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void ClearOptimizeFiles(object? _)
     {
-        if (ConfirmOnClear)
-        {
-            var result = MessageBox.Show(Properties.Loc.MsgConfirmClearList, Properties.Loc.TitleConfirm, MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result != MessageBoxResult.Yes)
-                return;
-        }
+        if (!ConfirmClearSharedList())
+            return;
+
         OptimizeFiles.Clear();
     }
 
@@ -1542,51 +1455,20 @@ public class MainViewModel : INotifyPropertyChanged
         if (!IsSupportedPdfFile(path))
             return;
 
-        if (!PdfFiles.Any(f => f.FilePath == path))
-        {
-            var fileInfo = new FileInfo(path);
-            var info = new OptimizeFile
-            {
-                FilePath = path,
-                OriginalSize = fileInfo.Length,
-                Status = Properties.Loc.StatusWaiting
-            };
-            PdfFiles.Add(info);
-        }
+        AddOptimizeFileInfo(PdfFiles, path);
     }
 
     private static bool IsSupportedPdfFile(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        return PdfExtensions.Contains(ext);
-    }
+        => HasSupportedExtension(path, PdfExtensions);
 
     private void AddPdfFiles(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = Properties.Loc.DlgTitleSelectPdfFiles,
-            Filter = Properties.Loc.DlgFilterPdfFiles,
-            Multiselect = true
-        };
-
-        if (dlg.ShowDialog() == true)
-        {
-            foreach (var path in dlg.FileNames)
-                AddPdfFileByPath(path);
-        }
+        AddFilesFromDialog(Properties.Loc.DlgTitleSelectPdfFiles, Properties.Loc.DlgFilterPdfFiles, AddPdfFileByPath);
     }
 
     private void AddPdfFolder(object? _)
     {
-        var dlg = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = Properties.Loc.DlgTitleAddFolder,
-            Multiselect = false
-        };
-
-        if (dlg.ShowDialog() == true)
-            AddPdfFileByPath(dlg.FolderName);
+        AddFolderFromDialog(Properties.Loc.DlgTitleAddFolder, AddPdfFileByPath);
     }
 
     private void RemovePdfFile(object? parameter)
@@ -1597,13 +1479,63 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void ClearPdfFiles(object? _)
     {
-        if (ConfirmOnClear)
-        {
-            var result = MessageBox.Show(Properties.Loc.MsgConfirmClearList, Properties.Loc.TitleConfirm, MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result != MessageBoxResult.Yes)
-                return;
-        }
+        if (!ConfirmClearSharedList())
+            return;
+
         PdfFiles.Clear();
+    }
+
+    private static void AddOptimizeFileInfo(ObservableCollection<OptimizeFile> collection, string path)
+    {
+        if (collection.Any(f => f.FilePath == path))
+            return;
+
+        var fileInfo = new FileInfo(path);
+        collection.Add(new OptimizeFile
+        {
+            FilePath = path,
+            OriginalSize = fileInfo.Length,
+            Status = Properties.Loc.StatusWaiting
+        });
+    }
+
+    private bool ConfirmClearSharedList()
+    {
+        if (!ConfirmOnClear)
+            return true;
+
+        var result = MessageBox.Show(Properties.Loc.MsgConfirmClearList, Properties.Loc.TitleConfirm, MessageBoxButton.YesNo, MessageBoxImage.Question);
+        return result == MessageBoxResult.Yes;
+    }
+
+    private sealed record ConversionWorkItem(OptimizeFile File, string OriginalPath, string TargetPath);
+
+    private sealed record OfficeProcessingOptions
+    {
+        public bool EnableOptimize { get; init; }
+        public bool StripMetadata { get; init; }
+        public bool CleanUnusedObjects { get; init; }
+        public bool CompressImages { get; init; }
+        public bool ResizeImagesByPpi { get; init; }
+        public int TargetImagePpi { get; init; }
+        public bool ConvertToWebP { get; init; }
+        public bool ConvertToPdf { get; init; }
+        public bool ConvertToPdfA { get; init; }
+        public int WebPQuality { get; init; }
+        public bool CompressMedia { get; init; }
+        public string FfmpegPath { get; init; } = "";
+        public int MediaVideoCrf { get; init; }
+        public string MediaVideoCodec { get; init; } = "";
+        public string MediaAudioCodec { get; init; } = "";
+        public string OutputDirectory { get; init; } = "";
+        public bool ResetCellSelection { get; init; }
+        public int MaxDegreeOfParallelism { get; init; }
+        public bool UseOxipng { get; init; }
+        public int OxipngLevel { get; init; }
+        public bool UseJpegli { get; init; }
+        public string OxipngPath { get; init; } = "";
+        public string CjpegliPath { get; init; } = "";
+        public string FileNameRule { get; init; } = "";
     }
 
     private async Task ProcessOptimizeAsync()
@@ -1617,65 +1549,18 @@ public class MainViewModel : INotifyPropertyChanged
 
         LogDebug($"Office ファイル変換開始: {targets.Count} ファイル");
 
-        IsProcessing = true;
-        ProgressValue = 0;
-        ProgressMax = targets.Count;
+        var token = BeginProcessing(targets.Count);
 
         int success = 0;
         int errors = 0;
         int processed = 0;
 
-        // UI スレッドから読み取るオプションをローカル変数にキャプチャ
-        var enableOfficeOptimize = EnableOfficeOptimize;
-
-        var stripOfficeMetadata = StripOfficeMetadata;
-        var cleanUnusedObjects = CleanUnusedObjects;
-        var compressEmbeddedImages = CompressEmbeddedImages;
-        var resizeEmbeddedImagesByPpi = ResizeEmbeddedImagesByPpi;
-        var targetImagePpi = TargetImagePpi;
-
-        var convertToWebP = ConvertToWebP;
-        var convertOfficeToPdf = ConvertOfficeToPdf;
-        var convertOfficeToPdfA = ConvertOfficeToPdfA;
-        var webPQuality = WebPQuality;
-        var compressMedia = CompressMedia;
-        var ffmpegPath = FfmpegPath;
-        var mediaVideoCrf = MediaVideoCrf;
-        var mediaVideoCodec = MediaVideoCodec;
-        var mediaAudioCodec = MediaAudioCodec;
-        var outputDirectory = OutputDirectory;
-        var resetCellSelection = ResetCellSelection;
-        var maxParallel = MaxDegreeOfParallelism;
-        var useOxipng = UseOxipng;
-        var oxipngLevel = OxipngLevel;
-        var useJpegli = UseJpegli;
-        var oxipngPath = OxipngPath;
-        var cjpegliPath = CjpegliPath;
-        var fileNameRule = FileNameRule;
-
-        var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var workItems = targets.Select(file =>
-        {
-            var originalPath = file.FilePath;
-            var ext = Path.GetExtension(originalPath);
-            var outputExtension = convertOfficeToPdf ? ".pdf" : Path.GetExtension(originalPath);
-            var targetPath = GetUniqueSuffixedPath(originalPath, fileNameRule, outputExtension, outputDirectory, reservedOutputPaths);
-            reservedOutputPaths.Add(targetPath);
-            return new
-            {
-                File = file,
-                OriginalPath = originalPath,
-                Extension = ext,
-                TargetPath = targetPath
-            };
-        }).ToList();
-
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+        var options = CreateOfficeProcessingOptions();
+        var workItems = CreateOfficeWorkItems(targets, options);
 
         var parallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = convertOfficeToPdf ? 1 : maxParallel > 0 ? maxParallel : Environment.ProcessorCount,
+            MaxDegreeOfParallelism = options.ConvertToPdf ? 1 : GetParallelism(options.MaxDegreeOfParallelism),
             CancellationToken = token
         };
 
@@ -1694,100 +1579,40 @@ public class MainViewModel : INotifyPropertyChanged
                     {
                         var originalPath = item.OriginalPath;
                         LogDebug($"処理開始: {file.FileName}");
-                        var ext = item.Extension;
                         var targetPath = item.TargetPath;
-                        tempPath = GetTemporarySiblingPath(targetPath);
+                        tempPath = OutputPathHelper.GetTemporarySiblingPath(targetPath);
 
                         long optimizedSize;
-                        if (convertOfficeToPdf)
+                        if (options.ConvertToPdf)
                         {
                             file.Status = Properties.Loc.StatusConvertingToPdf;
-                            optimizedSize = _processingService.ConvertOfficeToPdf(originalPath, tempPath, convertOfficeToPdfA, LogDebug, targetPath);
+                            optimizedSize = _processingService.ConvertOfficeToPdf(originalPath, tempPath, options.ConvertToPdfA, LogDebug, targetPath);
                         }
                         else
                         {
-                            var passStrip = enableOfficeOptimize && stripOfficeMetadata;
-                            var passClean = enableOfficeOptimize && cleanUnusedObjects;
-                            var shouldCompressImages = enableOfficeOptimize && compressEmbeddedImages;
-                            var passResizeImagesByPpi = enableOfficeOptimize && resizeEmbeddedImagesByPpi;
-                            var passConvertToWebP = enableOfficeOptimize && convertToWebP;
-                            var passCompressMedia = enableOfficeOptimize && compressMedia;
-                            var passResetCellSelection = enableOfficeOptimize && resetCellSelection;
-
                             file.Status = Properties.Loc.StatusOptimizingPackage;
-                            optimizedSize = _processingService.Optimize(
-                                originalPath, 
-                                tempPath, 
-                                passStrip, 
-                                passClean, 
-                                shouldCompressImages, 
-                                passConvertToWebP, 
-                                webPQuality,
-                                passCompressMedia,
-                                ffmpegPath,
-                                mediaVideoCrf,
-                                mediaVideoCodec,
-                                mediaAudioCodec,
-                                useOxipng,
-                                oxipngPath,
-                                oxipngLevel,
-                                useJpegli,
-                                cjpegliPath,
-                                resizeImagesByPpi: passResizeImagesByPpi,
-                                targetImagePpi: targetImagePpi,
-                                resetCellSelection: passResetCellSelection,
-                                logAction: LogDebug);
+                            optimizedSize = OptimizeOfficePackage(originalPath, tempPath, options);
                         }
 
-                        int retries = 5;
-                        while (retries > 0)
-                        {
-                            try
-                            {
-                                File.Move(tempPath, targetPath);
-                                break;
-                            }
-                            catch (IOException)
-                            {
-                                retries--;
-                                if (retries == 0) throw;
-                                GC.Collect();
-                                GC.WaitForPendingFinalizers();
-                                Thread.Sleep(100);
-                            }
-                        }
+                        FileMoveHelper.MoveWithRetries(tempPath, targetPath);
 
                         tempPath = null; // 正常完了したのでクリア
 
-                        file.OptimizedSize = optimizedSize;
-                        file.Status = Properties.Loc.StatusCompleted;
-                        LogDebug($"OK  {file.FileName} ({file.OriginalSize} -> {optimizedSize} bytes)");
+                        CompleteOptimizeFile(file, optimizedSize);
                         Interlocked.Increment(ref success);
                     }
                     catch (Exception ex)
                     {
                         file.Status = Properties.Loc.StatusErrorState;
                         Interlocked.Increment(ref errors);
-                        LogDebug($"ERR {file.FileName}: {ex.Message}");
-                        Application.Current?.Dispatcher.Invoke(() =>
-                        {
-                            StatusText = string.Format(Properties.Loc.StatusErrorMsg, file.FileName, ex.Message);
-                        });
+                        ReportFileError(file.FileName, ex.Message);
 
-                        // 残った一時ファイルがあればクリーンアップ
-                        if (tempPath != null && File.Exists(tempPath))
-                        {
-                            try { File.Delete(tempPath); } catch {}
-                        }
+                        FileMoveHelper.DeleteIfExists(tempPath);
                     }
                     finally
                     {
                         int current = Interlocked.Increment(ref processed);
-                        Application.Current?.Dispatcher.Invoke(() =>
-                        {
-                            StatusText = string.Format(Properties.Loc.StatusOptimizingProgress, current, targets.Count);
-                            ProgressValue = current;
-                        });
+                        UpdateOptimizeProgress(current, targets.Count);
                         file.IsProcessing = false;
                     }
                 }
@@ -1808,10 +1633,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            var isCancelled = token.IsCancellationRequested;
-            _cts?.Dispose();
-            _cts = null;
-            IsProcessing = false;
+            var isCancelled = EndProcessing(token);
 
             if (isCancelled)
             {
@@ -1822,13 +1644,82 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 StatusText = string.Format(Properties.Loc.StatusOptimizeDone, success, errors);
                 LogDebug(StatusText);
-                if (PlaySoundOnComplete)
-                {
-                    System.Media.SystemSounds.Asterisk.Play();
-                }
+                PlayCompletionSoundIfEnabled();
             }
         }
     }
+
+    private OfficeProcessingOptions CreateOfficeProcessingOptions()
+        => new()
+        {
+            EnableOptimize = EnableOfficeOptimize,
+            StripMetadata = StripOfficeMetadata,
+            CleanUnusedObjects = CleanUnusedObjects,
+            CompressImages = CompressEmbeddedImages,
+            ResizeImagesByPpi = ResizeEmbeddedImagesByPpi,
+            TargetImagePpi = TargetImagePpi,
+            ConvertToWebP = ConvertToWebP,
+            ConvertToPdf = ConvertOfficeToPdf,
+            ConvertToPdfA = ConvertOfficeToPdfA,
+            WebPQuality = WebPQuality,
+            CompressMedia = CompressMedia,
+            FfmpegPath = FfmpegPath,
+            MediaVideoCrf = MediaVideoCrf,
+            MediaVideoCodec = MediaVideoCodec,
+            MediaAudioCodec = MediaAudioCodec,
+            OutputDirectory = OutputDirectory,
+            ResetCellSelection = ResetCellSelection,
+            MaxDegreeOfParallelism = MaxDegreeOfParallelism,
+            UseOxipng = UseOxipng,
+            OxipngLevel = OxipngLevel,
+            UseJpegli = UseJpegli,
+            OxipngPath = OxipngPath,
+            CjpegliPath = CjpegliPath,
+            FileNameRule = FileNameRule
+        };
+
+    private static List<ConversionWorkItem> CreateOfficeWorkItems(IEnumerable<OptimizeFile> targets, OfficeProcessingOptions options)
+    {
+        var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return targets.Select(file =>
+        {
+            var originalPath = file.FilePath;
+            var outputExtension = options.ConvertToPdf ? ".pdf" : Path.GetExtension(originalPath);
+            var targetPath = OutputPathHelper.GetUniqueSuffixedPath(
+                originalPath,
+                options.FileNameRule,
+                outputExtension,
+                options.OutputDirectory,
+                reservedOutputPaths);
+
+            reservedOutputPaths.Add(targetPath);
+            return new ConversionWorkItem(file, originalPath, targetPath);
+        }).ToList();
+    }
+
+    private long OptimizeOfficePackage(string originalPath, string tempPath, OfficeProcessingOptions options)
+        => _processingService.Optimize(
+            originalPath,
+            tempPath,
+            options.EnableOptimize && options.StripMetadata,
+            options.EnableOptimize && options.CleanUnusedObjects,
+            options.EnableOptimize && options.CompressImages,
+            options.EnableOptimize && options.ConvertToWebP,
+            options.WebPQuality,
+            options.EnableOptimize && options.CompressMedia,
+            options.FfmpegPath,
+            options.MediaVideoCrf,
+            options.MediaVideoCodec,
+            options.MediaAudioCodec,
+            options.UseOxipng,
+            options.OxipngPath,
+            options.OxipngLevel,
+            options.UseJpegli,
+            options.CjpegliPath,
+            resizeImagesByPpi: options.EnableOptimize && options.ResizeImagesByPpi,
+            targetImagePpi: options.TargetImagePpi,
+            resetCellSelection: options.EnableOptimize && options.ResetCellSelection,
+            logAction: LogDebug);
 
     private async Task ProcessPdfOptimizeAsync()
     {
@@ -1841,18 +1732,182 @@ public class MainViewModel : INotifyPropertyChanged
 
         LogDebug($"PDF ファイル変換開始: {targets.Count} ファイル");
 
-        IsProcessing = true;
-        ProgressValue = 0;
-        ProgressMax = targets.Count;
+        var token = BeginProcessing(targets.Count);
 
         int success = 0;
         int errors = 0;
         int processed = 0;
 
-        var outputDirectory = OutputDirectory;
-        var maxParallel = MaxDegreeOfParallelism;
         var qpdfPath = QpdfPath;
-        var options = new PdfOptimizationOptions
+        var options = CreatePdfOptimizationOptions();
+        var workItems = CreatePdfWorkItems(targets, FileNameRule, OutputDirectory);
+
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = GetParallelism(MaxDegreeOfParallelism),
+            CancellationToken = token
+        };
+
+        try
+        {
+            await Parallel.ForEachAsync(workItems, parallelOptions, async (item, ct) =>
+            {
+                ct.ThrowIfCancellationRequested();
+                var file = item.File;
+                file.Status = Properties.Loc.StatusProcessing;
+                file.IsProcessing = true;
+                string? tempPath = null;
+                try
+                {
+                    LogDebug($"PDF処理開始: {file.FileName}");
+                    tempPath = OutputPathHelper.GetTemporarySiblingPath(item.TargetPath);
+                    file.Status = Properties.Loc.StatusOptimizingPdf;
+
+                    var optimizedSize = await _pdfOptimizationService.OptimizeAsync(
+                        item.OriginalPath,
+                        tempPath,
+                        options,
+                        qpdfPath,
+                        ct,
+                        LogDebug,
+                        item.TargetPath);
+
+                    await FileMoveHelper.MoveWithRetriesAsync(tempPath, item.TargetPath, ct);
+
+                    tempPath = null;
+                    CompleteOptimizeFile(file, optimizedSize);
+                    Interlocked.Increment(ref success);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    file.Status = Properties.Loc.StatusErrorState;
+                    Interlocked.Increment(ref errors);
+                    ReportFileError(file.FileName, ex.Message);
+
+                    FileMoveHelper.DeleteIfExists(tempPath);
+                }
+                finally
+                {
+                    var current = Interlocked.Increment(ref processed);
+                    UpdateOptimizeProgress(current, targets.Count);
+                    file.IsProcessing = false;
+                }
+            });
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+        catch (OperationCanceledException)
+        {
+            LogDebug("PDF ファイル変換処理がキャンセルされました。");
+        }
+        finally
+        {
+            var isCancelled = EndProcessing(token);
+
+            if (isCancelled)
+            {
+                StatusText = Properties.Loc.StatusPdfOptimizeCancelled;
+                LogDebug($"PDF ファイル変換キャンセル: {success} 成功, {errors} 失敗");
+            }
+            else
+            {
+                StatusText = string.Format(Properties.Loc.StatusPdfOptimizeDone, success, errors);
+                LogDebug(StatusText);
+                PlayCompletionSoundIfEnabled();
+            }
+        }
+    }
+
+    private static List<ConversionWorkItem> CreatePdfWorkItems(
+        IEnumerable<OptimizeFile> targets,
+        string fileNameRule,
+        string outputDirectory)
+    {
+        var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return targets.Select(file =>
+        {
+            var originalPath = file.FilePath;
+            var targetPath = OutputPathHelper.GetUniqueSuffixedPath(
+                originalPath,
+                fileNameRule,
+                ".pdf",
+                outputDirectory,
+                reservedOutputPaths);
+
+            reservedOutputPaths.Add(targetPath);
+            return new ConversionWorkItem(file, originalPath, targetPath);
+        }).ToList();
+    }
+
+    private static int GetParallelism(int configuredParallelism)
+        => configuredParallelism > 0 ? configuredParallelism : Environment.ProcessorCount;
+
+    private CancellationToken BeginProcessing(int progressMax)
+    {
+        IsProcessing = true;
+        ProgressValue = 0;
+        ProgressMax = progressMax;
+
+        _cts = new CancellationTokenSource();
+        return _cts.Token;
+    }
+
+    private bool EndProcessing(CancellationToken token)
+    {
+        var isCancelled = token.IsCancellationRequested;
+        _cts?.Dispose();
+        _cts = null;
+        IsProcessing = false;
+        return isCancelled;
+    }
+
+    private void PlayCompletionSoundIfEnabled()
+    {
+        if (PlaySoundOnComplete)
+            System.Media.SystemSounds.Asterisk.Play();
+    }
+
+    private void UpdateOptimizeProgress(int current, int total)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            StatusText = string.Format(Properties.Loc.StatusOptimizingProgress, current, total);
+            ProgressValue = current;
+        });
+    }
+
+    private void UpdateImageProgress(int current, int total, string fileName)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            StatusText = string.Format(Properties.Loc.StatusProcessingProgress, current, total, fileName);
+            ProgressValue = current;
+        });
+    }
+
+    private void ReportFileError(string fileName, string message)
+    {
+        LogDebug($"ERR {fileName}: {message}");
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            StatusText = string.Format(Properties.Loc.StatusErrorMsg, fileName, message);
+        });
+    }
+
+    private void CompleteOptimizeFile(OptimizeFile file, long optimizedSize)
+    {
+        file.OptimizedSize = optimizedSize;
+        file.Status = Properties.Loc.StatusCompleted;
+        LogDebug($"OK  {file.FileName} ({file.OriginalSize} -> {optimizedSize} bytes)");
+    }
+
+    private PdfOptimizationOptions CreatePdfOptimizationOptions()
+        => new()
         {
             OptimizeImages = PdfOptimizeImages,
             JpegQuality = PdfJpegQuality,
@@ -1881,187 +1936,6 @@ public class MainViewModel : INotifyPropertyChanged
             ForceVersion = PdfForceVersion,
             Linearize = PdfLinearize
         };
-
-        var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var fileNameRule = FileNameRule;
-        var workItems = targets.Select(file =>
-        {
-            var originalPath = file.FilePath;
-            var targetPath = GetUniqueSuffixedPath(originalPath, fileNameRule, ".pdf", outputDirectory, reservedOutputPaths);
-            reservedOutputPaths.Add(targetPath);
-            return new
-            {
-                File = file,
-                OriginalPath = originalPath,
-                TargetPath = targetPath
-            };
-        }).ToList();
-
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
-        var parallelOptions = new ParallelOptions
-        {
-            MaxDegreeOfParallelism = maxParallel > 0 ? maxParallel : Environment.ProcessorCount,
-            CancellationToken = token
-        };
-
-        try
-        {
-            await Parallel.ForEachAsync(workItems, parallelOptions, async (item, ct) =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var file = item.File;
-                file.Status = Properties.Loc.StatusProcessing;
-                file.IsProcessing = true;
-                string? tempPath = null;
-                try
-                {
-                    LogDebug($"PDF処理開始: {file.FileName}");
-                    tempPath = GetTemporarySiblingPath(item.TargetPath);
-                    file.Status = Properties.Loc.StatusOptimizingPdf;
-
-                    var optimizedSize = await _pdfOptimizationService.OptimizeAsync(
-                        item.OriginalPath,
-                        tempPath,
-                        options,
-                        qpdfPath,
-                        ct,
-                        LogDebug,
-                        item.TargetPath);
-
-                    int retries = 5;
-                    while (retries > 0)
-                    {
-                        try
-                        {
-                            File.Move(tempPath, item.TargetPath);
-                            break;
-                        }
-                        catch (IOException)
-                        {
-                            retries--;
-                            if (retries == 0) throw;
-                            GC.Collect();
-                            GC.WaitForPendingFinalizers();
-                            await Task.Delay(100, ct);
-                        }
-                    }
-
-                    tempPath = null;
-                    file.OptimizedSize = optimizedSize;
-                    file.Status = Properties.Loc.StatusCompleted;
-                    LogDebug($"OK  {file.FileName} ({file.OriginalSize} -> {optimizedSize} bytes)");
-                    Interlocked.Increment(ref success);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    file.Status = Properties.Loc.StatusErrorState;
-                    Interlocked.Increment(ref errors);
-                    LogDebug($"ERR {file.FileName}: {ex.Message}");
-                    Application.Current?.Dispatcher.Invoke(() =>
-                    {
-                        StatusText = string.Format(Properties.Loc.StatusErrorMsg, file.FileName, ex.Message);
-                    });
-
-                    if (tempPath != null && File.Exists(tempPath))
-                    {
-                        try { File.Delete(tempPath); } catch {}
-                    }
-                }
-                finally
-                {
-                    var current = Interlocked.Increment(ref processed);
-                    Application.Current?.Dispatcher.Invoke(() =>
-                    {
-                        StatusText = string.Format(Properties.Loc.StatusOptimizingProgress, current, targets.Count);
-                        ProgressValue = current;
-                    });
-                    file.IsProcessing = false;
-                }
-            });
-
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        }
-        catch (OperationCanceledException)
-        {
-            LogDebug("PDF ファイル変換処理がキャンセルされました。");
-        }
-        finally
-        {
-            var isCancelled = token.IsCancellationRequested;
-            _cts?.Dispose();
-            _cts = null;
-            IsProcessing = false;
-
-            if (isCancelled)
-            {
-                StatusText = Properties.Loc.StatusPdfOptimizeCancelled;
-                LogDebug($"PDF ファイル変換キャンセル: {success} 成功, {errors} 失敗");
-            }
-            else
-            {
-                StatusText = string.Format(Properties.Loc.StatusPdfOptimizeDone, success, errors);
-                LogDebug(StatusText);
-                if (PlaySoundOnComplete)
-                {
-                    System.Media.SystemSounds.Asterisk.Play();
-                }
-            }
-        }
-    }
-
-    private static string GetUniqueSuffixedPath(string originalPath, string suffix, string outputExtension, string outputDirectory, ISet<string>? reservedPaths = null)
-    {
-        var directory = string.IsNullOrWhiteSpace(outputDirectory)
-            ? Path.GetDirectoryName(originalPath) ?? ""
-            : outputDirectory;
-        var fileName = Path.GetFileNameWithoutExtension(originalPath);
-        var extension = string.IsNullOrWhiteSpace(outputExtension) ? Path.GetExtension(originalPath) : outputExtension;
-        var suffixedFileName = GetSuffixedFileName(fileName, suffix);
-        var candidate = Path.Combine(directory, suffixedFileName + extension);
-
-        var counter = 1;
-        while (File.Exists(candidate) || (reservedPaths?.Contains(candidate) ?? false))
-        {
-            candidate = Path.Combine(directory, $"{suffixedFileName}_{counter}{extension}");
-            counter++;
-        }
-
-        return candidate;
-    }
-
-    private static string GetSuffixedFileName(string fileName, string? suffix)
-    {
-        if (string.IsNullOrEmpty(suffix))
-            return fileName;
-
-        if (fileName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-            return fileName;
-
-        var numberedSuffixPrefix = suffix + "_";
-        var numberedSuffixIndex = fileName.LastIndexOf(numberedSuffixPrefix, StringComparison.OrdinalIgnoreCase);
-        if (numberedSuffixIndex >= 0)
-        {
-            var numberStart = numberedSuffixIndex + numberedSuffixPrefix.Length;
-            if (numberStart < fileName.Length && fileName.Skip(numberStart).All(char.IsDigit))
-                return fileName[..(numberedSuffixIndex + suffix.Length)];
-        }
-
-        return fileName + suffix;
-    }
-
-    private static string GetTemporarySiblingPath(string targetPath)
-    {
-        var directory = Path.GetDirectoryName(targetPath) ?? "";
-        var fileName = Path.GetFileNameWithoutExtension(targetPath);
-        var extension = Path.GetExtension(targetPath);
-        return Path.Combine(directory, $"{fileName}.{Guid.NewGuid():N}{extension}");
-    }
 
     // --- Window Size and Position and State ---
     private double _windowWidth = 1000;
@@ -2106,31 +1980,6 @@ public class MainViewModel : INotifyPropertyChanged
         set { _selectedTabIndex = value; OnPropertyChanged(); }
     }
 
-    private static string GetSettingsFilePath()
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, "FileMill", "settings.ini");
-    }
-
-    private static string GetPresetDirectoryPath(string presetType)
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, "FileMill", "presets", presetType.ToLowerInvariant());
-    }
-
-    private static string SanitizePresetName(string name)
-    {
-        var sanitized = name.Trim();
-        foreach (var invalidChar in Path.GetInvalidFileNameChars())
-            sanitized = sanitized.Replace(invalidChar, '_');
-        return sanitized;
-    }
-
-    private static string GetPresetFilePath(string presetType, string presetName)
-    {
-        return Path.Combine(GetPresetDirectoryPath(presetType), SanitizePresetName(presetName) + ".ini");
-    }
-
     private void LoadPresetNames()
     {
         LoadPresetNames(ImagePresetNames, "Image");
@@ -2142,7 +1991,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         target.Clear();
 
-        var dir = GetPresetDirectoryPath(presetType);
+        var dir = AppPathHelper.GetPresetDirectoryPath(presetType);
         if (!Directory.Exists(dir))
             return;
 
@@ -2162,11 +2011,11 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void LoadPreset(string presetType, string presetName, string displayName, bool updateStatus = true)
     {
-        var sanitizedName = SanitizePresetName(presetName);
+        var sanitizedName = AppPathHelper.SanitizePresetName(presetName);
         if (string.IsNullOrWhiteSpace(sanitizedName))
             return;
 
-        var path = GetPresetFilePath(presetType, sanitizedName);
+        var path = AppPathHelper.GetPresetFilePath(presetType, sanitizedName);
         if (!File.Exists(path))
             return;
 
@@ -2184,7 +2033,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void LoadLastUsedPreset(string presetType, string selectedPresetName, ObservableCollection<string> availablePresetNames, Action<string> selectPreset, string displayName)
     {
-        var presetName = SanitizePresetName(selectedPresetName);
+        var presetName = AppPathHelper.SanitizePresetName(selectedPresetName);
         var matchedPresetName = string.IsNullOrWhiteSpace(presetName)
             ? null
             : availablePresetNames.FirstOrDefault(name => string.Equals(name, presetName, StringComparison.OrdinalIgnoreCase));
@@ -2236,7 +2085,7 @@ public class MainViewModel : INotifyPropertyChanged
         Func<Dictionary<string, Dictionary<string, string>>> createData,
         string displayName)
     {
-        var presetName = SanitizePresetName(selectedPresetName);
+        var presetName = AppPathHelper.SanitizePresetName(selectedPresetName);
         if (string.IsNullOrWhiteSpace(presetName))
         {
             StatusText = "プリセット名を入力してください。";
@@ -2245,7 +2094,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            SettingsService.Save(GetPresetFilePath(presetType, presetName), createData());
+            SettingsService.Save(AppPathHelper.GetPresetFilePath(presetType, presetName), createData());
             LoadPresetNames();
             selectPreset(presetName);
             StatusText = $"{displayName}プリセットを保存しました: {presetName}";
@@ -2260,7 +2109,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         try
         {
-            var path = customPath ?? GetSettingsFilePath();
+            var path = customPath ?? AppPathHelper.GetSettingsFilePath();
             if (!File.Exists(path))
             {
                 return;
@@ -2268,210 +2117,179 @@ public class MainViewModel : INotifyPropertyChanged
 
             var data = SettingsService.Load(path);
 
-            if (data.TryGetValue("General", out var general))
-            {
-                if (general.TryGetValue("OutputDirectory", out var outDir) && !string.IsNullOrWhiteSpace(outDir))
-                    OutputDirectory = outDir;
-                if (general.TryGetValue("FileNameRule", out var fnRule))
-                    FileNameRule = fnRule;
-                if (general.TryGetValue("ThemeMode", out var themeVal) && Enum.TryParse<AppTheme>(themeVal, out var tm))
-                    AppTheme = tm;
-                if (general.TryGetValue("Language", out var langVal) && !string.IsNullOrWhiteSpace(langVal))
-                    Language = langVal;
-                if (general.TryGetValue("ConfirmOnClear", out var val))
-                    ConfirmOnClear = bool.TryParse(val, out var b) ? b : ConfirmOnClear;
-                if (general.TryGetValue("PlaySoundOnComplete", out val))
-                    PlaySoundOnComplete = bool.TryParse(val, out var b) ? b : PlaySoundOnComplete;
-                if (general.TryGetValue("MaxDegreeOfParallelism", out val))
-                    MaxDegreeOfParallelism = int.TryParse(val, out var i) ? i : MaxDegreeOfParallelism;
-                if (general.TryGetValue("WindowWidth", out val) && double.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dw))
-                    WindowWidth = dw;
-                if (general.TryGetValue("WindowHeight", out val) && double.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dh))
-                    WindowHeight = dh;
-                if (general.TryGetValue("WindowLeft", out val))
-                    WindowLeft = double.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dl) ? dl : double.NaN;
-                if (general.TryGetValue("WindowTop", out val))
-                    WindowTop = double.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dt) ? dt : double.NaN;
-                if (general.TryGetValue("WindowState", out val) && Enum.TryParse<WindowState>(val, out var ws))
-                    WindowState = ws == WindowState.Minimized ? WindowState.Normal : ws;
-                if (general.TryGetValue("SelectedTabIndex", out val) && int.TryParse(val, out var idx))
-                    SelectedTabIndex = idx;
-                if (general.TryGetValue("LastImagePresetName", out val))
-                    SelectedImagePresetName = val;
-                if (general.TryGetValue("LastOfficePresetName", out val))
-                    SelectedOfficePresetName = val;
-                if (general.TryGetValue("LastPdfPresetName", out val))
-                    SelectedPdfPresetName = val;
-            }
+            ApplyGeneralSettings(data);
 
-            if (data.TryGetValue("Office", out var opt))
-            {
-                if (opt.TryGetValue("EnableOfficeOptimize", out var val))
-                    EnableOfficeOptimize = bool.TryParse(val, out var b) ? b : EnableOfficeOptimize;
+            ApplyOfficeSettings(data);
 
-                if (opt.TryGetValue("StripOfficeMetadata", out val))
-                    StripOfficeMetadata = bool.TryParse(val, out var b) ? b : StripOfficeMetadata;
-                if (opt.TryGetValue("CleanUnusedObjects", out val))
-                    CleanUnusedObjects = bool.TryParse(val, out var b) ? b : CleanUnusedObjects;
-                if (opt.TryGetValue("ResetCellSelection", out val))
-                    ResetCellSelection = bool.TryParse(val, out var b) ? b : ResetCellSelection;
+            ApplyPdfSettings(data);
 
-                if (opt.TryGetValue("ConvertToWebP", out val))
-                    ConvertToWebP = bool.TryParse(val, out var b) ? b : ConvertToWebP;
-                if (opt.TryGetValue("ConvertOfficeToPdf", out val))
-                    ConvertOfficeToPdf = bool.TryParse(val, out var b) ? b : ConvertOfficeToPdf;
-                if (opt.TryGetValue("ConvertOfficeToPdfA", out val))
-                    ConvertOfficeToPdfA = bool.TryParse(val, out var b) ? b : ConvertOfficeToPdfA;
-                if (opt.TryGetValue("WebPQuality", out val))
-                    WebPQuality = int.TryParse(val, out var i) ? i : WebPQuality;
-                if (opt.TryGetValue("CompressEmbeddedImages", out val))
-                    CompressEmbeddedImages = bool.TryParse(val, out var b) ? b : CompressEmbeddedImages;
-                if (opt.TryGetValue("ResizeEmbeddedImagesByPpi", out val))
-                    ResizeEmbeddedImagesByPpi = bool.TryParse(val, out var b) ? b : ResizeEmbeddedImagesByPpi;
-                if (opt.TryGetValue("TargetImagePpi", out val))
-                    TargetImagePpi = int.TryParse(val, out var i) ? i : TargetImagePpi;
-                if (opt.TryGetValue("CompressMedia", out val))
-                    CompressMedia = bool.TryParse(val, out var b) ? b : CompressMedia;
-                if (opt.TryGetValue("MediaVideoCrf", out val))
-                    MediaVideoCrf = int.TryParse(val, out var i) ? i : MediaVideoCrf;
-                if (opt.TryGetValue("MediaVideoCodec", out var codec))
-                    MediaVideoCodec = codec;
-                if (opt.TryGetValue("MediaAudioCodec", out codec))
-                    MediaAudioCodec = codec;
-                if (opt.TryGetValue("FfmpegPath", out var fpath))
-                    FfmpegPath = fpath;
-                if (opt.TryGetValue("OxipngPath", out var pathVal))
-                    OxipngPath = pathVal;
-                if (opt.TryGetValue("UseOxipng", out val))
-                    UseOxipng = bool.TryParse(val, out var b) ? b : UseOxipng;
-                if (opt.TryGetValue("OxipngLevel", out val))
-                    OxipngLevel = int.TryParse(val, out var i) ? i : OxipngLevel;
-                if (opt.TryGetValue("UseJpegli", out val))
-                    UseJpegli = bool.TryParse(val, out var b) ? b : UseJpegli;
-                if (opt.TryGetValue("CjpegliPath", out var pathVal2))
-                    CjpegliPath = pathVal2;
-
-            }
-
-            if (data.TryGetValue("Pdf", out var pdf))
-            {
-                var hasStructureCleanupSetting = false;
-                var hasDistributionCompatibilitySetting = false;
-                var hasRestrictionRemovalSetting = false;
-
-                if (pdf.TryGetValue("QpdfPath", out var qpdfPath))
-                    QpdfPath = qpdfPath;
-                if (pdf.TryGetValue("OptimizeImages", out var val))
-                    PdfOptimizeImages = bool.TryParse(val, out var b) ? b : PdfOptimizeImages;
-                if (pdf.TryGetValue("JpegQuality", out val))
-                    PdfJpegQuality = int.TryParse(val, out var i) ? i : PdfJpegQuality;
-                if (pdf.TryGetValue("MinWidth", out val))
-                    PdfMinWidth = int.TryParse(val, out var i) ? i : PdfMinWidth;
-                if (pdf.TryGetValue("MinHeight", out val))
-                    PdfMinHeight = int.TryParse(val, out var i) ? i : PdfMinHeight;
-                if (pdf.TryGetValue("MinArea", out val))
-                    PdfMinArea = int.TryParse(val, out var i) ? i : PdfMinArea;
-                if (pdf.TryGetValue("KeepInlineImages", out val))
-                    PdfKeepInlineImages = bool.TryParse(val, out var b) ? b : PdfKeepInlineImages;
-                if (pdf.TryGetValue("ExternalizeInlineImages", out val))
-                    PdfExternalizeInlineImages = bool.TryParse(val, out var b) ? b : PdfExternalizeInlineImages;
-                if (pdf.TryGetValue("InlineImageMinBytes", out val))
-                    PdfInlineImageMinBytes = int.TryParse(val, out var i) ? i : PdfInlineImageMinBytes;
-                if (pdf.TryGetValue("CompressStreams", out val))
-                    PdfCompressStreams = bool.TryParse(val, out var b) ? b : PdfCompressStreams;
-                if (pdf.TryGetValue("CompressionLevel", out val))
-                    PdfCompressionLevel = int.TryParse(val, out var i) ? i : PdfCompressionLevel;
-                if (pdf.TryGetValue("DecodeLevel", out val))
-                    PdfDecodeLevel = val;
-                if (pdf.TryGetValue("RecompressFlate", out val))
-                    PdfRecompressFlate = bool.TryParse(val, out var b) ? b : PdfRecompressFlate;
-                if (pdf.TryGetValue("StructureCleanup", out val))
-                {
-                    PdfStructureCleanup = bool.TryParse(val, out var b) ? b : PdfStructureCleanup;
-                    hasStructureCleanupSetting = true;
-                }
-                if (pdf.TryGetValue("ObjectStreamMode", out val))
-                    PdfObjectStreamMode = val;
-                else if (pdf.TryGetValue("GenerateObjectStreams", out val))
-                    PdfGenerateObjectStreams = bool.TryParse(val, out var b) ? b : PdfGenerateObjectStreams;
-                if (pdf.TryGetValue("RemoveUnreferencedResources", out val))
-                    PdfRemoveUnreferencedResources = val;
-                if (pdf.TryGetValue("PreserveUnreferencedObjects", out val))
-                    PdfPreserveUnreferencedObjects = bool.TryParse(val, out var b) ? b : PdfPreserveUnreferencedObjects;
-                if (pdf.TryGetValue("NormalizeContent", out val))
-                    PdfNormalizeContent = bool.TryParse(val, out var b) ? b : PdfNormalizeContent;
-                if (pdf.TryGetValue("CoalesceContents", out val))
-                    PdfCoalesceContents = bool.TryParse(val, out var b) ? b : PdfCoalesceContents;
-                if (pdf.TryGetValue("NewlineBeforeEndStream", out val))
-                    PdfNewlineBeforeEndStream = bool.TryParse(val, out var b) ? b : PdfNewlineBeforeEndStream;
-                if (pdf.TryGetValue("DistributionCompatibility", out val))
-                {
-                    PdfDistributionCompatibility = bool.TryParse(val, out var b) ? b : PdfDistributionCompatibility;
-                    hasDistributionCompatibilitySetting = true;
-                }
-                if (pdf.TryGetValue("Decrypt", out val))
-                    PdfDecrypt = bool.TryParse(val, out var b) ? b : PdfDecrypt;
-                if (pdf.TryGetValue("RemoveRestrictions", out val))
-                    PdfRemoveRestrictions = bool.TryParse(val, out var b) ? b : PdfRemoveRestrictions;
-                if (pdf.TryGetValue("RestrictionRemoval", out val))
-                {
-                    PdfRestrictionRemoval = bool.TryParse(val, out var b) ? b : PdfRestrictionRemoval;
-                    hasRestrictionRemovalSetting = true;
-                }
-                if (pdf.TryGetValue("MinVersion", out val))
-                    PdfMinVersion = val;
-                if (pdf.TryGetValue("ForceVersion", out val))
-                    PdfForceVersion = val;
-                if (pdf.TryGetValue("Linearize", out val))
-                    PdfLinearize = bool.TryParse(val, out var b) ? b : PdfLinearize;
-
-                if (!hasStructureCleanupSetting)
-                    PdfStructureCleanup =
-                        PdfExternalizeInlineImages
-                        || PdfObjectStreamMode != "preserve"
-                        || PdfRemoveUnreferencedResources != "auto"
-                        || PdfPreserveUnreferencedObjects
-                        || PdfNormalizeContent
-                        || PdfCoalesceContents
-                        || PdfNewlineBeforeEndStream;
-
-                if (!hasDistributionCompatibilitySetting)
-                    PdfDistributionCompatibility =
-                        PdfLinearize
-                        || !string.IsNullOrWhiteSpace(PdfMinVersion)
-                        || !string.IsNullOrWhiteSpace(PdfForceVersion);
-
-                if (!hasRestrictionRemovalSetting)
-                    PdfRestrictionRemoval = PdfDecrypt || PdfRemoveRestrictions;
-            }
-
-            // 保存された有効ステップのプロパティをデフォルトステップに上書き適用
-            if (data.TryGetValue("Image", out var pipeline) && pipeline.TryGetValue("Enabled", out var enabledList))
-            {
-                // 一旦全ステップを無効化（保存された有効ステップだけ再有効化する）
-                foreach (var step in Steps)
-                    step.Enabled = false;
-
-                foreach (var typeName in enabledList.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    if (Enum.TryParse<PipelineStepType>(typeName.Trim(), out var type) &&
-                        data.TryGetValue("Image." + typeName.Trim(), out var stepData))
-                    {
-                        var step = Steps.FirstOrDefault(s => s.Type == type);
-                        if (step != null)
-                        {
-                            step.Enabled = true;
-                            LoadStepProperties(step, stepData);
-                        }
-                    }
-                }
-            }
+            ApplyImageSettings(data);
         }
         catch (Exception ex)
         {
             LogDebug($"Failed to load settings: {ex.Message}");
         }
     }
+
+    private void ApplyGeneralSettings(Dictionary<string, Dictionary<string, string>> data)
+    {
+        if (!data.TryGetValue("General", out var general))
+            return;
+
+        OutputDirectory = ReadString(general, "OutputDirectory", OutputDirectory, requireNonWhiteSpace: true);
+        FileNameRule = ReadString(general, "FileNameRule", FileNameRule);
+        AppTheme = ReadEnum(general, "ThemeMode", AppTheme);
+        Language = ReadString(general, "Language", Language, requireNonWhiteSpace: true);
+        ConfirmOnClear = ReadBool(general, "ConfirmOnClear", ConfirmOnClear);
+        PlaySoundOnComplete = ReadBool(general, "PlaySoundOnComplete", PlaySoundOnComplete);
+        MaxDegreeOfParallelism = ReadInt(general, "MaxDegreeOfParallelism", MaxDegreeOfParallelism);
+        WindowWidth = ReadDouble(general, "WindowWidth", WindowWidth);
+        WindowHeight = ReadDouble(general, "WindowHeight", WindowHeight);
+        WindowLeft = ReadDouble(general, "WindowLeft", double.NaN);
+        WindowTop = ReadDouble(general, "WindowTop", double.NaN);
+        WindowState = NormalizeRestoredWindowState(ReadEnum(general, "WindowState", WindowState));
+        SelectedTabIndex = ReadInt(general, "SelectedTabIndex", SelectedTabIndex);
+        SelectedImagePresetName = ReadString(general, "LastImagePresetName", SelectedImagePresetName);
+        SelectedOfficePresetName = ReadString(general, "LastOfficePresetName", SelectedOfficePresetName);
+        SelectedPdfPresetName = ReadString(general, "LastPdfPresetName", SelectedPdfPresetName);
+    }
+
+    private void ApplyOfficeSettings(Dictionary<string, Dictionary<string, string>> data)
+    {
+        if (!data.TryGetValue("Office", out var opt))
+            return;
+
+        EnableOfficeOptimize = ReadBool(opt, "EnableOfficeOptimize", EnableOfficeOptimize);
+        StripOfficeMetadata = ReadBool(opt, "StripOfficeMetadata", StripOfficeMetadata);
+        CleanUnusedObjects = ReadBool(opt, "CleanUnusedObjects", CleanUnusedObjects);
+        ResetCellSelection = ReadBool(opt, "ResetCellSelection", ResetCellSelection);
+        ConvertToWebP = ReadBool(opt, "ConvertToWebP", ConvertToWebP);
+        ConvertOfficeToPdf = ReadBool(opt, "ConvertOfficeToPdf", ConvertOfficeToPdf);
+        ConvertOfficeToPdfA = ReadBool(opt, "ConvertOfficeToPdfA", ConvertOfficeToPdfA);
+        WebPQuality = ReadInt(opt, "WebPQuality", WebPQuality);
+        CompressEmbeddedImages = ReadBool(opt, "CompressEmbeddedImages", CompressEmbeddedImages);
+        ResizeEmbeddedImagesByPpi = ReadBool(opt, "ResizeEmbeddedImagesByPpi", ResizeEmbeddedImagesByPpi);
+        TargetImagePpi = ReadInt(opt, "TargetImagePpi", TargetImagePpi);
+        CompressMedia = ReadBool(opt, "CompressMedia", CompressMedia);
+        MediaVideoCrf = ReadInt(opt, "MediaVideoCrf", MediaVideoCrf);
+        MediaVideoCodec = ReadString(opt, "MediaVideoCodec", MediaVideoCodec);
+        MediaAudioCodec = ReadString(opt, "MediaAudioCodec", MediaAudioCodec);
+        FfmpegPath = ReadString(opt, "FfmpegPath", FfmpegPath);
+        OxipngPath = ReadString(opt, "OxipngPath", OxipngPath);
+        UseOxipng = ReadBool(opt, "UseOxipng", UseOxipng);
+        OxipngLevel = ReadInt(opt, "OxipngLevel", OxipngLevel);
+        UseJpegli = ReadBool(opt, "UseJpegli", UseJpegli);
+        CjpegliPath = ReadString(opt, "CjpegliPath", CjpegliPath);
+    }
+
+    private void ApplyPdfSettings(Dictionary<string, Dictionary<string, string>> data)
+    {
+        if (!data.TryGetValue("Pdf", out var pdf))
+            return;
+
+        var hasStructureCleanupSetting = false;
+        var hasDistributionCompatibilitySetting = false;
+        var hasRestrictionRemovalSetting = false;
+
+        QpdfPath = ReadString(pdf, "QpdfPath", QpdfPath);
+        PdfOptimizeImages = ReadBool(pdf, "OptimizeImages", PdfOptimizeImages);
+        PdfJpegQuality = ReadInt(pdf, "JpegQuality", PdfJpegQuality);
+        PdfMinWidth = ReadInt(pdf, "MinWidth", PdfMinWidth);
+        PdfMinHeight = ReadInt(pdf, "MinHeight", PdfMinHeight);
+        PdfMinArea = ReadInt(pdf, "MinArea", PdfMinArea);
+        PdfKeepInlineImages = ReadBool(pdf, "KeepInlineImages", PdfKeepInlineImages);
+        PdfExternalizeInlineImages = ReadBool(pdf, "ExternalizeInlineImages", PdfExternalizeInlineImages);
+        PdfInlineImageMinBytes = ReadInt(pdf, "InlineImageMinBytes", PdfInlineImageMinBytes);
+        PdfCompressStreams = ReadBool(pdf, "CompressStreams", PdfCompressStreams);
+        PdfCompressionLevel = ReadInt(pdf, "CompressionLevel", PdfCompressionLevel);
+        PdfDecodeLevel = ReadString(pdf, "DecodeLevel", PdfDecodeLevel);
+        PdfRecompressFlate = ReadBool(pdf, "RecompressFlate", PdfRecompressFlate);
+        if (TryReadBool(pdf, "StructureCleanup", out var parsedStructureCleanup))
+        {
+            PdfStructureCleanup = parsedStructureCleanup;
+            hasStructureCleanupSetting = true;
+        }
+
+        PdfObjectStreamMode = ReadString(pdf, "ObjectStreamMode", PdfObjectStreamMode);
+        if (!pdf.ContainsKey("ObjectStreamMode"))
+            PdfGenerateObjectStreams = ReadBool(pdf, "GenerateObjectStreams", PdfGenerateObjectStreams);
+
+        PdfRemoveUnreferencedResources = ReadString(pdf, "RemoveUnreferencedResources", PdfRemoveUnreferencedResources);
+        PdfPreserveUnreferencedObjects = ReadBool(pdf, "PreserveUnreferencedObjects", PdfPreserveUnreferencedObjects);
+        PdfNormalizeContent = ReadBool(pdf, "NormalizeContent", PdfNormalizeContent);
+        PdfCoalesceContents = ReadBool(pdf, "CoalesceContents", PdfCoalesceContents);
+        PdfNewlineBeforeEndStream = ReadBool(pdf, "NewlineBeforeEndStream", PdfNewlineBeforeEndStream);
+        if (TryReadBool(pdf, "DistributionCompatibility", out var parsedDistributionCompatibility))
+        {
+            PdfDistributionCompatibility = parsedDistributionCompatibility;
+            hasDistributionCompatibilitySetting = true;
+        }
+
+        PdfDecrypt = ReadBool(pdf, "Decrypt", PdfDecrypt);
+        PdfRemoveRestrictions = ReadBool(pdf, "RemoveRestrictions", PdfRemoveRestrictions);
+        if (TryReadBool(pdf, "RestrictionRemoval", out var parsedRestrictionRemoval))
+        {
+            PdfRestrictionRemoval = parsedRestrictionRemoval;
+            hasRestrictionRemovalSetting = true;
+        }
+
+        PdfMinVersion = ReadString(pdf, "MinVersion", PdfMinVersion);
+        PdfForceVersion = ReadString(pdf, "ForceVersion", PdfForceVersion);
+        PdfLinearize = ReadBool(pdf, "Linearize", PdfLinearize);
+
+        if (!hasStructureCleanupSetting)
+            PdfStructureCleanup = InferPdfStructureCleanup();
+
+        if (!hasDistributionCompatibilitySetting)
+            PdfDistributionCompatibility = InferPdfDistributionCompatibility();
+
+        if (!hasRestrictionRemovalSetting)
+            PdfRestrictionRemoval = InferPdfRestrictionRemoval();
+    }
+
+    private bool InferPdfStructureCleanup()
+        => PdfExternalizeInlineImages
+           || PdfObjectStreamMode != "preserve"
+           || PdfRemoveUnreferencedResources != "auto"
+           || PdfPreserveUnreferencedObjects
+           || PdfNormalizeContent
+           || PdfCoalesceContents
+           || PdfNewlineBeforeEndStream;
+
+    private bool InferPdfDistributionCompatibility()
+        => PdfLinearize
+           || !string.IsNullOrWhiteSpace(PdfMinVersion)
+           || !string.IsNullOrWhiteSpace(PdfForceVersion);
+
+    private bool InferPdfRestrictionRemoval()
+        => PdfDecrypt || PdfRemoveRestrictions;
+
+    private void ApplyImageSettings(Dictionary<string, Dictionary<string, string>> data)
+    {
+        if (!data.TryGetValue("Image", out var pipeline) || !pipeline.TryGetValue("Enabled", out var enabledList))
+            return;
+
+        foreach (var step in Steps)
+            step.Enabled = false;
+
+        foreach (var typeName in enabledList.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmedTypeName = typeName.Trim();
+            if (Enum.TryParse<PipelineStepType>(trimmedTypeName, out var type) &&
+                data.TryGetValue("Image." + trimmedTypeName, out var stepData))
+            {
+                var step = Steps.FirstOrDefault(s => s.Type == type);
+                if (step != null)
+                {
+                    step.Enabled = true;
+                    LoadStepProperties(step, stepData);
+                }
+            }
+        }
+    }
+
+    private static WindowState NormalizeRestoredWindowState(WindowState state)
+        => state == WindowState.Minimized ? WindowState.Normal : state;
 
     /// <summary>
     /// ステップ種別ごとに必要なプロパティだけを保存用ディクショナリに追加する。
@@ -2501,14 +2319,14 @@ public class MainViewModel : INotifyPropertyChanged
                 data["PaddingBlue"] = step.PaddingBlue.ToString();
                 break;
             case PipelineStepType.Sharpen:
-                data["SharpenSigma"] = step.SharpenSigma.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                data["SharpenSigma"] = step.SharpenSigma.ToString(CultureInfo.InvariantCulture);
                 break;
             case PipelineStepType.ColorAdjust:
                 data["Brightness"] = step.Brightness.ToString();
                 data["Contrast"] = step.Contrast.ToString();
                 break;
             case PipelineStepType.ToneCurve:
-                data["ToneGamma"] = step.ToneGamma.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                data["ToneGamma"] = step.ToneGamma.ToString(CultureInfo.InvariantCulture);
                 break;
             case PipelineStepType.FormatConvert:
                 data["TargetFormat"] = step.TargetFormat.ToString();
@@ -2539,58 +2357,57 @@ public class MainViewModel : INotifyPropertyChanged
     /// </summary>
     private static void LoadStepProperties(PipelineStep step, Dictionary<string, string> data)
     {
-        string? v;
         switch (step.Type)
         {
             case PipelineStepType.Crop:
-                if (data.TryGetValue("CropWidth", out v)) step.CropWidth = int.TryParse(v, out var i) ? i : step.CropWidth;
-                if (data.TryGetValue("CropHeight", out v)) step.CropHeight = int.TryParse(v, out var i) ? i : step.CropHeight;
+                step.CropWidth = ReadInt(data, "CropWidth", step.CropWidth);
+                step.CropHeight = ReadInt(data, "CropHeight", step.CropHeight);
                 break;
             case PipelineStepType.Rotate:
-                if (data.TryGetValue("RotateTarget", out v)) step.RotateTarget = Enum.TryParse<RotateTarget>(v, out var r) ? r : step.RotateTarget;
-                if (data.TryGetValue("RotationDegrees", out v)) step.RotationDegrees = int.TryParse(v, out var i) ? i : step.RotationDegrees;
+                step.RotateTarget = ReadEnum(data, "RotateTarget", step.RotateTarget);
+                step.RotationDegrees = ReadInt(data, "RotationDegrees", step.RotationDegrees);
                 break;
             case PipelineStepType.Resize:
-                if (data.TryGetValue("TargetWidth", out v)) step.TargetWidth = int.TryParse(v, out var i) ? i : step.TargetWidth;
-                if (data.TryGetValue("TargetHeight", out v)) step.TargetHeight = int.TryParse(v, out var i) ? i : step.TargetHeight;
-                if (data.TryGetValue("FitMode", out v)) step.FitMode = Enum.TryParse<FitMode>(v, out var fm) ? fm : step.FitMode;
-                if (data.TryGetValue("AllowUpscale", out v)) step.AllowUpscale = bool.TryParse(v, out var b) ? b : step.AllowUpscale;
+                step.TargetWidth = ReadInt(data, "TargetWidth", step.TargetWidth);
+                step.TargetHeight = ReadInt(data, "TargetHeight", step.TargetHeight);
+                step.FitMode = ReadEnum(data, "FitMode", step.FitMode);
+                step.AllowUpscale = ReadBool(data, "AllowUpscale", step.AllowUpscale);
                 break;
             case PipelineStepType.Padding:
-                if (data.TryGetValue("PaddingSize", out v)) step.PaddingSize = int.TryParse(v, out var i) ? i : step.PaddingSize;
-                if (data.TryGetValue("PaddingRed", out v)) step.PaddingRed = int.TryParse(v, out var i) ? i : step.PaddingRed;
-                if (data.TryGetValue("PaddingGreen", out v)) step.PaddingGreen = int.TryParse(v, out var i) ? i : step.PaddingGreen;
-                if (data.TryGetValue("PaddingBlue", out v)) step.PaddingBlue = int.TryParse(v, out var i) ? i : step.PaddingBlue;
+                step.PaddingSize = ReadInt(data, "PaddingSize", step.PaddingSize);
+                step.PaddingRed = ReadInt(data, "PaddingRed", step.PaddingRed);
+                step.PaddingGreen = ReadInt(data, "PaddingGreen", step.PaddingGreen);
+                step.PaddingBlue = ReadInt(data, "PaddingBlue", step.PaddingBlue);
                 break;
             case PipelineStepType.Sharpen:
-                if (data.TryGetValue("SharpenSigma", out v)) step.SharpenSigma = double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : step.SharpenSigma;
+                step.SharpenSigma = ReadDouble(data, "SharpenSigma", step.SharpenSigma);
                 break;
             case PipelineStepType.ColorAdjust:
-                if (data.TryGetValue("Brightness", out v)) step.Brightness = int.TryParse(v, out var i) ? i : step.Brightness;
-                if (data.TryGetValue("Contrast", out v)) step.Contrast = int.TryParse(v, out var i) ? i : step.Contrast;
+                step.Brightness = ReadInt(data, "Brightness", step.Brightness);
+                step.Contrast = ReadInt(data, "Contrast", step.Contrast);
                 break;
             case PipelineStepType.ToneCurve:
-                if (data.TryGetValue("ToneGamma", out v)) step.ToneGamma = double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : step.ToneGamma;
+                step.ToneGamma = ReadDouble(data, "ToneGamma", step.ToneGamma);
                 break;
             case PipelineStepType.FormatConvert:
-                if (data.TryGetValue("TargetFormat", out v)) step.TargetFormat = Enum.TryParse<OutputFormat>(v, out var f) ? f : step.TargetFormat;
-                if (data.TryGetValue("Quality", out v)) step.Quality = int.TryParse(v, out var i) ? i : step.Quality;
-                if (data.TryGetValue("CompressionLevel", out v)) step.CompressionLevel = int.TryParse(v, out var i) ? i : step.CompressionLevel;
+                step.TargetFormat = ReadEnum(data, "TargetFormat", step.TargetFormat);
+                step.Quality = ReadInt(data, "Quality", step.Quality);
+                step.CompressionLevel = ReadInt(data, "CompressionLevel", step.CompressionLevel);
                 break;
             case PipelineStepType.Optimize:
-                if (data.TryGetValue("StripMetadata", out v)) step.StripMetadata = bool.TryParse(v, out var b) ? b : step.StripMetadata;
-                if (data.TryGetValue("OptimizeCoding", out v)) step.OptimizeCoding = bool.TryParse(v, out var b) ? b : step.OptimizeCoding;
-                if (data.TryGetValue("TrellisQuant", out v)) step.TrellisQuant = bool.TryParse(v, out var b) ? b : step.TrellisQuant;
-                if (data.TryGetValue("ReductionEffort", out v)) step.ReductionEffort = int.TryParse(v, out var i) ? i : step.ReductionEffort;
-                if (data.TryGetValue("Lossless", out v)) step.Lossless = bool.TryParse(v, out var b) ? b : step.Lossless;
+                step.StripMetadata = ReadBool(data, "StripMetadata", step.StripMetadata);
+                step.OptimizeCoding = ReadBool(data, "OptimizeCoding", step.OptimizeCoding);
+                step.TrellisQuant = ReadBool(data, "TrellisQuant", step.TrellisQuant);
+                step.ReductionEffort = ReadInt(data, "ReductionEffort", step.ReductionEffort);
+                step.Lossless = ReadBool(data, "Lossless", step.Lossless);
                 break;
             case PipelineStepType.Posterize:
-                if (data.TryGetValue("BitsPerChannel", out v)) step.BitsPerChannel = int.TryParse(v, out var i) ? i : step.BitsPerChannel;
+                step.BitsPerChannel = ReadInt(data, "BitsPerChannel", step.BitsPerChannel);
                 break;
             case PipelineStepType.Composite:
-                if (data.TryGetValue("CompositePath", out v)) step.CompositePath = v;
-                if (data.TryGetValue("CompositeX", out v)) step.CompositeX = int.TryParse(v, out var i) ? i : step.CompositeX;
-                if (data.TryGetValue("CompositeY", out v)) step.CompositeY = int.TryParse(v, out var i) ? i : step.CompositeY;
+                step.CompositePath = ReadString(data, "CompositePath", step.CompositePath ?? "");
+                step.CompositeX = ReadInt(data, "CompositeX", step.CompositeX);
+                step.CompositeY = ReadInt(data, "CompositeY", step.CompositeY);
                 break;
             // Grayscale, ExifAutoRotate: 追加プロパティなし
         }
@@ -2605,121 +2422,124 @@ public class MainViewModel : INotifyPropertyChanged
         var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
         if (includeGeneral)
-        {
-            var general = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["OutputDirectory"] = OutputDirectory ?? "",
-                ["FileNameRule"] = FileNameRule ?? "",
-                ["ThemeMode"] = AppTheme.ToString(),
-                ["Language"] = Language,
-                ["ConfirmOnClear"] = ConfirmOnClear.ToString(),
-                ["PlaySoundOnComplete"] = PlaySoundOnComplete.ToString(),
-                ["MaxDegreeOfParallelism"] = MaxDegreeOfParallelism.ToString(),
-                ["WindowWidth"] = WindowWidth.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["WindowHeight"] = WindowHeight.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["WindowLeft"] = WindowLeft.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["WindowTop"] = WindowTop.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["WindowState"] = (WindowState == WindowState.Minimized ? WindowState.Normal : WindowState).ToString(),
-                ["SelectedTabIndex"] = SelectedTabIndex.ToString(),
-                ["LastImagePresetName"] = SelectedImagePresetName ?? "",
-                ["LastOfficePresetName"] = SelectedOfficePresetName ?? "",
-                ["LastPdfPresetName"] = SelectedPdfPresetName ?? ""
-            };
-            data["General"] = general;
-        }
+            data["General"] = CreateGeneralSettingsSection();
 
         if (includeOffice)
-        {
-            var opt = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["EnableOfficeOptimize"] = EnableOfficeOptimize.ToString(),
-
-                ["StripOfficeMetadata"] = StripOfficeMetadata.ToString(),
-                ["CleanUnusedObjects"] = CleanUnusedObjects.ToString(),
-                ["ResetCellSelection"] = ResetCellSelection.ToString(),
-
-                ["ConvertToWebP"] = ConvertToWebP.ToString(),
-                ["ConvertOfficeToPdf"] = ConvertOfficeToPdf.ToString(),
-                ["ConvertOfficeToPdfA"] = ConvertOfficeToPdfA.ToString(),
-                ["WebPQuality"] = WebPQuality.ToString(),
-                ["CompressEmbeddedImages"] = CompressEmbeddedImages.ToString(),
-                ["ResizeEmbeddedImagesByPpi"] = ResizeEmbeddedImagesByPpi.ToString(),
-                ["TargetImagePpi"] = TargetImagePpi.ToString(),
-                ["CompressMedia"] = CompressMedia.ToString(),
-                ["MediaVideoCrf"] = MediaVideoCrf.ToString(),
-                ["MediaVideoCodec"] = MediaVideoCodec ?? "",
-                ["MediaAudioCodec"] = MediaAudioCodec ?? "",
-                ["FfmpegPath"] = FfmpegPath ?? "",
-                ["OxipngPath"] = OxipngPath ?? "",
-                ["UseOxipng"] = UseOxipng.ToString(),
-                ["OxipngLevel"] = OxipngLevel.ToString(),
-                ["UseJpegli"] = UseJpegli.ToString(),
-                ["CjpegliPath"] = CjpegliPath ?? ""
-            };
-            data["Office"] = opt;
-        }
+            data["Office"] = CreateOfficeSettingsSection();
 
         if (includePdf)
-        {
-            var pdf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["QpdfPath"] = QpdfPath ?? "",
-                ["OptimizeImages"] = PdfOptimizeImages.ToString(),
-                ["JpegQuality"] = PdfJpegQuality.ToString(),
-                ["MinWidth"] = PdfMinWidth.ToString(),
-                ["MinHeight"] = PdfMinHeight.ToString(),
-                ["MinArea"] = PdfMinArea.ToString(),
-                ["KeepInlineImages"] = PdfKeepInlineImages.ToString(),
-                ["ExternalizeInlineImages"] = PdfExternalizeInlineImages.ToString(),
-                ["InlineImageMinBytes"] = PdfInlineImageMinBytes.ToString(),
-                ["CompressStreams"] = PdfCompressStreams.ToString(),
-                ["CompressionLevel"] = PdfCompressionLevel.ToString(),
-                ["DecodeLevel"] = PdfDecodeLevel,
-                ["RecompressFlate"] = PdfRecompressFlate.ToString(),
-                ["StructureCleanup"] = PdfStructureCleanup.ToString(),
-                ["ObjectStreamMode"] = PdfObjectStreamMode,
-                ["GenerateObjectStreams"] = PdfGenerateObjectStreams.ToString(),
-                ["RemoveUnreferencedResources"] = PdfRemoveUnreferencedResources,
-                ["PreserveUnreferencedObjects"] = PdfPreserveUnreferencedObjects.ToString(),
-                ["NormalizeContent"] = PdfNormalizeContent.ToString(),
-                ["CoalesceContents"] = PdfCoalesceContents.ToString(),
-                ["NewlineBeforeEndStream"] = PdfNewlineBeforeEndStream.ToString(),
-                ["DistributionCompatibility"] = PdfDistributionCompatibility.ToString(),
-                ["Decrypt"] = PdfDecrypt.ToString(),
-                ["RemoveRestrictions"] = PdfRemoveRestrictions.ToString(),
-                ["RestrictionRemoval"] = PdfRestrictionRemoval.ToString(),
-                ["MinVersion"] = PdfMinVersion,
-                ["ForceVersion"] = PdfForceVersion,
-                ["Linearize"] = PdfLinearize.ToString()
-            };
-            data["Pdf"] = pdf;
-        }
+            data["Pdf"] = CreatePdfSettingsSection();
 
         if (includeImage)
-        {
-            var enabledSteps = Steps.Where(s => s.Enabled).ToList();
-            var pipeline = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Enabled"] = string.Join(",", enabledSteps.Select(s => s.Type.ToString()))
-            };
-            data["Image"] = pipeline;
-
-            foreach (var step in enabledSteps)
-            {
-                var stepData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                SaveStepProperties(step, stepData);
-                data["Image." + step.Type.ToString()] = stepData;
-            }
-        }
+            AddImageSettingsSections(data);
 
         return data;
     }
+
+    private Dictionary<string, string> CreateGeneralSettingsSection()
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["OutputDirectory"] = OutputDirectory ?? "",
+            ["FileNameRule"] = FileNameRule ?? "",
+            ["ThemeMode"] = AppTheme.ToString(),
+            ["Language"] = Language,
+            ["ConfirmOnClear"] = ConfirmOnClear.ToString(),
+            ["PlaySoundOnComplete"] = PlaySoundOnComplete.ToString(),
+            ["MaxDegreeOfParallelism"] = MaxDegreeOfParallelism.ToString(),
+            ["WindowWidth"] = WindowWidth.ToString(CultureInfo.InvariantCulture),
+            ["WindowHeight"] = WindowHeight.ToString(CultureInfo.InvariantCulture),
+            ["WindowLeft"] = WindowLeft.ToString(CultureInfo.InvariantCulture),
+            ["WindowTop"] = WindowTop.ToString(CultureInfo.InvariantCulture),
+            ["WindowState"] = (WindowState == WindowState.Minimized ? WindowState.Normal : WindowState).ToString(),
+            ["SelectedTabIndex"] = SelectedTabIndex.ToString(),
+            ["LastImagePresetName"] = SelectedImagePresetName ?? "",
+            ["LastOfficePresetName"] = SelectedOfficePresetName ?? "",
+            ["LastPdfPresetName"] = SelectedPdfPresetName ?? ""
+        };
+
+    private Dictionary<string, string> CreateOfficeSettingsSection()
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["EnableOfficeOptimize"] = EnableOfficeOptimize.ToString(),
+            ["StripOfficeMetadata"] = StripOfficeMetadata.ToString(),
+            ["CleanUnusedObjects"] = CleanUnusedObjects.ToString(),
+            ["ResetCellSelection"] = ResetCellSelection.ToString(),
+            ["ConvertToWebP"] = ConvertToWebP.ToString(),
+            ["ConvertOfficeToPdf"] = ConvertOfficeToPdf.ToString(),
+            ["ConvertOfficeToPdfA"] = ConvertOfficeToPdfA.ToString(),
+            ["WebPQuality"] = WebPQuality.ToString(),
+            ["CompressEmbeddedImages"] = CompressEmbeddedImages.ToString(),
+            ["ResizeEmbeddedImagesByPpi"] = ResizeEmbeddedImagesByPpi.ToString(),
+            ["TargetImagePpi"] = TargetImagePpi.ToString(),
+            ["CompressMedia"] = CompressMedia.ToString(),
+            ["MediaVideoCrf"] = MediaVideoCrf.ToString(),
+            ["MediaVideoCodec"] = MediaVideoCodec ?? "",
+            ["MediaAudioCodec"] = MediaAudioCodec ?? "",
+            ["FfmpegPath"] = FfmpegPath ?? "",
+            ["OxipngPath"] = OxipngPath ?? "",
+            ["UseOxipng"] = UseOxipng.ToString(),
+            ["OxipngLevel"] = OxipngLevel.ToString(),
+            ["UseJpegli"] = UseJpegli.ToString(),
+            ["CjpegliPath"] = CjpegliPath ?? ""
+        };
+
+    private Dictionary<string, string> CreatePdfSettingsSection()
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["QpdfPath"] = QpdfPath ?? "",
+            ["OptimizeImages"] = PdfOptimizeImages.ToString(),
+            ["JpegQuality"] = PdfJpegQuality.ToString(),
+            ["MinWidth"] = PdfMinWidth.ToString(),
+            ["MinHeight"] = PdfMinHeight.ToString(),
+            ["MinArea"] = PdfMinArea.ToString(),
+            ["KeepInlineImages"] = PdfKeepInlineImages.ToString(),
+            ["ExternalizeInlineImages"] = PdfExternalizeInlineImages.ToString(),
+            ["InlineImageMinBytes"] = PdfInlineImageMinBytes.ToString(),
+            ["CompressStreams"] = PdfCompressStreams.ToString(),
+            ["CompressionLevel"] = PdfCompressionLevel.ToString(),
+            ["DecodeLevel"] = PdfDecodeLevel,
+            ["RecompressFlate"] = PdfRecompressFlate.ToString(),
+            ["StructureCleanup"] = PdfStructureCleanup.ToString(),
+            ["ObjectStreamMode"] = PdfObjectStreamMode,
+            ["GenerateObjectStreams"] = PdfGenerateObjectStreams.ToString(),
+            ["RemoveUnreferencedResources"] = PdfRemoveUnreferencedResources,
+            ["PreserveUnreferencedObjects"] = PdfPreserveUnreferencedObjects.ToString(),
+            ["NormalizeContent"] = PdfNormalizeContent.ToString(),
+            ["CoalesceContents"] = PdfCoalesceContents.ToString(),
+            ["NewlineBeforeEndStream"] = PdfNewlineBeforeEndStream.ToString(),
+            ["DistributionCompatibility"] = PdfDistributionCompatibility.ToString(),
+            ["Decrypt"] = PdfDecrypt.ToString(),
+            ["RemoveRestrictions"] = PdfRemoveRestrictions.ToString(),
+            ["RestrictionRemoval"] = PdfRestrictionRemoval.ToString(),
+            ["MinVersion"] = PdfMinVersion,
+            ["ForceVersion"] = PdfForceVersion,
+            ["Linearize"] = PdfLinearize.ToString()
+        };
+
+    private void AddImageSettingsSections(Dictionary<string, Dictionary<string, string>> data)
+    {
+        var enabledSteps = Steps.Where(s => s.Enabled).ToList();
+        data["Image"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Enabled"] = string.Join(",", enabledSteps.Select(s => s.Type.ToString()))
+        };
+
+        foreach (var step in enabledSteps)
+        {
+            var stepData = CreateSettingsSection();
+            SaveStepProperties(step, stepData);
+            data["Image." + step.Type.ToString()] = stepData;
+        }
+    }
+
+    private static Dictionary<string, string> CreateSettingsSection()
+        => new(StringComparer.OrdinalIgnoreCase);
 
     public void SaveSettings(string? customPath = null)
     {
         try
         {
-            var path = customPath ?? GetSettingsFilePath();
+            var path = customPath ?? AppPathHelper.GetSettingsFilePath();
             SettingsService.Save(path, CreateSettingsData(includeGeneral: true));
         }
         catch (Exception ex)

@@ -76,6 +76,22 @@ public class PdfOptimizationService
     {
         yield return inputPath;
 
+        foreach (var argument in BuildImageArguments(options))
+            yield return argument;
+        foreach (var argument in BuildStreamArguments(options))
+            yield return argument;
+        foreach (var argument in BuildStructureArguments(options))
+            yield return argument;
+        foreach (var argument in BuildCompatibilityArguments(options))
+            yield return argument;
+        foreach (var argument in BuildRestrictionArguments(options))
+            yield return argument;
+
+        yield return outputPath;
+    }
+
+    private static IEnumerable<string> BuildImageArguments(PdfOptimizationOptions options)
+    {
         if (options.OptimizeImages)
         {
             yield return "--optimize-images";
@@ -86,7 +102,10 @@ public class PdfOptimizationService
             if (options.KeepInlineImages)
                 yield return "--keep-inline-images";
         }
+    }
 
+    private static IEnumerable<string> BuildStreamArguments(PdfOptimizationOptions options)
+    {
         if (options.CompressStreams)
         {
             yield return "--compress-streams=y";
@@ -104,7 +123,10 @@ public class PdfOptimizationService
         {
             yield return "--compress-streams=n";
         }
+    }
 
+    private static IEnumerable<string> BuildStructureArguments(PdfOptimizationOptions options)
+    {
         if (options.StructureCleanup)
         {
             if (options.ExternalizeInlineImages)
@@ -131,7 +153,10 @@ public class PdfOptimizationService
             if (options.NewlineBeforeEndStream)
                 yield return "--newline-before-endstream";
         }
+    }
 
+    private static IEnumerable<string> BuildCompatibilityArguments(PdfOptimizationOptions options)
+    {
         if (options.DistributionCompatibility)
         {
             var minVersion = NormalizePdfVersion(options.MinVersion);
@@ -145,7 +170,10 @@ public class PdfOptimizationService
             if (options.Linearize)
                 yield return "--linearize";
         }
+    }
 
+    private static IEnumerable<string> BuildRestrictionArguments(PdfOptimizationOptions options)
+    {
         if (options.RestrictionRemoval)
         {
             if (options.Decrypt)
@@ -154,8 +182,6 @@ public class PdfOptimizationService
             if (options.RemoveRestrictions)
                 yield return "--remove-restrictions";
         }
-
-        yield return outputPath;
     }
 
     private static string ResolveQpdfPath(string qpdfPath)
