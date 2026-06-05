@@ -35,7 +35,7 @@ build:
 
 release-check:
 	@if [ -z "$(TAG)" ]; then \
-		echo "[ERROR] TAG cannot be empty. Usage: make release TAG=v0.1.0"; \
+		echo "[ERROR] TAG cannot be empty. Usage: make release TAG=0.3.0"; \
 		exit 1; \
 	fi
 	@if [ -z "$(GH)" ]; then \
@@ -100,7 +100,7 @@ release: release-check
 	@$(MAKE) package TAG="$(TAG)" CONFIG="$(CONFIG)"
 	@echo ""
 	@echo "[3/5] Creating Git tag '$(TAG)'..."
-	@if ! git tag -a "$(TAG)" -m "Release $(TAG)" 2>/dev/null; then \
+	@if ! git tag -a "$(TAG)" -m "$(TAG) をリリース" 2>/dev/null; then \
 		echo "[WARNING] Git tag '$(TAG)' already exists locally or failed to create."; \
 		printf "Proceed using the existing tag? (y/N): "; \
 		read confirm_tag; \
@@ -113,7 +113,7 @@ release: release-check
 	@git push origin "$(BRANCH)" --tags
 	@echo ""
 	@echo "[5/5] Creating GitHub Release and uploading $(PACKAGE)..."
-	@"$(GH)" release create "$(TAG)" "$(PACKAGE)" --title "Release $(TAG)" --notes "Release $(TAG)"
+	@"$(GH)" release create "$(TAG)" "$(PACKAGE)" --title "FileMill $(TAG)" --notes "$(TAG) をリリースしました。"
 	@echo ""
 	@echo "==================================================="
 	@echo " Release '$(TAG)' successfully published to GitHub!"
