@@ -80,13 +80,13 @@ bin\Release\net10.0-windows
 ZIP パッケージだけを作成する場合は次を実行します。
 
 ```bash
-make package TAG=0.2
+make package TAG=0.3.0
 ```
 
 GitHub Release まで公開する場合は次を実行します。
 
 ```bash
-make release TAG=0.2
+make release TAG=0.3.0
 ```
 
 `release` ターゲットは次の処理を行います。
