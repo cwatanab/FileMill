@@ -329,6 +329,18 @@
                             <StackPanel>
                                 <TextBlock Text="埋め込み画像:" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
                                 <CheckBox Content="文書内の埋め込み画像を圧縮する" IsChecked="{Binding CompressEmbeddedImages, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="WordやPowerPoint内の画像を圧縮し、画像WebP変換がオンならWebP化します。"/>
+                                <CheckBox x:Name="SettingsOfficeResizeImagePpiCheck" Content="画像解像度を PPI で制限" IsChecked="{Binding ResizeEmbeddedImagesByPpi, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="Office上の表示サイズから実効PPIを計算し、指定PPIを超える画像だけ縮小します。"/>
+                                <StackPanel Margin="20,4,0,0" Visibility="{Binding IsChecked, ElementName=SettingsOfficeResizeImagePpiCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="目標 PPI:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="56"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider Minimum="72" Maximum="600" Value="{Binding TargetImagePpi}" TickFrequency="10" IsSnapToTickEnabled="True"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TargetImagePpi, StringFormat={}{0} PPI}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                    </Grid>
+                                </StackPanel>
                                 <CheckBox x:Name="WebPConvertCheck" Content="画像を WebP 形式に変換" IsChecked="{Binding ConvertToWebP, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6" FontSize="12"/>
                                 <StackPanel Margin="20,4,0,0" Visibility="{Binding IsChecked, ElementName=WebPConvertCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <TextBlock Text="WebP品質:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
@@ -408,6 +420,177 @@
                                   Margin="0,6"
                                   FontSize="12"
                                   ToolTip="Word と PowerPoint は PDF/A として出力します。Excel は Microsoft Office Interop の制約により PDF/A 指定に対応していません。"/>
+                    </StackPanel>
+
+                    <!-- PDF 画像最適化設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfImage}">
+                        <StackPanel Margin="0,2,0,0">
+                            <TextBlock Text="JPEG品質" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                            <Grid Margin="0,2,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="36"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="1" Maximum="100" Value="{Binding PdfJpegQuality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1" Text="{Binding PdfJpegQuality}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="88"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="最小幅" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBox Grid.Column="1" Text="{Binding PdfMinWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="88"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="最小高さ" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBox Grid.Column="1" Text="{Binding PdfMinHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="88"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="最小面積" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBox Grid.Column="1" Text="{Binding PdfMinArea, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+                            </Grid>
+
+                            <CheckBox Content="インライン画像を保持" IsChecked="{Binding PdfKeepInlineImages, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- PDF ストリーム圧縮設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfStream}">
+                        <StackPanel Margin="0,2,0,0">
+                            <TextBlock Text="圧縮レベル" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                            <Grid Margin="0,2,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="28"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="1" Maximum="9" Value="{Binding PdfCompressionLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1" Text="{Binding PdfCompressionLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="88"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="デコード" VerticalAlignment="Center" FontSize="11"/>
+                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfDecodeLevelIndex, Mode=TwoWay}" FontSize="11" Height="24">
+                                    <ComboBoxItem Content="none"/>
+                                    <ComboBoxItem Content="generalized"/>
+                                    <ComboBoxItem Content="specialized"/>
+                                    <ComboBoxItem Content="all"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <CheckBox Content="Flateを再圧縮" IsChecked="{Binding PdfRecompressFlate, Mode=TwoWay}" Margin="0,8,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- PDF 構造整理設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfStructure}">
+                        <StackPanel Margin="0,2,0,0">
+                            <CheckBox x:Name="PdfStructureExternalizeInlineImagesCheck" Content="インライン画像を通常画像に変換" IsChecked="{Binding PdfExternalizeInlineImages, Mode=TwoWay}" Margin="0,2" FontSize="11"/>
+
+                            <Grid Margin="20,6,0,0" Visibility="{Binding IsChecked, ElementName=PdfStructureExternalizeInlineImagesCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="88"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="最小バイト" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBox Grid.Column="1" Text="{Binding PdfInlineImageMinBytes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Padding="4,2"/>
+                            </Grid>
+
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="112"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="オブジェクト" VerticalAlignment="Center" FontSize="11"/>
+                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfObjectStreamModeIndex, Mode=TwoWay}" FontSize="11" Height="24">
+                                    <ComboBoxItem Content="preserve"/>
+                                    <ComboBoxItem Content="disable"/>
+                                    <ComboBoxItem Content="generate"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="112"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="未参照リソース" VerticalAlignment="Center" FontSize="11"/>
+                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfRemoveUnreferencedResourcesIndex, Mode=TwoWay}" FontSize="11" Height="24">
+                                    <ComboBoxItem Content="auto"/>
+                                    <ComboBoxItem Content="yes"/>
+                                    <ComboBoxItem Content="no"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <CheckBox Content="未参照オブジェクトを保持" IsChecked="{Binding PdfPreserveUnreferencedObjects, Mode=TwoWay}" Margin="0,8,0,0" FontSize="11"/>
+                            <CheckBox Content="コンテンツ改行を正規化" IsChecked="{Binding PdfNormalizeContent, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
+                            <CheckBox Content="コンテンツストリームを結合" IsChecked="{Binding PdfCoalesceContents, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
+                            <CheckBox Content="endstream前に改行を追加" IsChecked="{Binding PdfNewlineBeforeEndStream, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- PDF 配布・互換性設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfCompatibility}">
+                        <StackPanel Margin="0,2,0,0">
+                            <CheckBox Content="Web表示用にリニアライズ" IsChecked="{Binding PdfLinearize, Mode=TwoWay}" Margin="0,2,0,6" FontSize="11"/>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="112"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="最小バージョン" VerticalAlignment="Center" FontSize="11"/>
+                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfMinVersionIndex, Mode=TwoWay}" FontSize="11" Height="24">
+                                    <ComboBoxItem Content="指定なし"/>
+                                    <ComboBoxItem Content="1.3"/>
+                                    <ComboBoxItem Content="1.4"/>
+                                    <ComboBoxItem Content="1.5"/>
+                                    <ComboBoxItem Content="1.6"/>
+                                    <ComboBoxItem Content="1.7"/>
+                                    <ComboBoxItem Content="2.0"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="112"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="強制バージョン" VerticalAlignment="Center" FontSize="11"/>
+                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfForceVersionIndex, Mode=TwoWay}" FontSize="11" Height="24" ToolTip="PDF機能との互換性に注意してください">
+                                    <ComboBoxItem Content="指定なし"/>
+                                    <ComboBoxItem Content="1.3"/>
+                                    <ComboBoxItem Content="1.4"/>
+                                    <ComboBoxItem Content="1.5"/>
+                                    <ComboBoxItem Content="1.6"/>
+                                    <ComboBoxItem Content="1.7"/>
+                                    <ComboBoxItem Content="2.0"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- PDF 制限解除設定 -->
+                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfRestrictions}">
+                        <StackPanel Margin="0,2,0,0">
+                            <CheckBox Content="暗号化を解除" IsChecked="{Binding PdfDecrypt, Mode=TwoWay}" Margin="0,2" FontSize="11"/>
+                            <CheckBox Content="署名/制限を解除" IsChecked="{Binding PdfRemoveRestrictions, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11" ToolTip="電子署名は無効になります"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <!-- オプション設定 -->

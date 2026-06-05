@@ -167,6 +167,18 @@ public partial class MainWindow : Window
         FileListDropBorder.BorderBrush = (Brush)TryFindResource("BorderBrush");
     }
 
+    private void FileListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Delete || VM.IsProcessing)
+            return;
+
+        var selectedFiles = FileListView.SelectedItems.Cast<ImageFile>().ToList();
+        foreach (var file in selectedFiles)
+            VM.Files.Remove(file);
+
+        e.Handled = selectedFiles.Count > 0;
+    }
+
     private void MenuItem_Exit_Click(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();
@@ -358,6 +370,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OptimizeFileListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Delete || VM.IsProcessing)
+            return;
+
+        var selectedFiles = OptimizeFileListView.SelectedItems.Cast<OptimizeFile>().ToList();
+        foreach (var file in selectedFiles)
+            VM.OptimizeFiles.Remove(file);
+
+        e.Handled = selectedFiles.Count > 0;
+    }
+
     private void OptimizeFileListHeader_Click(object sender, RoutedEventArgs e)
     {
         if (e.OriginalSource is not GridViewColumnHeader header || header.Column == null)
@@ -474,6 +498,18 @@ public partial class MainWindow : Window
             PdfFileListDropBorder.Background = (Brush)TryFindResource("ControlBackground");
             PdfFileListDropBorder.BorderBrush = (Brush)TryFindResource("BorderBrush");
         }
+    }
+
+    private void PdfFileListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Delete || VM.IsProcessing)
+            return;
+
+        var selectedFiles = PdfFileListView.SelectedItems.Cast<OptimizeFile>().ToList();
+        foreach (var file in selectedFiles)
+            VM.PdfFiles.Remove(file);
+
+        e.Handled = selectedFiles.Count > 0;
     }
 
     private void PdfFileListHeader_Click(object sender, RoutedEventArgs e)

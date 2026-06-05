@@ -15,7 +15,8 @@ public class PdfOptimizationService
         PdfOptimizationOptions options,
         string qpdfPath,
         CancellationToken cancellationToken = default,
-        Action<string>? logAction = null)
+        Action<string>? logAction = null,
+        string? displayOutputPath = null)
     {
         if (!File.Exists(inputPath))
             throw new FileNotFoundException("PDF ファイルが見つかりません。", inputPath);
@@ -25,7 +26,8 @@ public class PdfOptimizationService
             Directory.CreateDirectory(dir);
 
         var executablePath = ResolveQpdfPath(qpdfPath);
-        logAction?.Invoke($"PDF最適化: {Path.GetFileName(inputPath)} -> {Path.GetFileName(outputPath)}");
+        var logOutputPath = string.IsNullOrWhiteSpace(displayOutputPath) ? outputPath : displayOutputPath;
+        logAction?.Invoke($"PDF変換: {Path.GetFileName(inputPath)} -> {Path.GetFileName(logOutputPath)}");
 
         var psi = new ProcessStartInfo
         {
@@ -88,14 +90,70 @@ public class PdfOptimizationService
         if (options.CompressStreams)
         {
             yield return "--compress-streams=y";
+
+            var decodeLevel = NormalizeDecodeLevel(options.DecodeLevel);
+            if (!string.IsNullOrEmpty(decodeLevel))
+                yield return $"--decode-level={decodeLevel}";
+
+            if (options.RecompressFlate)
+                yield return "--recompress-flate";
+
             yield return $"--compression-level={Clamp(options.CompressionLevel, 1, 9)}";
         }
+        else
+        {
+            yield return "--compress-streams=n";
+        }
 
-        if (options.GenerateObjectStreams)
-            yield return "--object-streams=generate";
+        if (options.StructureCleanup)
+        {
+            if (options.ExternalizeInlineImages)
+            {
+                yield return "--externalize-inline-images";
+                yield return $"--ii-min-bytes={Math.Max(0, options.InlineImageMinBytes)}";
+            }
 
-        if (options.Linearize)
-            yield return "--linearize";
+            yield return $"--object-streams={NormalizeObjectStreamMode(options.ObjectStreamMode)}";
+
+            var removeUnreferencedResources = NormalizeRemoveUnreferencedResources(options.RemoveUnreferencedResources);
+            if (removeUnreferencedResources != "auto")
+                yield return $"--remove-unreferenced-resources={removeUnreferencedResources}";
+
+            if (options.PreserveUnreferencedObjects)
+                yield return "--preserve-unreferenced";
+
+            if (options.NormalizeContent)
+                yield return "--normalize-content=y";
+
+            if (options.CoalesceContents)
+                yield return "--coalesce-contents";
+
+            if (options.NewlineBeforeEndStream)
+                yield return "--newline-before-endstream";
+        }
+
+        if (options.DistributionCompatibility)
+        {
+            var minVersion = NormalizePdfVersion(options.MinVersion);
+            if (!string.IsNullOrEmpty(minVersion))
+                yield return $"--min-version={minVersion}";
+
+            var forceVersion = NormalizePdfVersion(options.ForceVersion);
+            if (!string.IsNullOrEmpty(forceVersion))
+                yield return $"--force-version={forceVersion}";
+
+            if (options.Linearize)
+                yield return "--linearize";
+        }
+
+        if (options.RestrictionRemoval)
+        {
+            if (options.Decrypt)
+                yield return "--decrypt";
+
+            if (options.RemoveRestrictions)
+                yield return "--remove-restrictions";
+        }
 
         yield return outputPath;
     }
@@ -161,4 +219,32 @@ public class PdfOptimizationService
 
     private static int Clamp(int value, int min, int max)
         => Math.Min(Math.Max(value, min), max);
+
+    private static string NormalizeDecodeLevel(string? value)
+        => value switch
+        {
+            "none" or "generalized" or "specialized" or "all" => value,
+            _ => "generalized"
+        };
+
+    private static string NormalizeObjectStreamMode(string? value)
+        => value switch
+        {
+            "disable" or "generate" => value,
+            _ => "preserve"
+        };
+
+    private static string NormalizeRemoveUnreferencedResources(string? value)
+        => value switch
+        {
+            "yes" or "no" => value,
+            _ => "auto"
+        };
+
+    private static string NormalizePdfVersion(string? value)
+        => value switch
+        {
+            "1.3" or "1.4" or "1.5" or "1.6" or "1.7" or "2.0" => value,
+            _ => ""
+        };
 }

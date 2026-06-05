@@ -162,6 +162,12 @@ With gratitude to all developers and contributors.</value></data>
   <data name="ModalTitleComposite" xml:space="preserve"><value>Composite Settings</value></data>
   <data name="ModalTitleOfficeOptimize" xml:space="preserve"><value>Office Optimize Settings</value></data>
   <data name="ModalTitleOfficePdf" xml:space="preserve"><value>PDF Conversion Settings</value></data>
+  <data name="ModalTitlePdfConvert" xml:space="preserve"><value>PDF File Conversion Settings</value></data>
+  <data name="ModalTitlePdfImage" xml:space="preserve"><value>PDF Image Optimization Settings</value></data>
+  <data name="ModalTitlePdfStream" xml:space="preserve"><value>PDF Stream Compression Settings</value></data>
+  <data name="ModalTitlePdfStructure" xml:space="preserve"><value>PDF Structure Cleanup Settings</value></data>
+  <data name="ModalTitlePdfCompatibility" xml:space="preserve"><value>PDF Distribution and Compatibility Settings</value></data>
+  <data name="ModalTitlePdfRestrictions" xml:space="preserve"><value>PDF Restriction Removal Settings</value></data>
   <data name="ModalTitleImageOptimize" xml:space="preserve"><value>Image Optimize Settings</value></data>
   <data name="ModalTitleMediaOptimize" xml:space="preserve"><value>Media Optimize Settings</value></data>
   <data name="ModalTitleOptions" xml:space="preserve"><value>Options</value></data>
@@ -179,14 +185,14 @@ With gratitude to all developers and contributors.</value></data>
   <data name="StatusCompleted" xml:space="preserve"><value>Completed</value></data>
   <data name="StatusErrorState" xml:space="preserve"><value>Error</value></data>
   <data name="StatusConvertingToPdf" xml:space="preserve"><value>Converting to PDF</value></data>
-  <data name="StatusOptimizingPdf" xml:space="preserve"><value>Optimizing PDF</value></data>
+  <data name="StatusOptimizingPdf" xml:space="preserve"><value>Converting PDF</value></data>
   <data name="StatusOfficePdfInteropUnavailable" xml:space="preserve"><value>Microsoft Office Interop required for {0} PDF conversion is unavailable.</value></data>
   <data name="StatusOfficePdfAUnsupportedForExcel" xml:space="preserve"><value>Excel Microsoft Office Interop API does not support PDF/A export.</value></data>
   <data name="StatusOptimizingProgress" xml:space="preserve"><value>Processing... ({0}/{1})</value></data>
   <data name="StatusOptimizeCancelled" xml:space="preserve"><value>Office file conversion was cancelled</value></data>
   <data name="StatusOptimizeDone" xml:space="preserve"><value>Office file conversion done: {0} succeeded, {1} failed</value></data>
-  <data name="StatusPdfOptimizeCancelled" xml:space="preserve"><value>PDF file optimization was cancelled</value></data>
-  <data name="StatusPdfOptimizeDone" xml:space="preserve"><value>PDF file optimization done: {0} succeeded, {1} failed</value></data>
+  <data name="StatusPdfOptimizeCancelled" xml:space="preserve"><value>PDF file conversion was cancelled</value></data>
+  <data name="StatusPdfOptimizeDone" xml:space="preserve"><value>PDF file conversion done: {0} succeeded, {1} failed</value></data>
   <data name="MsgConfirmClearImageList" xml:space="preserve"><value>Do you want to remove all image files from the list?</value></data>
   <data name="MsgConfirmClearList" xml:space="preserve"><value>Do you want to remove all files from the list?</value></data>
   <data name="TitleConfirm" xml:space="preserve"><value>Confirm</value></data>

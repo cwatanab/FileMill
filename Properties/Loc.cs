@@ -132,6 +132,12 @@ public static class Loc
     public static string ModalTitleComposite => RM.GetString("ModalTitleComposite") ?? "";
     public static string ModalTitleOfficeOptimize => RM.GetString("ModalTitleOfficeOptimize") ?? "";
     public static string ModalTitleOfficePdf => RM.GetString("ModalTitleOfficePdf") ?? "";
+    public static string ModalTitlePdfConvert => RM.GetString("ModalTitlePdfConvert") ?? "";
+    public static string ModalTitlePdfImage => RM.GetString("ModalTitlePdfImage") ?? "";
+    public static string ModalTitlePdfStream => RM.GetString("ModalTitlePdfStream") ?? "";
+    public static string ModalTitlePdfStructure => RM.GetString("ModalTitlePdfStructure") ?? "";
+    public static string ModalTitlePdfCompatibility => RM.GetString("ModalTitlePdfCompatibility") ?? "";
+    public static string ModalTitlePdfRestrictions => RM.GetString("ModalTitlePdfRestrictions") ?? "";
     public static string ModalTitleImageOptimize => RM.GetString("ModalTitleImageOptimize") ?? "";
     public static string ModalTitleMediaOptimize => RM.GetString("ModalTitleMediaOptimize") ?? "";
     public static string ModalTitleOptions => RM.GetString("ModalTitleOptions") ?? "";

@@ -1100,7 +1100,7 @@ public class ImageProcessingService
             }
 
             if (!modified)
-                return null; // 変更なしの場合は元データをそのまま使う
+                return original;
 
             using var output = new MemoryStream();
             document.Save(output, SaveOptions.DisableFormatting);
@@ -1523,7 +1523,7 @@ public class ImageProcessingService
     /// <summary>
     /// Microsoft Office COM Interop を使って Office Open XML ファイルを PDF に変換する。
     /// </summary>
-    public long ConvertOfficeToPdf(string inputPath, string outputPath, bool usePdfA, Action<string>? logAction = null)
+    public long ConvertOfficeToPdf(string inputPath, string outputPath, bool usePdfA, Action<string>? logAction = null, string? displayOutputPath = null)
     {
         var ext = Path.GetExtension(inputPath).ToLowerInvariant();
         if (!IsOfficePdfConversionAvailableForExtension(ext))
@@ -1538,7 +1538,7 @@ public class ImageProcessingService
         {
             try
             {
-                ConvertOfficeToPdfCore(inputPath, outputPath, ext, usePdfA, logAction);
+                ConvertOfficeToPdfCore(inputPath, outputPath, ext, usePdfA, logAction, displayOutputPath);
             }
             catch (Exception ex)
             {
@@ -1555,11 +1555,12 @@ public class ImageProcessingService
         return new FileInfo(outputPath).Length;
     }
 
-    private static void ConvertOfficeToPdfCore(string inputPath, string outputPath, string extension, bool usePdfA, Action<string>? logAction)
+    private static void ConvertOfficeToPdfCore(string inputPath, string outputPath, string extension, bool usePdfA, Action<string>? logAction, string? displayOutputPath)
     {
         inputPath = Path.GetFullPath(inputPath);
         outputPath = Path.GetFullPath(outputPath);
-        logAction?.Invoke($"PDF変換: {Path.GetFileName(inputPath)} -> {Path.GetFileName(outputPath)}{(usePdfA ? " (PDF/A)" : "")}");
+        var logOutputPath = string.IsNullOrWhiteSpace(displayOutputPath) ? outputPath : displayOutputPath;
+        logAction?.Invoke($"PDF変換: {Path.GetFileName(inputPath)} -> {Path.GetFileName(logOutputPath)}{(usePdfA ? " (PDF/A)" : "")}");
 
         switch (extension)
         {

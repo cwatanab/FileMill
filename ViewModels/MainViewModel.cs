@@ -281,7 +281,7 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsOfficePdfConversionAvailable => ImageProcessingService.IsOfficePdfConversionAvailable;
     public string OfficePdfConversionToolTip => ImageProcessingService.OfficePdfConversionAvailabilityMessage;
 
-    // --- PDF最適化詳細 ---
+    // --- PDF変換詳細 ---
     private bool _pdfOptimizeImages;
     public bool PdfOptimizeImages
     {
@@ -324,6 +324,20 @@ public class MainViewModel : INotifyPropertyChanged
         set { _pdfKeepInlineImages = value; OnPropertyChanged(); }
     }
 
+    private bool _pdfExternalizeInlineImages;
+    public bool PdfExternalizeInlineImages
+    {
+        get => _pdfExternalizeInlineImages;
+        set { _pdfExternalizeInlineImages = value; OnPropertyChanged(); }
+    }
+
+    private int _pdfInlineImageMinBytes = 1024;
+    public int PdfInlineImageMinBytes
+    {
+        get => _pdfInlineImageMinBytes;
+        set { _pdfInlineImageMinBytes = value; OnPropertyChanged(); }
+    }
+
     private bool _pdfCompressStreams = true;
     public bool PdfCompressStreams
     {
@@ -338,11 +352,232 @@ public class MainViewModel : INotifyPropertyChanged
         set { _pdfCompressionLevel = value; OnPropertyChanged(); }
     }
 
-    private bool _pdfGenerateObjectStreams;
+    private string _pdfDecodeLevel = "generalized";
+    public string PdfDecodeLevel
+    {
+        get => _pdfDecodeLevel;
+        set
+        {
+            var next = value switch
+            {
+                "none" or "specialized" or "all" => value,
+                _ => "generalized"
+            };
+            if (_pdfDecodeLevel == next) return;
+            _pdfDecodeLevel = next;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PdfDecodeLevelIndex));
+        }
+    }
+
+    public int PdfDecodeLevelIndex
+    {
+        get => _pdfDecodeLevel switch
+        {
+            "none" => 0,
+            "specialized" => 2,
+            "all" => 3,
+            _ => 1
+        };
+        set => PdfDecodeLevel = value switch
+        {
+            0 => "none",
+            2 => "specialized",
+            3 => "all",
+            _ => "generalized"
+        };
+    }
+
+    private bool _pdfRecompressFlate;
+    public bool PdfRecompressFlate
+    {
+        get => _pdfRecompressFlate;
+        set { _pdfRecompressFlate = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfStructureCleanup;
+    public bool PdfStructureCleanup
+    {
+        get => _pdfStructureCleanup;
+        set { _pdfStructureCleanup = value; OnPropertyChanged(); }
+    }
+
+    private string _pdfObjectStreamMode = "preserve";
+    public string PdfObjectStreamMode
+    {
+        get => _pdfObjectStreamMode;
+        set
+        {
+            var next = value switch
+            {
+                "disable" or "generate" => value,
+                _ => "preserve"
+            };
+            if (_pdfObjectStreamMode == next) return;
+            _pdfObjectStreamMode = next;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PdfObjectStreamModeIndex));
+            OnPropertyChanged(nameof(PdfGenerateObjectStreams));
+        }
+    }
+
+    public int PdfObjectStreamModeIndex
+    {
+        get => _pdfObjectStreamMode switch
+        {
+            "disable" => 1,
+            "generate" => 2,
+            _ => 0
+        };
+        set => PdfObjectStreamMode = value switch
+        {
+            1 => "disable",
+            2 => "generate",
+            _ => "preserve"
+        };
+    }
+
     public bool PdfGenerateObjectStreams
     {
-        get => _pdfGenerateObjectStreams;
-        set { _pdfGenerateObjectStreams = value; OnPropertyChanged(); }
+        get => PdfObjectStreamMode == "generate";
+        set
+        {
+            if (value)
+                PdfObjectStreamMode = "generate";
+            else if (PdfObjectStreamMode == "generate")
+                PdfObjectStreamMode = "preserve";
+            OnPropertyChanged();
+        }
+    }
+
+    private string _pdfRemoveUnreferencedResources = "auto";
+    public string PdfRemoveUnreferencedResources
+    {
+        get => _pdfRemoveUnreferencedResources;
+        set
+        {
+            var next = value switch
+            {
+                "yes" or "no" => value,
+                _ => "auto"
+            };
+            if (_pdfRemoveUnreferencedResources == next) return;
+            _pdfRemoveUnreferencedResources = next;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PdfRemoveUnreferencedResourcesIndex));
+        }
+    }
+
+    public int PdfRemoveUnreferencedResourcesIndex
+    {
+        get => _pdfRemoveUnreferencedResources switch
+        {
+            "yes" => 1,
+            "no" => 2,
+            _ => 0
+        };
+        set => PdfRemoveUnreferencedResources = value switch
+        {
+            1 => "yes",
+            2 => "no",
+            _ => "auto"
+        };
+    }
+
+    private bool _pdfPreserveUnreferencedObjects;
+    public bool PdfPreserveUnreferencedObjects
+    {
+        get => _pdfPreserveUnreferencedObjects;
+        set { _pdfPreserveUnreferencedObjects = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfNormalizeContent;
+    public bool PdfNormalizeContent
+    {
+        get => _pdfNormalizeContent;
+        set { _pdfNormalizeContent = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfCoalesceContents;
+    public bool PdfCoalesceContents
+    {
+        get => _pdfCoalesceContents;
+        set { _pdfCoalesceContents = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfNewlineBeforeEndStream;
+    public bool PdfNewlineBeforeEndStream
+    {
+        get => _pdfNewlineBeforeEndStream;
+        set { _pdfNewlineBeforeEndStream = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfDistributionCompatibility;
+    public bool PdfDistributionCompatibility
+    {
+        get => _pdfDistributionCompatibility;
+        set { _pdfDistributionCompatibility = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfDecrypt;
+    public bool PdfDecrypt
+    {
+        get => _pdfDecrypt;
+        set { _pdfDecrypt = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfRemoveRestrictions;
+    public bool PdfRemoveRestrictions
+    {
+        get => _pdfRemoveRestrictions;
+        set { _pdfRemoveRestrictions = value; OnPropertyChanged(); }
+    }
+
+    private bool _pdfRestrictionRemoval;
+    public bool PdfRestrictionRemoval
+    {
+        get => _pdfRestrictionRemoval;
+        set { _pdfRestrictionRemoval = value; OnPropertyChanged(); }
+    }
+
+    private string _pdfMinVersion = "";
+    public string PdfMinVersion
+    {
+        get => _pdfMinVersion;
+        set
+        {
+            var next = NormalizePdfVersion(value);
+            if (_pdfMinVersion == next) return;
+            _pdfMinVersion = next;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PdfMinVersionIndex));
+        }
+    }
+
+    public int PdfMinVersionIndex
+    {
+        get => PdfVersionToIndex(_pdfMinVersion);
+        set => PdfMinVersion = PdfVersionFromIndex(value);
+    }
+
+    private string _pdfForceVersion = "";
+    public string PdfForceVersion
+    {
+        get => _pdfForceVersion;
+        set
+        {
+            var next = NormalizePdfVersion(value);
+            if (_pdfForceVersion == next) return;
+            _pdfForceVersion = next;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PdfForceVersionIndex));
+        }
+    }
+
+    public int PdfForceVersionIndex
+    {
+        get => PdfVersionToIndex(_pdfForceVersion);
+        set => PdfForceVersion = PdfVersionFromIndex(value);
     }
 
     private bool _pdfLinearize;
@@ -351,6 +586,37 @@ public class MainViewModel : INotifyPropertyChanged
         get => _pdfLinearize;
         set { _pdfLinearize = value; OnPropertyChanged(); }
     }
+
+    private static int PdfVersionToIndex(string value)
+        => value switch
+        {
+            "1.3" => 1,
+            "1.4" => 2,
+            "1.5" => 3,
+            "1.6" => 4,
+            "1.7" => 5,
+            "2.0" => 6,
+            _ => 0
+        };
+
+    private static string PdfVersionFromIndex(int value)
+        => value switch
+        {
+            1 => "1.3",
+            2 => "1.4",
+            3 => "1.5",
+            4 => "1.6",
+            5 => "1.7",
+            6 => "2.0",
+            _ => ""
+        };
+
+    private static string NormalizePdfVersion(string? value)
+        => value switch
+        {
+            "1.3" or "1.4" or "1.5" or "1.6" or "1.7" or "2.0" => value,
+            _ => ""
+        };
 
     private int _webpQuality = 85;
     public int WebPQuality
@@ -558,7 +824,7 @@ public class MainViewModel : INotifyPropertyChanged
                 command.RaiseCanExecuteChanged();
 
             if (!_suppressNotifications && PdfPresetNames.Contains(value))
-                LoadPreset("Pdf", value, "PDF最適化");
+                LoadPreset("Pdf", value, "PDF変換");
         }
     }
 
@@ -1016,19 +1282,7 @@ public class MainViewModel : INotifyPropertyChanged
                             ? ImageProcessingService.GetExtension(formatStep.TargetFormat)
                             : Path.GetExtension(file.FilePath);
 
-                        var baseName = Path.GetFileNameWithoutExtension(file.FilePath);
-                        var newBaseName = baseName + FileNameRule;
-
-                        var fileName = newBaseName + ext;
-                        var outputPath = Path.Combine(OutputDirectory, fileName);
-
-                        int counter = 1;
-                        while (File.Exists(outputPath))
-                        {
-                            outputPath = Path.Combine(OutputDirectory,
-                                $"{newBaseName}_{counter}{ext}");
-                            counter++;
-                        }
+                        var outputPath = GetUniqueSuffixedPath(file.FilePath, FileNameRule, ext, OutputDirectory);
 
                         _processingService.Process(file.FilePath, outputPath, Steps, UseOxipng, OxipngPath, OxipngLevel, UseJpegli, CjpegliPath, logAction: LogDebug);
                         success++;
@@ -1182,6 +1436,12 @@ public class MainViewModel : INotifyPropertyChanged
                 "Composite" => Properties.Loc.ModalTitleComposite,
                 "OfficeOptimize" => Properties.Loc.ModalTitleOfficeOptimize,
                 "OfficePdf" => Properties.Loc.ModalTitleOfficePdf,
+                "PdfConvert" => Properties.Loc.ModalTitlePdfConvert,
+                "PdfImage" => Properties.Loc.ModalTitlePdfImage,
+                "PdfStream" => Properties.Loc.ModalTitlePdfStream,
+                "PdfStructure" => Properties.Loc.ModalTitlePdfStructure,
+                "PdfCompatibility" => Properties.Loc.ModalTitlePdfCompatibility,
+                "PdfRestrictions" => Properties.Loc.ModalTitlePdfRestrictions,
 
                 "Options" => Properties.Loc.ModalTitleOptions,
                 _ => Properties.Loc.ModalTitleDefault
@@ -1391,6 +1651,7 @@ public class MainViewModel : INotifyPropertyChanged
         var useJpegli = UseJpegli;
         var oxipngPath = OxipngPath;
         var cjpegliPath = CjpegliPath;
+        var fileNameRule = FileNameRule;
 
         var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var workItems = targets.Select(file =>
@@ -1398,8 +1659,7 @@ public class MainViewModel : INotifyPropertyChanged
             var originalPath = file.FilePath;
             var ext = Path.GetExtension(originalPath);
             var outputExtension = convertOfficeToPdf ? ".pdf" : Path.GetExtension(originalPath);
-            var outputSuffix = convertOfficeToPdf ? "_converted" : "_optimized";
-            var targetPath = GetUniqueSuffixedPath(originalPath, outputSuffix, outputExtension, outputDirectory, reservedOutputPaths);
+            var targetPath = GetUniqueSuffixedPath(originalPath, fileNameRule, outputExtension, outputDirectory, reservedOutputPaths);
             reservedOutputPaths.Add(targetPath);
             return new
             {
@@ -1442,7 +1702,7 @@ public class MainViewModel : INotifyPropertyChanged
                         if (convertOfficeToPdf)
                         {
                             file.Status = Properties.Loc.StatusConvertingToPdf;
-                            optimizedSize = _processingService.ConvertOfficeToPdf(originalPath, tempPath, convertOfficeToPdfA, LogDebug);
+                            optimizedSize = _processingService.ConvertOfficeToPdf(originalPath, tempPath, convertOfficeToPdfA, LogDebug, targetPath);
                         }
                         else
                         {
@@ -1496,11 +1756,6 @@ public class MainViewModel : INotifyPropertyChanged
                                 Thread.Sleep(100);
                             }
                         }
-
-                        Application.Current?.Dispatcher.Invoke(() =>
-                        {
-                            file.FilePath = targetPath;
-                        });
 
                         tempPath = null; // 正常完了したのでクリア
 
@@ -1584,7 +1839,7 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        LogDebug($"PDF ファイル最適化開始: {targets.Count} ファイル");
+        LogDebug($"PDF ファイル変換開始: {targets.Count} ファイル");
 
         IsProcessing = true;
         ProgressValue = 0;
@@ -1605,17 +1860,34 @@ public class MainViewModel : INotifyPropertyChanged
             MinHeight = PdfMinHeight,
             MinArea = PdfMinArea,
             KeepInlineImages = PdfKeepInlineImages,
+            ExternalizeInlineImages = PdfExternalizeInlineImages,
+            InlineImageMinBytes = PdfInlineImageMinBytes,
             CompressStreams = PdfCompressStreams,
             CompressionLevel = PdfCompressionLevel,
-            GenerateObjectStreams = PdfGenerateObjectStreams,
+            DecodeLevel = PdfDecodeLevel,
+            RecompressFlate = PdfRecompressFlate,
+            StructureCleanup = PdfStructureCleanup,
+            ObjectStreamMode = PdfObjectStreamMode,
+            RemoveUnreferencedResources = PdfRemoveUnreferencedResources,
+            PreserveUnreferencedObjects = PdfPreserveUnreferencedObjects,
+            NormalizeContent = PdfNormalizeContent,
+            CoalesceContents = PdfCoalesceContents,
+            NewlineBeforeEndStream = PdfNewlineBeforeEndStream,
+            DistributionCompatibility = PdfDistributionCompatibility,
+            Decrypt = PdfDecrypt,
+            RemoveRestrictions = PdfRemoveRestrictions,
+            RestrictionRemoval = PdfRestrictionRemoval,
+            MinVersion = PdfMinVersion,
+            ForceVersion = PdfForceVersion,
             Linearize = PdfLinearize
         };
 
         var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var fileNameRule = FileNameRule;
         var workItems = targets.Select(file =>
         {
             var originalPath = file.FilePath;
-            var targetPath = GetUniqueSuffixedPath(originalPath, "_optimized", ".pdf", outputDirectory, reservedOutputPaths);
+            var targetPath = GetUniqueSuffixedPath(originalPath, fileNameRule, ".pdf", outputDirectory, reservedOutputPaths);
             reservedOutputPaths.Add(targetPath);
             return new
             {
@@ -1654,7 +1926,8 @@ public class MainViewModel : INotifyPropertyChanged
                         options,
                         qpdfPath,
                         ct,
-                        LogDebug);
+                        LogDebug,
+                        item.TargetPath);
 
                     int retries = 5;
                     while (retries > 0)
@@ -1673,11 +1946,6 @@ public class MainViewModel : INotifyPropertyChanged
                             await Task.Delay(100, ct);
                         }
                     }
-
-                    Application.Current?.Dispatcher.Invoke(() =>
-                    {
-                        file.FilePath = item.TargetPath;
-                    });
 
                     tempPath = null;
                     file.OptimizedSize = optimizedSize;
@@ -1721,7 +1989,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (OperationCanceledException)
         {
-            LogDebug("PDF ファイル最適化処理がキャンセルされました。");
+            LogDebug("PDF ファイル変換処理がキャンセルされました。");
         }
         finally
         {
@@ -1733,7 +2001,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (isCancelled)
             {
                 StatusText = Properties.Loc.StatusPdfOptimizeCancelled;
-                LogDebug($"PDF ファイル最適化キャンセル: {success} 成功, {errors} 失敗");
+                LogDebug($"PDF ファイル変換キャンセル: {success} 成功, {errors} 失敗");
             }
             else
             {
@@ -1754,16 +2022,37 @@ public class MainViewModel : INotifyPropertyChanged
             : outputDirectory;
         var fileName = Path.GetFileNameWithoutExtension(originalPath);
         var extension = string.IsNullOrWhiteSpace(outputExtension) ? Path.GetExtension(originalPath) : outputExtension;
-        var candidate = Path.Combine(directory, fileName + suffix + extension);
+        var suffixedFileName = GetSuffixedFileName(fileName, suffix);
+        var candidate = Path.Combine(directory, suffixedFileName + extension);
 
         var counter = 1;
         while (File.Exists(candidate) || (reservedPaths?.Contains(candidate) ?? false))
         {
-            candidate = Path.Combine(directory, $"{fileName}{suffix}_{counter}{extension}");
+            candidate = Path.Combine(directory, $"{suffixedFileName}_{counter}{extension}");
             counter++;
         }
 
         return candidate;
+    }
+
+    private static string GetSuffixedFileName(string fileName, string? suffix)
+    {
+        if (string.IsNullOrEmpty(suffix))
+            return fileName;
+
+        if (fileName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            return fileName;
+
+        var numberedSuffixPrefix = suffix + "_";
+        var numberedSuffixIndex = fileName.LastIndexOf(numberedSuffixPrefix, StringComparison.OrdinalIgnoreCase);
+        if (numberedSuffixIndex >= 0)
+        {
+            var numberStart = numberedSuffixIndex + numberedSuffixPrefix.Length;
+            if (numberStart < fileName.Length && fileName.Skip(numberStart).All(char.IsDigit))
+                return fileName[..(numberedSuffixIndex + suffix.Length)];
+        }
+
+        return fileName + suffix;
     }
 
     private static string GetTemporarySiblingPath(string targetPath)
@@ -1890,7 +2179,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         LoadLastUsedPreset("Image", SelectedImagePresetName, ImagePresetNames, name => SelectedImagePresetName = name, "画像変換");
         LoadLastUsedPreset("Office", SelectedOfficePresetName, OfficePresetNames, name => SelectedOfficePresetName = name, "Office変換");
-        LoadLastUsedPreset("Pdf", SelectedPdfPresetName, PdfPresetNames, name => SelectedPdfPresetName = name, "PDF最適化");
+        LoadLastUsedPreset("Pdf", SelectedPdfPresetName, PdfPresetNames, name => SelectedPdfPresetName = name, "PDF変換");
     }
 
     private void LoadLastUsedPreset(string presetType, string selectedPresetName, ObservableCollection<string> availablePresetNames, Action<string> selectPreset, string displayName)
@@ -1937,7 +2226,7 @@ public class MainViewModel : INotifyPropertyChanged
             SelectedPdfPresetName,
             name => SelectedPdfPresetName = name,
             () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: true, includeImage: false),
-            "PDF最適化");
+            "PDF変換");
     }
 
     private void SavePreset(
@@ -2066,6 +2355,10 @@ public class MainViewModel : INotifyPropertyChanged
 
             if (data.TryGetValue("Pdf", out var pdf))
             {
+                var hasStructureCleanupSetting = false;
+                var hasDistributionCompatibilitySetting = false;
+                var hasRestrictionRemovalSetting = false;
+
                 if (pdf.TryGetValue("QpdfPath", out var qpdfPath))
                     QpdfPath = qpdfPath;
                 if (pdf.TryGetValue("OptimizeImages", out var val))
@@ -2080,14 +2373,76 @@ public class MainViewModel : INotifyPropertyChanged
                     PdfMinArea = int.TryParse(val, out var i) ? i : PdfMinArea;
                 if (pdf.TryGetValue("KeepInlineImages", out val))
                     PdfKeepInlineImages = bool.TryParse(val, out var b) ? b : PdfKeepInlineImages;
+                if (pdf.TryGetValue("ExternalizeInlineImages", out val))
+                    PdfExternalizeInlineImages = bool.TryParse(val, out var b) ? b : PdfExternalizeInlineImages;
+                if (pdf.TryGetValue("InlineImageMinBytes", out val))
+                    PdfInlineImageMinBytes = int.TryParse(val, out var i) ? i : PdfInlineImageMinBytes;
                 if (pdf.TryGetValue("CompressStreams", out val))
                     PdfCompressStreams = bool.TryParse(val, out var b) ? b : PdfCompressStreams;
                 if (pdf.TryGetValue("CompressionLevel", out val))
                     PdfCompressionLevel = int.TryParse(val, out var i) ? i : PdfCompressionLevel;
-                if (pdf.TryGetValue("GenerateObjectStreams", out val))
+                if (pdf.TryGetValue("DecodeLevel", out val))
+                    PdfDecodeLevel = val;
+                if (pdf.TryGetValue("RecompressFlate", out val))
+                    PdfRecompressFlate = bool.TryParse(val, out var b) ? b : PdfRecompressFlate;
+                if (pdf.TryGetValue("StructureCleanup", out val))
+                {
+                    PdfStructureCleanup = bool.TryParse(val, out var b) ? b : PdfStructureCleanup;
+                    hasStructureCleanupSetting = true;
+                }
+                if (pdf.TryGetValue("ObjectStreamMode", out val))
+                    PdfObjectStreamMode = val;
+                else if (pdf.TryGetValue("GenerateObjectStreams", out val))
                     PdfGenerateObjectStreams = bool.TryParse(val, out var b) ? b : PdfGenerateObjectStreams;
+                if (pdf.TryGetValue("RemoveUnreferencedResources", out val))
+                    PdfRemoveUnreferencedResources = val;
+                if (pdf.TryGetValue("PreserveUnreferencedObjects", out val))
+                    PdfPreserveUnreferencedObjects = bool.TryParse(val, out var b) ? b : PdfPreserveUnreferencedObjects;
+                if (pdf.TryGetValue("NormalizeContent", out val))
+                    PdfNormalizeContent = bool.TryParse(val, out var b) ? b : PdfNormalizeContent;
+                if (pdf.TryGetValue("CoalesceContents", out val))
+                    PdfCoalesceContents = bool.TryParse(val, out var b) ? b : PdfCoalesceContents;
+                if (pdf.TryGetValue("NewlineBeforeEndStream", out val))
+                    PdfNewlineBeforeEndStream = bool.TryParse(val, out var b) ? b : PdfNewlineBeforeEndStream;
+                if (pdf.TryGetValue("DistributionCompatibility", out val))
+                {
+                    PdfDistributionCompatibility = bool.TryParse(val, out var b) ? b : PdfDistributionCompatibility;
+                    hasDistributionCompatibilitySetting = true;
+                }
+                if (pdf.TryGetValue("Decrypt", out val))
+                    PdfDecrypt = bool.TryParse(val, out var b) ? b : PdfDecrypt;
+                if (pdf.TryGetValue("RemoveRestrictions", out val))
+                    PdfRemoveRestrictions = bool.TryParse(val, out var b) ? b : PdfRemoveRestrictions;
+                if (pdf.TryGetValue("RestrictionRemoval", out val))
+                {
+                    PdfRestrictionRemoval = bool.TryParse(val, out var b) ? b : PdfRestrictionRemoval;
+                    hasRestrictionRemovalSetting = true;
+                }
+                if (pdf.TryGetValue("MinVersion", out val))
+                    PdfMinVersion = val;
+                if (pdf.TryGetValue("ForceVersion", out val))
+                    PdfForceVersion = val;
                 if (pdf.TryGetValue("Linearize", out val))
                     PdfLinearize = bool.TryParse(val, out var b) ? b : PdfLinearize;
+
+                if (!hasStructureCleanupSetting)
+                    PdfStructureCleanup =
+                        PdfExternalizeInlineImages
+                        || PdfObjectStreamMode != "preserve"
+                        || PdfRemoveUnreferencedResources != "auto"
+                        || PdfPreserveUnreferencedObjects
+                        || PdfNormalizeContent
+                        || PdfCoalesceContents
+                        || PdfNewlineBeforeEndStream;
+
+                if (!hasDistributionCompatibilitySetting)
+                    PdfDistributionCompatibility =
+                        PdfLinearize
+                        || !string.IsNullOrWhiteSpace(PdfMinVersion)
+                        || !string.IsNullOrWhiteSpace(PdfForceVersion);
+
+                if (!hasRestrictionRemovalSetting)
+                    PdfRestrictionRemoval = PdfDecrypt || PdfRemoveRestrictions;
             }
 
             // 保存された有効ステップのプロパティをデフォルトステップに上書き適用
@@ -2315,9 +2670,26 @@ public class MainViewModel : INotifyPropertyChanged
                 ["MinHeight"] = PdfMinHeight.ToString(),
                 ["MinArea"] = PdfMinArea.ToString(),
                 ["KeepInlineImages"] = PdfKeepInlineImages.ToString(),
+                ["ExternalizeInlineImages"] = PdfExternalizeInlineImages.ToString(),
+                ["InlineImageMinBytes"] = PdfInlineImageMinBytes.ToString(),
                 ["CompressStreams"] = PdfCompressStreams.ToString(),
                 ["CompressionLevel"] = PdfCompressionLevel.ToString(),
+                ["DecodeLevel"] = PdfDecodeLevel,
+                ["RecompressFlate"] = PdfRecompressFlate.ToString(),
+                ["StructureCleanup"] = PdfStructureCleanup.ToString(),
+                ["ObjectStreamMode"] = PdfObjectStreamMode,
                 ["GenerateObjectStreams"] = PdfGenerateObjectStreams.ToString(),
+                ["RemoveUnreferencedResources"] = PdfRemoveUnreferencedResources,
+                ["PreserveUnreferencedObjects"] = PdfPreserveUnreferencedObjects.ToString(),
+                ["NormalizeContent"] = PdfNormalizeContent.ToString(),
+                ["CoalesceContents"] = PdfCoalesceContents.ToString(),
+                ["NewlineBeforeEndStream"] = PdfNewlineBeforeEndStream.ToString(),
+                ["DistributionCompatibility"] = PdfDistributionCompatibility.ToString(),
+                ["Decrypt"] = PdfDecrypt.ToString(),
+                ["RemoveRestrictions"] = PdfRemoveRestrictions.ToString(),
+                ["RestrictionRemoval"] = PdfRestrictionRemoval.ToString(),
+                ["MinVersion"] = PdfMinVersion,
+                ["ForceVersion"] = PdfForceVersion,
                 ["Linearize"] = PdfLinearize.ToString()
             };
             data["Pdf"] = pdf;

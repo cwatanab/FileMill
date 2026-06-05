@@ -1,6 +1,6 @@
 # FileMill 詳細仕様
 
-FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一括変換と、Office Open XML ファイルの軽量化、PDF 変換、PDF 最適化を行います。
+FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一括変換と、Office Open XML ファイルの軽量化、PDF 変換、qpdf による PDF ファイル変換を行います。
 
 本アプリは、画像一括変換ソフト「Ralpha」のレイアウト・UI 思想を踏襲して画像変換機能を提供し、Office Open XML 最適化ツール「OptiOpenXML」の処理思想を取り入れ、それぞれを現代的な画像フォーマットに対応させて統合したものです。
 
@@ -28,11 +28,11 @@ FileMill は Windows 向けの WPF バッチ処理アプリです。画像の一
   - 埋め込み動画の圧縮最適化
   - `.docx` / `.xlsx` / `.pptx` の PDF 変換
   - Word / PowerPoint の PDF/A 変換
-- PDF ファイル最適化
-  - qpdf を使用した PDF の画像最適化、ストリーム圧縮、オブジェクトストリーム生成、リニアライズ
+- PDF ファイル変換
+  - qpdf を使用した PDF の画像最適化、ストリーム圧縮、オブジェクトストリーム、未参照リソース、PDF バージョン、リニアライズの調整
 - 設定とプリセット
   - General 設定は `settings.ini` に保存
-  - 画像変換、Office 変換、PDF 最適化はセクションごとにプリセット保存
+  - 画像変換、Office 変換、PDF 変換はセクションごとにプリセット保存
   - 最後に使ったプリセットを起動時に自動ロード
 - 外部ツール連携
   - `oxipng`
@@ -133,13 +133,13 @@ dotnet run --project FileMill.csproj
 2. Office ファイル (`.docx` / `.xlsx` / `.pptx`) を追加する
 3. 出力先フォルダを選択する
 4. 必要に応じてプリセットを選択する
-5. 有効にする変換オプションのチェックを入れ、詳細設定を調整する
-6. PDF に変換する場合は `PDFへ変換` をオンにする
+5. `Office最適化` または `PDFへ変換` のチェックを入れる
+6. 必要に応じて各グループの歯車から詳細設定を開いて調整する
 7. `変換実行` を押す
 
-最適化後のファイルは、元ファイルと同じフォルダに `_optimized` を付けて保存されます。出力先を指定した場合は、そのフォルダへ出力されます。重複する場合は `_optimized_1`, `_optimized_2` のような連番が付きます。
+変換後のファイルは、元ファイル名の末尾に出力ファイル名設定の文字列を付けて保存されます。既定値は `_converted` です。出力先を指定した場合は、そのフォルダへ出力されます。重複する場合は `_converted_1`, `_converted_2` のような連番が付きます。
 
-PDF 変換後のファイルは `_converted.pdf` として保存されます。Microsoft Office Interop が利用できない環境では、PDF 変換オプションは無効になります。
+PDF 変換後のファイルも同じ出力ファイル名設定を使い、拡張子は `.pdf` になります。Microsoft Office Interop が利用できない環境では、PDF 変換オプションは無効になります。
 
 PDF/A 変換は Word と PowerPoint で有効です。Excel の Microsoft Office Interop API には PDF/A 指定がないため、Excel ファイルで `PDF/A 準拠` をオンにするとエラーになります。
 
@@ -185,22 +185,22 @@ WebP に対応していない古い Office 環境では、ファイル自体が�
 
 Office ファイル内の動画・音声パーツを `ffmpeg` で圧縮します。動画品質は CRF、映像・音声コーデックは UI から指定できます。
 
-## PDF ファイル最適化の使い方
+## PDF ファイル変換の使い方
 
-1. `PDF ファイル最適化` タブを開く
+1. `PDF ファイル変換` タブを開く
 2. PDF ファイルを追加する
 3. 出力先フォルダを選択する
 4. 必要に応じてプリセットを選択する
-5. 右側の PDF 最適化オプションを調整する
-6. `最適化実行` を押す
+5. 右側の歯車から PDF ファイル変換設定を開き、必要なオプションを調整する
+6. `変換実行` を押す
 
-最適化後のファイルは、元ファイルと同じフォルダに `_optimized.pdf` を付けて保存されます。出力先を指定した場合は、そのフォルダへ出力されます。重複する場合は `_optimized_1.pdf`, `_optimized_2.pdf` のような連番が付きます。
+変換後のファイルは、元ファイル名の末尾に出力ファイル名設定の文字列を付け、拡張子 `.pdf` で保存されます。既定値は `_converted` です。出力先を指定した場合は、そのフォルダへ出力されます。重複する場合は `_converted_1.pdf`, `_converted_2.pdf` のような連番が付きます。
 
-PDF 最適化には `qpdf.exe` が必要です。既定では `tools/qpdf.exe` を参照し、見つからない場合は PATH 上の `qpdf.exe` と `C:\Program Files\qpdf\bin\qpdf.exe` も探します。パスは `設定 > オプション` の「外部ツール パス」から変更できます。
+PDF 変換には `qpdf.exe` が必要です。既定では `tools/qpdf.exe` を参照し、見つからない場合は PATH 上の `qpdf.exe` と `C:\Program Files\qpdf\bin\qpdf.exe` も探します。パスは `設定 > オプション` の「外部ツール パス」から変更できます。
 
 ### PDF の画像最適化
 
-PDF 最適化の `画像を最適化` は qpdf の機能です。FileMill 独自の画像リサイズ処理ではなく、qpdf に次の引数を渡します。
+PDF 変換の `画像を最適化` は qpdf の機能です。FileMill 独自の画像リサイズ処理ではなく、qpdf に次の引数を渡します。
 
 ```text
 --optimize-images
@@ -213,13 +213,50 @@ PDF 最適化の `画像を最適化` は qpdf の機能です。FileMill 独自
 
 これは PDF 内画像を表示サイズに合わせて PPI 指定で下げる機能ではありません。条件に合う画像を JPEG / DCT 圧縮へ再圧縮し、サイズが小さくなる場合に反映する qpdf の最適化です。
 
+### PDF の qpdf 変換オプション
+
+PDF ファイル変換では、qpdf 12.3.2 の変換系オプションを次のグループで指定できます。
+
+```text
+画像を最適化:
+--optimize-images
+--jpeg-quality=<品質>
+
+ストリームを圧縮:
+--compress-streams=y|n
+--compression-level=<1-9>
+--recompress-flate
+
+構造整理:
+--object-streams=preserve|disable|generate
+--remove-unreferenced-resources=auto|yes|no
+--externalize-inline-images
+--ii-min-bytes=<バイト数>
+--decode-level=none|generalized|specialized|all
+--preserve-unreferenced
+--normalize-content=y
+--coalesce-contents
+--newline-before-endstream
+
+配布・互換性:
+--linearize
+--min-version=<PDFバージョン>
+--force-version=<PDFバージョン>
+
+制限解除:
+--decrypt
+--remove-restrictions
+```
+
+`--remove-restrictions` は署名付き PDF の制限解除に使えますが、電子署名は無効になります。`--force-version` は PDF ヘッダーを強制するため、ファイル内容との互換性に注意が必要です。
+
 ## プリセット
 
 General 以外の設定は、用途ごとにプリセットとして保存できます。
 
 - 画像変換: `presets/image`
 - Office 変換: `presets/office`
-- PDF 最適化: `presets/pdf`
+- PDF 変換: `presets/pdf`
 
 アプリケーション設定としては、ユーザーごとの LocalAppData 配下にもプリセットが保存されます。プロジェクト同梱のおすすめプリセットは `presets/` 配下に置きます。
 
@@ -249,7 +286,7 @@ JPEG PNG WebP AVIF TIFF
 
 Office ファイル変換では、Office Open XML 形式の `.docx`, `.xlsx`, `.pptx` を処理対象にしています。
 
-PDF ファイル最適化では `.pdf` を処理対象にしています。
+PDF ファイル変換では `.pdf` を処理対象にしています。
 
 ## 外部ツール
 
@@ -275,7 +312,7 @@ ViewModels/MainViewModel.cs     画面状態、コマンド、変換・最適化
 Services/ImageProcessingService.cs
                                 画像処理、Office パッケージ最適化、Office PDF 変換
 Services/PdfOptimizationService.cs
-                                qpdf による PDF 最適化
+                                qpdf による PDF 変換
 Models/                         画面表示用モデルと処理ステップ定義
 Converters/                     WPF バインディング用コンバーター
 Themes/                         ライト・ダークテーマ
@@ -287,7 +324,7 @@ presets/                        同梱プリセット
 - UI は WPF / XAML で構成されています。
 - MVVM 形式をベースに、画面操作は `MainViewModel` のコマンドへ集約しています。
 - 画像処理と Office Open XML パッケージ処理は `ImageProcessingService` に集約しています。
-- PDF 最適化は `PdfOptimizationService` で qpdf を呼び出します。
+- PDF 変換は `PdfOptimizationService` で qpdf を呼び出します。
 - 設定は `SettingsService` で INI 形式として読み書きします。
 - `bin/` と `obj/` はビルド生成物のため Git 管理対象外です。
 
