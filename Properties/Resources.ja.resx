@@ -136,9 +136,7 @@
 
   <!-- About -->
   <data name="AboutTitle" xml:space="preserve"><value>バージョン情報</value></data>
-  <data name="AboutMessage" xml:space="preserve"><value>FileMill
-
-本アプリは、画像一括変換ソフト「Ralpha」およびOfficeファイル軽量化ツール「OptiOpenXML」の思想を取り入れ、現代の画像フォーマット（WebP, AVIF等）に対応させて統合したバッチ処理アプリです。
+  <data name="AboutMessage" xml:space="preserve"><value>本アプリは、画像一括変換ソフト「Ralpha」およびOfficeファイル軽量化ツール「OptiOpenXML」の思想を取り入れ、現代の画像フォーマット（WebP, AVIF等）に対応させて統合したバッチ処理アプリです。
 
 【謝辞】
 ・Ralpha / RalphaPlus (にるぽ / Nilposoft 氏)
@@ -148,6 +146,13 @@
 ・OptiOpenXML
   Office Open XML文書の軽量化・最適化処理のアイデアの参考にさせていただきました。
   https://www.hiskip.com/free/freesoft/doc/office/14978.html
+
+【使用ライブラリ】
+・qpdf (Apache 2.0)
+・oxipng (MIT)
+・cjpegli / libjxl (BSD 3-Clause)
+・FFmpeg (LGPL v3)
+・NetVips / libvips (MIT / LGPL v2.1+)
 
 素晴らしいソフトウェアの開発者および関係者の皆様に心より感謝申し上げます。</value></data>
 

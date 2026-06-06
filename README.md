@@ -69,3 +69,13 @@ FileMill は、画像一括変換ソフト **Ralpha / RalphaPlus** の軽快な�
 
 - [Ralpha / RalphaPlus](http://nilposoft.info/ralpha/ralphaplus64.html)
 - [OptiOpenXML](https://www.hiskip.com/free/freesoft/doc/office/14978.html)
+
+また、以下の外部ツールを利用しています。
+
+| ツール | ライセンス |
+|--------|-----------|
+| [qpdf](https://github.com/qpdf/qpdf) | Apache 2.0 |
+| [oxipng](https://github.com/oxipng/oxipng) | MIT |
+| [cjpegli / libjxl](https://github.com/libjxl/libjxl) | BSD 3-Clause |
+| [FFmpeg](https://ffmpeg.org) | LGPL v3 |
+| [NetVips / libvips](https://github.com/kleisauke/net-vips) | MIT / LGPL v2.1+ |

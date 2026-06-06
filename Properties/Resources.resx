@@ -136,13 +136,18 @@
 
   <!-- About -->
   <data name="AboutTitle" xml:space="preserve"><value>About</value></data>
-  <data name="AboutMessage" xml:space="preserve"><value>FileMill
-
-A batch processing app for image conversion and Office file optimization.
+  <data name="AboutMessage" xml:space="preserve"><value>A batch processing app for image conversion and Office file optimization.
 
 Built upon the design philosophies of:
 · Ralpha / RalphaPlus (Nilposoft)
 · OptiOpenXML
+
+Powered by:
+· qpdf (Apache 2.0)
+· oxipng (MIT)
+· cjpegli / libjxl (BSD 3-Clause)
+· FFmpeg (LGPL v3)
+· NetVips / libvips (MIT / LGPL v2.1+)
 
 With gratitude to all developers and contributors.</value></data>
 
