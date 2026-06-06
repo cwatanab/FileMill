@@ -303,6 +303,10 @@
 
             <MenuItem Header="ヘルプ(_H)">
 
+                <MenuItem Header="アップデートを確認(_U)..." Click="MenuItem_CheckForUpdates_Click"/>
+
+                <Separator/>
+
                 <MenuItem Header="バージョン情報(_A)" Click="MenuItem_About_Click"/>
 
             </MenuItem>

@@ -5,7 +5,7 @@ PROJECT := FileMill.csproj
 CONFIG  := Release
 OUTDIR  := bin/$(CONFIG)/net10.0-windows
 EXE     := $(OUTDIR)/FileMill.exe
-TAG     ?= 0.3.0
+TAG     ?= 0.3.1
 BRANCH  := $(shell git branch --show-current 2>/dev/null)
 PACKAGE := FileMill-$(TAG).zip
 DISTDIR := dist/FileMill-$(TAG)
@@ -35,7 +35,7 @@ build:
 
 release-check:
 	@if [ -z "$(TAG)" ]; then \
-		echo "[ERROR] TAG cannot be empty. Usage: make release TAG=0.3.0"; \
+		echo "[ERROR] TAG cannot be empty. Usage: make release TAG=0.3.1"; \
 		exit 1; \
 	fi
 	@if [ -z "$(GH)" ]; then \

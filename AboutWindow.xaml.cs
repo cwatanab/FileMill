@@ -9,6 +9,7 @@ public partial class AboutWindow : Window
     {
         InitializeComponent();
         ThemeHelper.ApplyWindowTheme(this, App.IsDarkThemeActive());
+        VersionText.Text = $"v{UpdateService.CurrentVersionText}";
         MessageText.Text = Properties.Loc.AboutMessage;
     }
 

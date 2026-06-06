@@ -265,6 +265,67 @@ public partial class MainWindow : Window
         aboutWin.ShowDialog();
     }
 
+    private async void MenuItem_CheckForUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        var menuItem = sender as MenuItem;
+        if (menuItem != null)
+            menuItem.IsEnabled = false;
+
+        try
+        {
+            var result = await UpdateService.CheckForUpdatesAsync();
+            if (!result.IsUpdateAvailable)
+            {
+                MessageBox.Show(
+                    $"現在のバージョン {result.CurrentVersion} は最新です。",
+                    "アップデート確認",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                $"新しいバージョン {result.LatestVersion} が利用できます。\n\n現在のバージョン: {result.CurrentVersion}\n最新バージョン: {result.LatestVersion}\n\nダウンロードして更新しますか？\nFileMill は終了し、更新後に再起動します。",
+                "アップデート確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (answer != MessageBoxResult.Yes)
+                return;
+
+            if (string.IsNullOrWhiteSpace(result.PackageUrl))
+            {
+                var openReleasePage = MessageBox.Show(
+                    "更新用 ZIP が見つかりませんでした。リリースページを開きますか？",
+                    "アップデート確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (openReleasePage == MessageBoxResult.Yes)
+                    UpdateService.OpenReleasePage(result.ReleaseUrl);
+                return;
+            }
+
+            System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            var packagePath = await UpdateService.DownloadUpdatePackageAsync(result);
+            UpdateService.StartUpdaterProcess(packagePath);
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"アップデート情報を確認できませんでした。\n\n{ex.Message}",
+                "アップデート確認",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+        finally
+        {
+            System.Windows.Input.Mouse.OverrideCursor = null;
+            if (menuItem != null)
+                menuItem.IsEnabled = true;
+        }
+    }
+
     // --- ファイル最適化用イベントハンドラー ---
     private void HeaderAllCheckOptimize_Checked(object sender, RoutedEventArgs e)
     {

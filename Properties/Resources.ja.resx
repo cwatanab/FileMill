@@ -136,7 +136,7 @@
 
   <!-- About -->
   <data name="AboutTitle" xml:space="preserve"><value>バージョン情報</value></data>
-  <data name="AboutMessage" xml:space="preserve"><value>FileMill v1.0
+  <data name="AboutMessage" xml:space="preserve"><value>FileMill
 
 本アプリは、画像一括変換ソフト「Ralpha」およびOfficeファイル軽量化ツール「OptiOpenXML」の思想を取り入れ、現代の画像フォーマット（WebP, AVIF等）に対応させて統合したバッチ処理アプリです。
 

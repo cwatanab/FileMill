@@ -136,7 +136,7 @@
 
   <!-- About -->
   <data name="AboutTitle" xml:space="preserve"><value>About</value></data>
-  <data name="AboutMessage" xml:space="preserve"><value>FileMill v1.0
+  <data name="AboutMessage" xml:space="preserve"><value>FileMill
 
 A batch processing app for image conversion and Office file optimization.
 
