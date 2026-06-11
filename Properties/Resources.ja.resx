@@ -224,4 +224,30 @@
   <data name="DlgTitleAddFolder" xml:space="preserve"><value>フォルダを追加</value></data>
   <data name="TooltipOfficePdfAvailable" xml:space="preserve"><value>Microsoft Office Interop を使用して PDF に変換します。利用可能: {0}</value></data>
   <data name="TooltipOfficePdfUnavailable" xml:space="preserve"><value>Microsoft Office Interop が利用できないため、PDF 変換は無効です。</value></data>
+
+  <!-- Update check -->
+  <data name="TitleUpdateCheck" xml:space="preserve"><value>アップデート確認</value></data>
+  <data name="MsgUpdateUpToDate" xml:space="preserve"><value>現在のバージョン {0} は最新です。</value></data>
+  <data name="MsgUpdateAvailable" xml:space="preserve"><value>新しいバージョン {0} が利用できます。
+
+現在のバージョン: {1}
+最新バージョン: {0}
+
+ダウンロードして更新しますか？
+FileMill は終了し、更新後に再起動します。</value></data>
+  <data name="MsgUpdateNoPackage" xml:space="preserve"><value>更新用 ZIP が見つかりませんでした。リリースページを開きますか？</value></data>
+  <data name="MsgUpdateCheckFailed" xml:space="preserve"><value>アップデート情報を確認できませんでした。
+
+{0}</value></data>
+
+  <!-- Language -->
+  <data name="MsgLanguageRestart" xml:space="preserve"><value>言語設定を変更しました。今すぐ再起動して適用しますか？</value></data>
+
+  <!-- Presets -->
+  <data name="StatusPresetNameRequired" xml:space="preserve"><value>プリセット名を入力してください。</value></data>
+  <data name="StatusPresetApplied" xml:space="preserve"><value>{0}プリセットを適用しました: {1}</value></data>
+  <data name="StatusPresetSaved" xml:space="preserve"><value>{0}プリセットを保存しました: {1}</value></data>
+  <data name="PresetTypeImage" xml:space="preserve"><value>画像変換</value></data>
+  <data name="PresetTypeOffice" xml:space="preserve"><value>Office変換</value></data>
+  <data name="PresetTypePdf" xml:space="preserve"><value>PDF変換</value></data>
 </root>

@@ -368,11 +368,16 @@ public class ImageProcessingService
             using var image = Image.NewFromFile(filePath, memory: true);
             try
             {
-                var fields = image.GetFields();
-                if (fields != null && fields.Contains("exif-ifd3-DateTimeOriginal"))
+                // libvips は EXIF IFD を "exif-ifd2-*" として公開し、値には
+                // " (ASCII, 20 components, 20 bytes)" のような注釈が付くため、
+                // フィールド名は末尾一致で探し、先頭 19 文字だけをパースする。
+                var dateField = image.GetFields()?.FirstOrDefault(
+                    f => f.EndsWith("-DateTimeOriginal", StringComparison.Ordinal));
+                if (dateField != null)
                 {
-                    var val = image.Get("exif-ifd3-DateTimeOriginal")?.ToString();
-                    if (DateTime.TryParseExact(val?.Trim('\0'), "yyyy:MM:dd HH:mm:ss", null, System.Globalization.DateTimeStyles.None, out var dt))
+                    var val = image.Get(dateField)?.ToString()?.Trim('\0').Trim();
+                    if (val?.Length >= 19 && DateTime.TryParseExact(val[..19], "yyyy:MM:dd HH:mm:ss",
+                            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
                     {
                         dateTaken = dt;
                     }
@@ -458,7 +463,9 @@ public class ImageProcessingService
                 return CopyFile(inputPath, outputPath);
         }
 
-        var compressionLevel = repackPackage ? CompressionLevel.SmallestSize : CompressionLevel.NoCompression;
+        // 再パック無効でもパッケージを書き直す以上は Deflate を維持する
+        // （NoCompression だと元より大きいファイルになってしまう）
+        var compressionLevel = repackPackage ? CompressionLevel.SmallestSize : CompressionLevel.Optimal;
 
         using (var source = ZipFile.OpenRead(inputPath))
         using (var output = File.Create(outputPath))
@@ -1353,9 +1360,17 @@ public class ImageProcessingService
             }
         }
 
-        // Ensure Default elements exist for known extensions
+        // リネームで実際に導入された拡張子だけ Default を保証する
+        var introducedExtensions = entryRenames.Values
+            .Select(Path.GetExtension)
+            .Where(ext => !string.IsNullOrEmpty(ext))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var (ext, contentType) in ExtensionToContentType)
         {
+            if (!introducedExtensions.Contains(ext))
+                continue;
+
             var existingDefault = root.Elements(ns + "Default").FirstOrDefault(element =>
                 string.Equals(element.Attribute("Extension")?.Value, ext.TrimStart('.'), StringComparison.OrdinalIgnoreCase));
             if (existingDefault == null)
@@ -1874,16 +1889,19 @@ public class ImageProcessingService
     {
         try
         {
-            var stripOption = stripMetadata ? "all" : "none";
             var processInfo = new ProcessStartInfo
             {
                 FileName = ResolveToolPath(oxipngPath, "oxipng"),
-                Arguments = $"-o {level} --strip {stripOption} \"{filePath}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            processInfo.ArgumentList.Add("-o");
+            processInfo.ArgumentList.Add(level.ToString());
+            processInfo.ArgumentList.Add("--strip");
+            processInfo.ArgumentList.Add(stripMetadata ? "all" : "none");
+            processInfo.ArgumentList.Add(filePath);
 
             using var process = new Process { StartInfo = processInfo };
             if (logAction != null)
@@ -1904,7 +1922,11 @@ public class ImageProcessingService
             {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
-                if (!process.WaitForExit(30000)) // 30 seconds timeout
+                if (process.WaitForExit(30000)) // 30 seconds timeout
+                {
+                    process.WaitForExit(); // 非同期出力をフラッシュ
+                }
+                else
                 {
                     try { process.Kill(); } catch {}
                     logAction?.Invoke("[oxipng] 処理がタイムアウトしたためプロセスを終了しました。");
@@ -1925,12 +1947,15 @@ public class ImageProcessingService
             var processInfo = new ProcessStartInfo
             {
                 FileName = ResolveToolPath(cjpegliPath, "cjpegli"),
-                Arguments = $"-q {quality} \"{inputPath}\" \"{outputPath}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            processInfo.ArgumentList.Add("-q");
+            processInfo.ArgumentList.Add(quality.ToString());
+            processInfo.ArgumentList.Add(inputPath);
+            processInfo.ArgumentList.Add(outputPath);
 
             using var process = new Process { StartInfo = processInfo };
             if (logAction != null)
@@ -1952,6 +1977,10 @@ public class ImageProcessingService
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
                 var completed = process.WaitForExit(30000); // 30 seconds timeout
+                if (completed)
+                    process.WaitForExit(); // 非同期出力をフラッシュ
+                else
+                    try { process.Kill(); } catch {}
                 return completed && process.ExitCode == 0 && File.Exists(outputPath);
             }
             return false;

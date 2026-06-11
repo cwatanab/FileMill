@@ -42,7 +42,7 @@ public partial class MainWindow : Window
             if (vm.Language != previousLanguage)
             {
                 var result = MessageBox.Show(
-                    "Language changed. Restart now to apply?",
+                    Properties.Loc.MsgLanguageRestart,
                     "FileMill",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
@@ -277,16 +277,16 @@ public partial class MainWindow : Window
             if (!result.IsUpdateAvailable)
             {
                 MessageBox.Show(
-                    $"現在のバージョン {result.CurrentVersion} は最新です。",
-                    "アップデート確認",
+                    string.Format(Properties.Loc.MsgUpdateUpToDate, result.CurrentVersion),
+                    Properties.Loc.TitleUpdateCheck,
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
                 return;
             }
 
             var answer = MessageBox.Show(
-                $"新しいバージョン {result.LatestVersion} が利用できます。\n\n現在のバージョン: {result.CurrentVersion}\n最新バージョン: {result.LatestVersion}\n\nダウンロードして更新しますか？\nFileMill は終了し、更新後に再起動します。",
-                "アップデート確認",
+                string.Format(Properties.Loc.MsgUpdateAvailable, result.LatestVersion, result.CurrentVersion),
+                Properties.Loc.TitleUpdateCheck,
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Information);
 
@@ -296,8 +296,8 @@ public partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(result.PackageUrl))
             {
                 var openReleasePage = MessageBox.Show(
-                    "更新用 ZIP が見つかりませんでした。リリースページを開きますか？",
-                    "アップデート確認",
+                    Properties.Loc.MsgUpdateNoPackage,
+                    Properties.Loc.TitleUpdateCheck,
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
                 if (openReleasePage == MessageBoxResult.Yes)
@@ -313,8 +313,8 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"アップデート情報を確認できませんでした。\n\n{ex.Message}",
-                "アップデート確認",
+                string.Format(Properties.Loc.MsgUpdateCheckFailed, ex.Message),
+                Properties.Loc.TitleUpdateCheck,
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }

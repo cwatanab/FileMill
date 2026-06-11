@@ -804,7 +804,7 @@ public class MainViewModel : INotifyPropertyChanged
             RaiseCanExecuteChanged(SaveImagePresetCommand);
 
             if (!_suppressNotifications && ImagePresetNames.Contains(value))
-                LoadPreset("Image", value, "画像変換");
+                LoadPreset("Image", value, Properties.Loc.PresetTypeImage);
         }
     }
 
@@ -820,7 +820,7 @@ public class MainViewModel : INotifyPropertyChanged
             RaiseCanExecuteChanged(SaveOfficePresetCommand);
 
             if (!_suppressNotifications && OfficePresetNames.Contains(value))
-                LoadPreset("Office", value, "Office変換");
+                LoadPreset("Office", value, Properties.Loc.PresetTypeOffice);
         }
     }
 
@@ -836,7 +836,7 @@ public class MainViewModel : INotifyPropertyChanged
             RaiseCanExecuteChanged(SavePdfPresetCommand);
 
             if (!_suppressNotifications && PdfPresetNames.Contains(value))
-                LoadPreset("Pdf", value, "PDF変換");
+                LoadPreset("Pdf", value, Properties.Loc.PresetTypePdf);
         }
     }
 
@@ -1256,6 +1256,7 @@ public class MainViewModel : INotifyPropertyChanged
                     {
                         errors++;
                         ReportFileError(file.FileName, ex.Message);
+                        UpdateProgressValue(i + 1);
                     }
                 }
             });
@@ -1487,7 +1488,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private static void AddOptimizeFileInfo(ObservableCollection<OptimizeFile> collection, string path)
     {
-        if (collection.Any(f => f.FilePath == path))
+        if (collection.Any(f => string.Equals(f.FilePath, path, StringComparison.OrdinalIgnoreCase)))
             return;
 
         var fileInfo = new FileInfo(path);
@@ -1881,6 +1882,11 @@ public class MainViewModel : INotifyPropertyChanged
         });
     }
 
+    private void UpdateProgressValue(int current)
+    {
+        Application.Current?.Dispatcher.Invoke(() => ProgressValue = current);
+    }
+
     private void UpdateImageProgress(int current, int total, string fileName)
     {
         Application.Current?.Dispatcher.Invoke(() =>
@@ -2021,14 +2027,14 @@ public class MainViewModel : INotifyPropertyChanged
 
         LoadSettings(path);
         if (updateStatus)
-            StatusText = $"{displayName}プリセットを適用しました: {sanitizedName}";
+            StatusText = string.Format(Properties.Loc.StatusPresetApplied, displayName, sanitizedName);
     }
 
     private void LoadLastUsedPresets()
     {
-        LoadLastUsedPreset("Image", SelectedImagePresetName, ImagePresetNames, name => SelectedImagePresetName = name, "画像変換");
-        LoadLastUsedPreset("Office", SelectedOfficePresetName, OfficePresetNames, name => SelectedOfficePresetName = name, "Office変換");
-        LoadLastUsedPreset("Pdf", SelectedPdfPresetName, PdfPresetNames, name => SelectedPdfPresetName = name, "PDF変換");
+        LoadLastUsedPreset("Image", SelectedImagePresetName, ImagePresetNames, name => SelectedImagePresetName = name, Properties.Loc.PresetTypeImage);
+        LoadLastUsedPreset("Office", SelectedOfficePresetName, OfficePresetNames, name => SelectedOfficePresetName = name, Properties.Loc.PresetTypeOffice);
+        LoadLastUsedPreset("Pdf", SelectedPdfPresetName, PdfPresetNames, name => SelectedPdfPresetName = name, Properties.Loc.PresetTypePdf);
     }
 
     private void LoadLastUsedPreset(string presetType, string selectedPresetName, ObservableCollection<string> availablePresetNames, Action<string> selectPreset, string displayName)
@@ -2055,7 +2061,7 @@ public class MainViewModel : INotifyPropertyChanged
             SelectedImagePresetName,
             name => SelectedImagePresetName = name,
             () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: false, includeImage: true),
-            "画像変換");
+            Properties.Loc.PresetTypeImage);
     }
 
     private void SaveOfficePreset(object? parameter)
@@ -2065,7 +2071,7 @@ public class MainViewModel : INotifyPropertyChanged
             SelectedOfficePresetName,
             name => SelectedOfficePresetName = name,
             () => CreateSettingsData(includeGeneral: false, includeOffice: true, includePdf: false, includeImage: false),
-            "Office変換");
+            Properties.Loc.PresetTypeOffice);
     }
 
     private void SavePdfPreset(object? parameter)
@@ -2075,7 +2081,7 @@ public class MainViewModel : INotifyPropertyChanged
             SelectedPdfPresetName,
             name => SelectedPdfPresetName = name,
             () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: true, includeImage: false),
-            "PDF変換");
+            Properties.Loc.PresetTypePdf);
     }
 
     private void SavePreset(
@@ -2088,7 +2094,7 @@ public class MainViewModel : INotifyPropertyChanged
         var presetName = AppPathHelper.SanitizePresetName(selectedPresetName);
         if (string.IsNullOrWhiteSpace(presetName))
         {
-            StatusText = "プリセット名を入力してください。";
+            StatusText = Properties.Loc.StatusPresetNameRequired;
             return;
         }
 
@@ -2097,7 +2103,7 @@ public class MainViewModel : INotifyPropertyChanged
             SettingsService.Save(AppPathHelper.GetPresetFilePath(presetType, presetName), createData());
             LoadPresetNames();
             selectPreset(presetName);
-            StatusText = $"{displayName}プリセットを保存しました: {presetName}";
+            StatusText = string.Format(Properties.Loc.StatusPresetSaved, displayName, presetName);
         }
         catch (Exception ex)
         {

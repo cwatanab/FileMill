@@ -185,4 +185,22 @@ public static class Loc
     public static string DlgTitleAddFolder => RM.GetString("DlgTitleAddFolder") ?? "";
     public static string TooltipOfficePdfAvailable => RM.GetString("TooltipOfficePdfAvailable") ?? "";
     public static string TooltipOfficePdfUnavailable => RM.GetString("TooltipOfficePdfUnavailable") ?? "";
+
+    // Update check
+    public static string TitleUpdateCheck => RM.GetString("TitleUpdateCheck") ?? "";
+    public static string MsgUpdateUpToDate => RM.GetString("MsgUpdateUpToDate") ?? "";
+    public static string MsgUpdateAvailable => RM.GetString("MsgUpdateAvailable") ?? "";
+    public static string MsgUpdateNoPackage => RM.GetString("MsgUpdateNoPackage") ?? "";
+    public static string MsgUpdateCheckFailed => RM.GetString("MsgUpdateCheckFailed") ?? "";
+
+    // Language
+    public static string MsgLanguageRestart => RM.GetString("MsgLanguageRestart") ?? "";
+
+    // Presets
+    public static string StatusPresetNameRequired => RM.GetString("StatusPresetNameRequired") ?? "";
+    public static string StatusPresetApplied => RM.GetString("StatusPresetApplied") ?? "";
+    public static string StatusPresetSaved => RM.GetString("StatusPresetSaved") ?? "";
+    public static string PresetTypeImage => RM.GetString("PresetTypeImage") ?? "";
+    public static string PresetTypeOffice => RM.GetString("PresetTypeOffice") ?? "";
+    public static string PresetTypePdf => RM.GetString("PresetTypePdf") ?? "";
 }

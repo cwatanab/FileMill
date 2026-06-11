@@ -219,4 +219,30 @@ With gratitude to all developers and contributors.</value></data>
   <data name="DlgTitleAddFolder" xml:space="preserve"><value>Add Folder</value></data>
   <data name="TooltipOfficePdfAvailable" xml:space="preserve"><value>Convert to PDF using Microsoft Office Interop. Available: {0}</value></data>
   <data name="TooltipOfficePdfUnavailable" xml:space="preserve"><value>PDF conversion is disabled because Microsoft Office Interop is unavailable.</value></data>
+
+  <!-- Update check -->
+  <data name="TitleUpdateCheck" xml:space="preserve"><value>Check for Updates</value></data>
+  <data name="MsgUpdateUpToDate" xml:space="preserve"><value>You are running the latest version ({0}).</value></data>
+  <data name="MsgUpdateAvailable" xml:space="preserve"><value>A new version {0} is available.
+
+Current version: {1}
+Latest version: {0}
+
+Download and update now?
+FileMill will close and restart after the update.</value></data>
+  <data name="MsgUpdateNoPackage" xml:space="preserve"><value>No update package (ZIP) was found. Open the release page instead?</value></data>
+  <data name="MsgUpdateCheckFailed" xml:space="preserve"><value>Could not check for updates.
+
+{0}</value></data>
+
+  <!-- Language -->
+  <data name="MsgLanguageRestart" xml:space="preserve"><value>Language changed. Restart now to apply?</value></data>
+
+  <!-- Presets -->
+  <data name="StatusPresetNameRequired" xml:space="preserve"><value>Enter a preset name.</value></data>
+  <data name="StatusPresetApplied" xml:space="preserve"><value>{0} preset applied: {1}</value></data>
+  <data name="StatusPresetSaved" xml:space="preserve"><value>{0} preset saved: {1}</value></data>
+  <data name="PresetTypeImage" xml:space="preserve"><value>Image Conversion</value></data>
+  <data name="PresetTypeOffice" xml:space="preserve"><value>Office Conversion</value></data>
+  <data name="PresetTypePdf" xml:space="preserve"><value>PDF Conversion</value></data>
 </root>
