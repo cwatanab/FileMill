@@ -574,15 +574,15 @@
 
                         <!-- リストビュー -->
 
-                        <ListView x:Name="FileListView" ItemsSource="{Binding Files}" BorderThickness="0" SelectionMode="Extended" PreviewKeyDown="FileListView_PreviewKeyDown">
+                        <ui:ListView x:Name="FileListView" ItemsSource="{Binding Files}" BorderThickness="0" SelectionMode="Extended" PreviewKeyDown="FileListView_PreviewKeyDown">
 
-                            <ListView.Resources>
+                            <ui:ListView.Resources>
 
-                                <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
+                                <Style TargetType="GridViewColumnHeader">
                                     <EventSetter Event="Click" Handler="FileListHeader_Click"/>
                                 </Style>
 
-                            </ListView.Resources>
+                            </ui:ListView.Resources>
 
                             <ListView.View>
 
@@ -728,9 +728,9 @@
 
 
 
-                            <ListView.ItemContainerStyle>
+                            <ui:ListView.ItemContainerStyle>
 
-                                <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                <Style TargetType="ListViewItem">
 
                                     <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
 
@@ -752,9 +752,9 @@
 
                                 </Style>
 
-                            </ListView.ItemContainerStyle>
+                            </ui:ListView.ItemContainerStyle>
 
-                        </ListView>
+                        </ui:ListView>
 
                     </Grid>
 
@@ -1351,23 +1351,17 @@
 
                                     <!-- リストビュー -->
 
-                                    <ListView x:Name="OptimizeFileListView" ItemsSource="{Binding OptimizeFiles}" BorderThickness="0" SelectionMode="Extended" PreviewKeyDown="OptimizeFileListView_PreviewKeyDown">
+                                    <ui:ListView x:Name="OptimizeFileListView" ItemsSource="{Binding OptimizeFiles}" BorderThickness="0" SelectionMode="Extended" PreviewKeyDown="OptimizeFileListView_PreviewKeyDown">
 
-                                        <ListView.Resources>
+                                        <ui:ListView.Resources>
 
-                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
+                                             <Style TargetType="GridViewColumnHeader">
 
                                                 <EventSetter Event="Click" Handler="OptimizeFileListHeader_Click"/>
 
-
-
-
-
-
-
                                             </Style>
 
-                                        </ListView.Resources>
+                                        </ui:ListView.Resources>
 
                                         <ListView.View>
 
@@ -1545,7 +1539,7 @@
 
                                         <ListView.ItemContainerStyle>
 
-                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                            <Style TargetType="ListViewItem">
 
                                                 <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
 
@@ -1569,7 +1563,7 @@
 
                                         </ListView.ItemContainerStyle>
 
-                                    </ListView>
+                                    </ui:ListView>
 
                                 </Grid>
 
@@ -1859,17 +1853,17 @@
 
                                     </TextBlock>
 
-                                    <ListView x:Name="PdfFileListView" ItemsSource="{Binding PdfFiles}" BorderThickness="0" SelectionMode="Extended" PreviewKeyDown="PdfFileListView_PreviewKeyDown">
+                                    <ui:ListView x:Name="PdfFileListView" ItemsSource="{Binding PdfFiles}" BorderThickness="0" SelectionMode="Extended" PreviewKeyDown="PdfFileListView_PreviewKeyDown">
 
-                                        <ListView.Resources>
+                                        <ui:ListView.Resources>
 
-                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
+                                             <Style TargetType="GridViewColumnHeader">
 
                                                 <EventSetter Event="Click" Handler="PdfFileListHeader_Click"/>
 
                                             </Style>
 
-                                        </ListView.Resources>
+                                        </ui:ListView.Resources>
 
                                         <ListView.View>
 
@@ -2029,9 +2023,9 @@
 
                                         </ListView.View>
 
-                                        <ListView.ItemContainerStyle>
+                                        <ui:ListView.ItemContainerStyle>
 
-                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                            <Style TargetType="ListViewItem">
 
                                                 <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
 
@@ -2053,9 +2047,9 @@
 
                                             </Style>
 
-                                        </ListView.ItemContainerStyle>
+                                        </ui:ListView.ItemContainerStyle>
 
-                                    </ListView>
+                                    </ui:ListView>
 
                                 </Grid>
 

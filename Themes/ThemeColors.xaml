@@ -54,92 +54,15 @@
 
     <SolidColorBrush x:Key="SeparatorBrush" Color="#E5E5E5"/>
 
-    <!-- 暗黙の文字色（テーマに応じた既定の前景色）とコントロールスタイル（Wpf.Ui ベース） -->
+    <!-- 暗黙の文字色（テーマに応じた既定の前景色） -->
     <Style TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
     </Style>
     <Style TargetType="Label">
         <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
     </Style>
-    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-    </Style>
-    <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-    </Style>
-    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-    </Style>
-    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-    </Style>
-    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-    </Style>
-    <Style TargetType="ListView" BasedOn="{StaticResource {x:Type ListView}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource ListBackground}"/>
-    </Style>
-    <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="Transparent"/>
-    </Style>
-    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Cursor" Value="Hand"/>
-    </Style>
-    <Style TargetType="TabControl" BasedOn="{StaticResource {x:Type TabControl}}">
-        <Setter Property="Background" Value="{DynamicResource WindowBackground}"/>
-    </Style>
-    <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-    </Style>
-    <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
-        <Setter Property="Foreground" Value="{DynamicResource AccentBackground}"/>
-    </Style>
-    <Style TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-    </Style>
-    <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource MenuBackground}"/>
-    </Style>
-    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-    </Style>
-    <Style TargetType="ContextMenu" BasedOn="{StaticResource {x:Type ContextMenu}}">
-        <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-    </Style>
-    <Style TargetType="StatusBar" BasedOn="{StaticResource {x:Type StatusBar}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource StatusBarBackground}"/>
-    </Style>
-    <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
-        <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-    </Style>
-    <Style TargetType="Separator" BasedOn="{StaticResource {x:Type Separator}}">
-        <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-    </Style>
-    <Style TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
-        <Setter Property="Background" Value="Transparent"/>
-    </Style>
-    <Style TargetType="ScrollBar" BasedOn="{StaticResource {x:Type ScrollBar}}">
-        <!-- ScrollBar は Wpf.Ui のデフォルトスタイルを適用 -->
-    </Style>
-    <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
-        <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
-        <Setter Property="Background" Value="{DynamicResource HeaderBackground}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource HeaderBorderBrush}"/>
-    </Style>
 
+    <!-- GroupBox の Fluent スタイル（丸角 8px） -->
     <Style TargetType="GroupBox">
         <Setter Property="Foreground" Value="{DynamicResource ControlForeground}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
