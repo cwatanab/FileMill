@@ -495,13 +495,18 @@ public class ImageProcessingService
             foreach (var entry in source.Entries)
             {
                 var entryName = NormalizePackagePath(entry.FullName);
+                // OPC 仕様上、mimetype は必ず無圧縮 (STORED) でなければならない
+                var entryCompressionLevel = IsMimetypeEntry(entry.FullName)
+                    ? CompressionLevel.NoCompression
+                    : compressionLevel;
+
                 if (allReplacements.TryGetValue(entryName, out var replacement))
                 {
-                    WriteEntry(destination, replacement.EntryName, compressionLevel, entry.LastWriteTime, replacement.Data);
+                    WriteEntry(destination, replacement.EntryName, entryCompressionLevel, entry.LastWriteTime, replacement.Data);
                     continue;
                 }
 
-                var destinationEntry = destination.CreateEntry(entry.FullName, compressionLevel);
+                var destinationEntry = destination.CreateEntry(entry.FullName, entryCompressionLevel);
                 destinationEntry.LastWriteTime = entry.LastWriteTime;
                 if (string.IsNullOrEmpty(entry.Name))
                     continue;
@@ -554,6 +559,10 @@ public class ImageProcessingService
         foreach (var entry in source.Entries)
         {
             if (string.IsNullOrEmpty(entry.Name) || !IsPackageImage(entry.FullName))
+                continue;
+
+            // サムネイル画像は Office が JPEG/PNG を期待するため WebP 変換・圧縮をスキップ
+            if (IsThumbnailEntry(entry.FullName))
                 continue;
 
             var entryName = NormalizePackagePath(entry.FullName);
@@ -1039,6 +1048,12 @@ public class ImageProcessingService
     private static bool IsContentTypesEntry(string entryName)
         => NormalizePackagePath(entryName).Equals("[Content_Types].xml", StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsMimetypeEntry(string entryName)
+        => NormalizePackagePath(entryName).Equals("mimetype", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsThumbnailEntry(string entryName)
+        => NormalizePackagePath(entryName).StartsWith("docProps/thumbnail.", StringComparison.OrdinalIgnoreCase);
+
     private static bool IsRelationshipEntry(string entryName)
         => NormalizePackagePath(entryName).EndsWith(".rels", StringComparison.OrdinalIgnoreCase);
 
@@ -1109,9 +1124,7 @@ public class ImageProcessingService
             if (!modified)
                 return original;
 
-            using var output = new MemoryStream();
-            document.Save(output, SaveOptions.DisableFormatting);
-            return output.ToArray();
+            return SaveXmlWithoutBom(document);
         }
         catch (Exception ex)
         {
@@ -1145,15 +1158,24 @@ public class ImageProcessingService
                 SanitizeCoreProperties(document);
             }
 
-            using var output = new MemoryStream();
-            document.Save(output, SaveOptions.DisableFormatting);
-            return output.ToArray();
+            return SaveXmlWithoutBom(document);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"SanitizeOpenXmlProperties failed for {entryName}: {ex.Message}");
             return original;
         }
+    }
+
+    private static byte[] SaveXmlWithoutBom(XDocument document)
+    {
+        using var output = new MemoryStream();
+        document.Save(output, SaveOptions.DisableFormatting);
+        var bytes = output.ToArray();
+        // XDocument.Save は UTF-8 BOM (EF BB BF) を付加するため除去
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+            return bytes[3..];
+        return bytes;
     }
 
     private static void SanitizeCoreProperties(XDocument document)
@@ -1385,15 +1407,18 @@ public class ImageProcessingService
             }
         }
 
-        using var output = new MemoryStream();
-        document.Save(output, SaveOptions.DisableFormatting);
-        return output.ToArray();
+        return SaveXmlWithoutBom(document);
     }
 
-    private static byte[] UpdateRelationshipTargets(Stream stream, string relationshipEntryName, IReadOnlyDictionary<string, string> imageEntryRenames)
+    private static byte[]? UpdateRelationshipTargets(Stream stream, string relationshipEntryName, IReadOnlyDictionary<string, string> imageEntryRenames)
     {
-        var document = XDocument.Load(stream, LoadOptions.PreserveWhitespace);
+        using var input = new MemoryStream();
+        stream.CopyTo(input);
+        var original = input.ToArray();
+        using var documentStream = new MemoryStream(original);
+        var document = XDocument.Load(documentStream, LoadOptions.PreserveWhitespace);
         var baseDirectory = GetRelationshipSourceDirectory(relationshipEntryName);
+        var modified = false;
 
         foreach (var element in document.Descendants().Where(element => element.Name.LocalName == "Relationship"))
         {
@@ -1413,11 +1438,10 @@ public class ImageProcessingService
                 ? "/" + replacementName
                 : GetRelativePackagePath(baseDirectory, replacementName);
             target.Value = updatedTarget + suffix;
+            modified = true;
         }
 
-        using var output = new MemoryStream();
-        document.Save(output, SaveOptions.DisableFormatting);
-        return output.ToArray();
+        return modified ? SaveXmlWithoutBom(document) : original;
     }
 
     private static string GetUniqueWebPEntryName(string entryName, ISet<string> usedEntryNames)
