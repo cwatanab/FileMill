@@ -12,12 +12,20 @@
         WindowBackdropType="Mica"
         Background="{DynamicResource WindowBackground}">
 
-    <Grid Margin="16">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" Icon="app.ico" />
+
+        <Grid Grid.Row="1" Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
         <!-- アプリケーション名とバージョン -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
@@ -45,5 +53,6 @@
                 HorizontalAlignment="Right" 
                 IsDefault="True" 
                 Click="OkButton_Click"/>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

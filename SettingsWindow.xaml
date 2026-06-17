@@ -21,9 +21,17 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" Icon="app.ico" />
+
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
         <!-- コンテンツ -->
         <Border Grid.Row="0" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource SettingsBorderBrush}" BorderThickness="0,0,0,1" Padding="15,12">
@@ -704,5 +712,6 @@
             <Button Content="OK" IsDefault="True" Click="OK_Click" Width="75" Height="24" Margin="0,0,8,0"/>
             <Button Content="キャンセル" IsCancel="True" Click="Cancel_Click" Width="75" Height="24"/>
         </StackPanel>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

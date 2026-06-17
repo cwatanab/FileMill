@@ -264,10 +264,18 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="FileMill" Icon="app.ico" />
+
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
         <DockPanel Grid.Row="0">
 
@@ -2152,5 +2160,6 @@
             </StatusBarItem>
         </StatusBar>
 
-</Grid>
+        </Grid>
+    </Grid>
 </ui:FluentWindow>
