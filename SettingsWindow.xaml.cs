@@ -3,7 +3,7 @@ using FileMill.Services;
 
 namespace FileMill;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
 {
     public SettingsWindow()
     {

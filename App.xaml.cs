@@ -29,18 +29,28 @@ public partial class App : Application
             resolvedMode = IsSystemDarkMode() ? AppTheme.Dark : AppTheme.Light;
         }
 
+        // Apply Wpf.Ui Application Theme
+        var wpfUiTheme = resolvedMode == AppTheme.Dark 
+            ? Wpf.Ui.Appearance.ApplicationTheme.Dark 
+            : Wpf.Ui.Appearance.ApplicationTheme.Light;
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(wpfUiTheme);
+
         var themeName = resolvedMode == AppTheme.Dark
             ? "DarkTheme.xaml"
             : "LightTheme.xaml";
 
         var dict = new ResourceDictionary { Source = new Uri($"pack://application:,,,/Themes/{themeName}") };
 
-        // 既存のテーマ辞書を置き換え（ThemeColors.xaml はそのまま）
+        // 既存のテーマ辞書を置き換え（MergedDictionaries のインデックス3）
         var merged = app.Resources.MergedDictionaries;
-        // 2番目以降にテーマ辞書があれば削除（1番目は ThemeColors.xaml）
-        while (merged.Count > 1)
-            merged.RemoveAt(1);
-        merged.Add(dict);
+        if (merged.Count > 3)
+        {
+            merged[3] = dict;
+        }
+        else
+        {
+            merged.Add(dict);
+        }
 
         // すべてのウィンドウのタイトルバーにテーマを適用
         bool isDark = resolvedMode == AppTheme.Dark;

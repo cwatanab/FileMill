@@ -13,7 +13,7 @@ using FileMill.Services;
 
 namespace FileMill;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private static readonly HashSet<string> SupportedExtensions = new(MainViewModel.ImageExtensions, StringComparer.OrdinalIgnoreCase);
 

@@ -1,4 +1,4 @@
-﻿<Window x:Class="FileMill.MainWindow"
+<ui:FluentWindow x:Class="FileMill.MainWindow"
 
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 
@@ -13,6 +13,8 @@
         xmlns:conv="clr-namespace:FileMill.Converters"
 
         xmlns:views="clr-namespace:FileMill.Views"
+
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
 
         mc:Ignorable="d"
 
@@ -29,6 +31,10 @@
         MinHeight="600" MinWidth="850"
 
         WindowStartupLocation="CenterScreen"
+
+        ExtendsContentIntoTitleBar="True"
+
+        WindowBackdropType="Mica"
 
         Background="{DynamicResource WindowBackground}">
 
@@ -2147,5 +2153,4 @@
         </StatusBar>
 
 </Grid>
-</Window>
-
+</ui:FluentWindow>

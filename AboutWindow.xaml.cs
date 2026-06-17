@@ -3,7 +3,7 @@ using FileMill.Services;
 
 namespace FileMill;
 
-public partial class AboutWindow : Window
+public partial class AboutWindow : Wpf.Ui.Controls.FluentWindow
 {
     public AboutWindow()
     {

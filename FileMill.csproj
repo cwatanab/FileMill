@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="NetVips" Version="3.2.0" />
     <PackageReference Include="NetVips.Native.win-x64" Version="8.18.2" />
+    <PackageReference Include="wpf-ui" Version="3.0.5" />
   </ItemGroup>
 
   <Target Name="CopyTools" AfterTargets="Build">

@@ -1,12 +1,15 @@
-<Window x:Class="FileMill.AboutWindow"
+<ui:FluentWindow x:Class="FileMill.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:properties="clr-namespace:FileMill.Properties"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="{x:Static properties:Loc.AboutTitle}"
         Width="460" Height="420"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
         Background="{DynamicResource WindowBackground}">
 
     <Grid Margin="16">
@@ -43,4 +46,4 @@
                 IsDefault="True" 
                 Click="OkButton_Click"/>
     </Grid>
-</Window>
+</ui:FluentWindow>
