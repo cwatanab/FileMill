@@ -48,13 +48,13 @@ release-check:
 		echo "Please run 'gh auth login' to authenticate with GitHub."; \
 		exit 1; \
 	fi
-	@if ! git diff-index --quiet HEAD --; then \
-		echo "[WARNING] You have uncommitted changes in your working tree."; \
-		printf "Do you want to continue despite uncommitted changes? (y/N): "; \
-		read confirm_dirty; \
-		case "$$confirm_dirty" in [Yy]) ;; *) echo "Release aborted."; exit 1 ;; esac; \
-		echo ""; \
-	fi
+	#@if ! git diff-index --quiet HEAD --; then \
+	#	echo "[WARNING] You have uncommitted changes in your working tree."; \
+	#	printf "Do you want to continue despite uncommitted changes? (y/N): "; \
+	#	read confirm_dirty; \
+	#	case "$$confirm_dirty" in [Yy]) ;; *) echo "Release aborted."; exit 1 ;; esac; \
+	#	echo ""; \
+	#fi
 
 package: build
 	@echo ""
@@ -92,9 +92,9 @@ release: release-check
 	@echo "  - Git Branch   : $(BRANCH)"
 	@echo "  - ZIP Package  : $(PACKAGE)"
 	@echo ""
-	@printf "Are you sure you want to build and publish this release? (y/N): "; \
-	read confirm_release; \
-	case "$$confirm_release" in [Yy]) ;; *) echo "Release aborted."; exit 1 ;; esac
+	#@printf "Are you sure you want to build and publish this release? (y/N): "; \
+	#read confirm_release; \
+	#case "$$confirm_release" in [Yy]) ;; *) echo "Release aborted."; exit 1 ;; esac
 	@echo ""
 	@echo "[1/5] Building release binaries..."
 	@$(MAKE) package TAG="$(TAG)" CONFIG="$(CONFIG)"

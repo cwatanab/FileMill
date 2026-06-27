@@ -46,10 +46,10 @@
 
         <!-- アップデートを確認ボタン & OKボタン -->
         <Grid Grid.Row="2" Margin="0,16,0,0">
-            <ui:Button Content="アップデートを確認(_U)..." 
-                       HorizontalAlignment="Left"
-                       Height="28"
-                       Click="CheckForUpdates_Click"/>
+            <Button Content="アップデートを確認(_U)..." 
+                    HorizontalAlignment="Left"
+                    Height="28"
+                    Click="CheckForUpdates_Click"/>
             <Button Content="{x:Static properties:Loc.ButtonOK}" 
                     MinWidth="80" 
                     Width="Auto"

@@ -364,22 +364,43 @@ public partial class MainWindow : FluentWindow
         const int WM_NCHITTEST = 0x0084;
         const int HTCLIENT = 1;
 
-        if (msg == WM_NCHITTEST && SettingsButton is { IsVisible: true, ActualWidth: > 0 })
+        if (msg == WM_NCHITTEST)
         {
             int screenX = unchecked((short)(long)lParam);
             int screenY = unchecked((short)((long)lParam >> 16));
-            try
+
+            if (SettingsButton is { IsVisible: true, ActualWidth: > 0 })
             {
-                Point pt = SettingsButton.PointFromScreen(new Point(screenX, screenY));
-                if (pt.X >= 0.0 && pt.X <= SettingsButton.ActualWidth && pt.Y >= 0.0 && pt.Y <= SettingsButton.ActualHeight)
+                try
                 {
-                    handled = true;
-                    return (IntPtr)HTCLIENT;
+                    Point pt = SettingsButton.PointFromScreen(new Point(screenX, screenY));
+                    if (pt.X >= 0.0 && pt.X <= SettingsButton.ActualWidth && pt.Y >= 0.0 && pt.Y <= SettingsButton.ActualHeight)
+                    {
+                        handled = true;
+                        return (IntPtr)HTCLIENT;
+                    }
+                }
+                catch
+                {
+                    // PointFromScreen can throw if the visual is not connected
                 }
             }
-            catch
+
+            if (AboutButton is { IsVisible: true, ActualWidth: > 0 })
             {
-                // PointFromScreen can throw if the visual is not connected
+                try
+                {
+                    Point pt = AboutButton.PointFromScreen(new Point(screenX, screenY));
+                    if (pt.X >= 0.0 && pt.X <= AboutButton.ActualWidth && pt.Y >= 0.0 && pt.Y <= AboutButton.ActualHeight)
+                    {
+                        handled = true;
+                        return (IntPtr)HTCLIENT;
+                    }
+                }
+                catch
+                {
+                    // PointFromScreen can throw if the visual is not connected
+                }
             }
         }
         return IntPtr.Zero;

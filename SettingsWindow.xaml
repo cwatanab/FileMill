@@ -5,10 +5,10 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:properties="clr-namespace:FileMill.Properties"
         Title="{Binding ModalTitle}"
-        Width="520" SizeToContent="Height"
-        MinWidth="480" MaxHeight="700"
+        Width="640" Height="680"
+        MinWidth="520" MinHeight="400"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         ShowInTaskbar="False"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
@@ -18,6 +18,10 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:StringEqualsToVisibilityConverter x:Key="ModalTypeToVis"/>
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -30,689 +34,1076 @@
 
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-        <!-- コンテンツ -->
-        <Border Grid.Row="0" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource SettingsBorderBrush}" BorderThickness="0,0,0,1" Padding="15,12">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <Grid>
-                    <!-- リサイズ設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Resize}">
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="幅 (px)" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBox Grid.Column="1" Text="{Binding ResizeStep.TargetWidth, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                        </Grid>
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="高さ (px)" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBox Grid.Column="1" Text="{Binding ResizeStep.TargetHeight, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                        </Grid>
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="モード" VerticalAlignment="Center" FontSize="12"/>
-                            <ComboBox Grid.Column="1" SelectedIndex="{Binding ResizeStep.FitModeIndex}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                                <ComboBoxItem Content="内包 (Inside)" FontSize="11"/>
-                                <ComboBoxItem Content="外接 (Cover)" FontSize="11"/>
-                                <ComboBoxItem Content="引き伸ばし (Fill)" FontSize="11"/>
-                            </ComboBox>
-                        </Grid>
-                        <CheckBox Content="拡大を許可する" IsChecked="{Binding ResizeStep.AllowUpscale}" Margin="0,6,0,0" FontSize="12"/>
+            <!-- ヘッダー -->
+            <Border Grid.Row="0" Padding="24,16,24,12" BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Settings24" FontSize="24" Foreground="{DynamicResource SystemAccentColorBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ModalTitle}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ControlForeground}"/>
+                        <TextBlock Text="パラメータを調整して処理をカスタマイズします" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
                     </StackPanel>
+                </StackPanel>
+            </Border>
 
-                    <!-- フォーマット変換設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Format}">
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="出力形式" VerticalAlignment="Center" FontSize="12"/>
-                            <ComboBox Grid.Column="1" SelectedIndex="{Binding FormatStep.TargetFormatIndex}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                                <ComboBoxItem Content="JPEG" FontSize="11"/>
-                                <ComboBoxItem Content="PNG" FontSize="11"/>
-                                <ComboBoxItem Content="WebP" FontSize="11"/>
-                                <ComboBoxItem Content="AVIF" FontSize="11"/>
-                                <ComboBoxItem Content="TIFF" FontSize="11"/>
-                            </ComboBox>
-                        </Grid>
-                        <StackPanel Margin="0,10,0,0">
-                            <TextBlock Text="品質 (JPEG/WebP):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="35"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Minimum="0" Maximum="100" Value="{Binding FormatStep.Quality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1" Text="{Binding FormatStep.Quality}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                            </Grid>
-                        </StackPanel>
-                        <StackPanel Margin="0,4,0,0">
-                            <TextBlock Text="圧縮レベル (PNG):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="30"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Minimum="0" Maximum="9" Value="{Binding FormatStep.CompressionLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1" Text="{Binding FormatStep.CompressionLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- 最適化設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Optimize}">
-                        <CheckBox Content="メタデータを削除" IsChecked="{Binding OptimizeStep.StripMetadata}" Margin="0,2" FontSize="12"/>
-                        <CheckBox Content="Huffman最適化 (JPEG)" IsChecked="{Binding OptimizeStep.OptimizeCoding}" Margin="0,2" FontSize="12"/>
-                        <CheckBox Content="Trellis量子化 (JPEG)" IsChecked="{Binding OptimizeStep.TrellisQuant}" Margin="0,2" FontSize="12"/>
-                        <CheckBox Content="ロスレス (WebP/AVIF)" IsChecked="{Binding OptimizeStep.Lossless}" Margin="0,2" FontSize="12"/>
-                        <StackPanel Margin="0,10,0,0">
-                            <TextBlock Text="圧縮努力 (WebP/AVIF):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="30"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Minimum="0" Maximum="6" Value="{Binding OptimizeStep.ReductionEffort}" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1" Text="{Binding OptimizeStep.ReductionEffort}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                            </Grid>
-                        </StackPanel>
-
-                        <!-- 外部ツール -->
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
-                            <StackPanel>
-                                <TextBlock Text="外部ツール:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
-
-                                <!-- oxipng -->
-                                <CheckBox x:Name="UseOxipngCheckOpt" Content="PNGロスレス最適化に oxipng を使う"
-                                          IsChecked="{Binding UseOxipng, Mode=TwoWay}" Margin="0,2" FontSize="11"/>
-                                <StackPanel Margin="0,2,0,6"
-                                            Visibility="{Binding IsChecked, ElementName=UseOxipngCheckOpt, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="oxipng 最適化レベル:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
-                                    <Grid Margin="0,2">
+            <!-- コンテンツ -->
+            <Border Grid.Row="1" Background="Transparent" Padding="24,16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
+                    <Grid>
+                        <!-- リサイズ設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Resize}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="30"/>
                                         </Grid.ColumnDefinitions>
-                                        <Slider Minimum="0" Maximum="6" Value="{Binding OxipngLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding OxipngLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                        <TextBlock Text="幅 (px)" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding ResizeStep.TargetWidth, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="例: 1920" Height="36"/>
                                     </Grid>
-                                </StackPanel>
-
-                                <!-- jpegli -->
-                                <CheckBox x:Name="UseJpegliCheckOpt" Content="JPEG高品質エンコードに jpegli を使う"
-                                          IsChecked="{Binding UseJpegli, Mode=TwoWay}" Margin="0,2" FontSize="11"
-                                          ToolTip="cjpegli による高品質JPEG最適化を有効にします"/>
-
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- 減色設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Posterize}">
-                        <TextBlock Text="ビット深度:" FontSize="12" Margin="0,2"/>
-                        <ComboBox SelectedIndex="{Binding PosterizeStep.BitsIndex}" Margin="0,6" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                            <ComboBoxItem Content="8 bit (フルカラー)" FontSize="11"/>
-                            <ComboBoxItem Content="7 bit (128階調)" FontSize="11"/>
-                            <ComboBoxItem Content="6 bit (64階調)" FontSize="11"/>
-                            <ComboBoxItem Content="5 bit (32階調)" FontSize="11"/>
-                            <ComboBoxItem Content="4 bit (16階調)" FontSize="11"/>
-                            <ComboBoxItem Content="3 bit (8階調)" FontSize="11"/>
-                            <ComboBoxItem Content="2 bit (4階調)" FontSize="11"/>
-                            <ComboBoxItem Content="1 bit (2階調)" FontSize="11"/>
-                        </ComboBox>
-                        <TextBlock Text="{Binding PosterizeStep.LevelsPerChannel, StringFormat='階調レベル: {0}階調/ch'}" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,4,0,0"/>
-                    </StackPanel>
-
-                    <!-- 回転設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Rotate}">
-                        <RadioButton Content="すべての画像を対象にする" IsChecked="{Binding RotateStep.RotateTarget, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=All}" GroupName="RotateTarget" Margin="0,6" FontSize="12"/>
-                        <RadioButton Content="横長画像のみ" IsChecked="{Binding RotateStep.RotateTarget, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Landscape}" GroupName="RotateTarget" Margin="0,6" FontSize="12"/>
-                        <RadioButton Content="縦長画像のみ" IsChecked="{Binding RotateStep.RotateTarget, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Portrait}" GroupName="RotateTarget" Margin="0,6" FontSize="12"/>
-                        <ComboBox SelectedIndex="{Binding RotateStep.RotationAngleIndex, Mode=TwoWay}" Margin="0,8,0,0" Width="180" HorizontalAlignment="Left" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                            <ComboBoxItem Content="90度" FontSize="12"/>
-                            <ComboBoxItem Content="180度" FontSize="12"/>
-                            <ComboBoxItem Content="270度" FontSize="12"/>
-                        </ComboBox>
-                    </StackPanel>
-
-                    <!-- トリミング設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Crop}">
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="幅 (px)" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBox Grid.Column="1" Text="{Binding CropStep.CropWidth, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                        </Grid>
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="高さ (px)" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBox Grid.Column="1" Text="{Binding CropStep.CropHeight, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- 余白の追加設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Padding}">
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="85"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="余白サイズ (px)" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBox Grid.Column="1" Text="{Binding PaddingStep.PaddingSize, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                        </Grid>
-                        <TextBlock Text="背景色 (RGB):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6,0,0"/>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="20"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="35"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="R" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource RGBRedBrush}"/>
-                            <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingRed}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingRed}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="20"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="35"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="G" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource RGBGreenBrush}"/>
-                            <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingGreen}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingGreen}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="20"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="35"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="B" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource RGBBlueBrush}"/>
-                            <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingBlue}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingBlue}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- アンシャープマスク設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Sharpen}">
-                        <TextBlock Text="強さ (Sigma):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Minimum="0.1" Maximum="5.0" Value="{Binding SharpenStep.SharpenSigma}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="1" Text="{Binding SharpenStep.SharpenSigma, StringFormat={}{0:F1}}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- 色調補正設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ColorAdjust}">
-                        <TextBlock Text="明るさ:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="35"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Minimum="-100" Maximum="100" Value="{Binding ColorAdjustStep.Brightness}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ColorAdjustStep.Brightness}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                        <TextBlock Text="コントラスト:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="35"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Minimum="-100" Maximum="100" Value="{Binding ColorAdjustStep.Contrast}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ColorAdjustStep.Contrast}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- トーンカーブ設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ToneCurve}">
-                        <TextBlock Text="ガンマ補正:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Minimum="0.1" Maximum="3.0" Value="{Binding ToneCurveStep.ToneGamma}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ToneCurveStep.ToneGamma, StringFormat={}{0:F1}}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- 画像合成設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Composite}">
-                        <TextBlock Text="合成画像 (ウォーターマーク) パス:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding CompositeStep.CompositePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            <Button Grid.Column="1" Content="..." Width="32" Height="32" Command="{Binding BrowseCompositeCommand}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-                        </Grid>
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Xオフセット:" VerticalAlignment="Center" FontSize="11" Margin="0,0,4,0"/>
-                            <TextBox Grid.Column="1" Text="{Binding CompositeStep.CompositeX, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            <TextBlock Grid.Column="2" Text="Yオフセット:" VerticalAlignment="Center" FontSize="11" Margin="0,0,4,0"/>
-                            <TextBox Grid.Column="3" Text="{Binding CompositeStep.CompositeY, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- Office 最適化設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=OfficeOptimize}">
-                        <CheckBox Content="作成者・メタデータの削除" IsChecked="{Binding StripOfficeMetadata, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="作成者、最終保存者、編集履歴などを削除します。"/>
-                        <CheckBox Content="未使用オブジェクトのクリーンアップ" IsChecked="{Binding CleanUnusedObjects, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="Officeファイルを再パックして不要なデータを減らします。"/>
-
-                        <!-- Excel固有 -->
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Excel固有:" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
-                                <CheckBox Content="選択セルをA1に変更する" IsChecked="{Binding ResetCellSelection, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="すべてのシートの選択セルとスクロール位置をA1にリセットします。"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 埋め込み画像 -->
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
-                            <StackPanel>
-                                <TextBlock Text="埋め込み画像:" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
-                                <CheckBox Content="文書内の埋め込み画像を圧縮する" IsChecked="{Binding CompressEmbeddedImages, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="WordやPowerPoint内の画像を圧縮し、画像WebP変換がオンならWebP化します。"/>
-                                <CheckBox x:Name="SettingsOfficeResizeImagePpiCheck" Content="画像解像度を PPI で制限" IsChecked="{Binding ResizeEmbeddedImagesByPpi, Mode=TwoWay}" Margin="0,6" FontSize="12" ToolTip="Office上の表示サイズから実効PPIを計算し、指定PPIを超える画像だけ縮小します。"/>
-                                <StackPanel Margin="20,8,0,0" Visibility="{Binding IsChecked, ElementName=SettingsOfficeResizeImagePpiCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="目標 PPI:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="高さ (px)" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding ResizeStep.TargetHeight, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="例: 1080" Height="36"/>
+                                    </Grid>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="56"/>
                                         </Grid.ColumnDefinitions>
-                                        <Slider Minimum="72" Maximum="600" Value="{Binding TargetImagePpi}" TickFrequency="10" IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding TargetImagePpi, StringFormat={}{0} PPI}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                        <TextBlock Text="モード" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding ResizeStep.FitModeIndex}" Height="36">
+                                            <ComboBoxItem Content="内包 (Inside) - 比率維持で枠内に収める" FontSize="12"/>
+                                            <ComboBoxItem Content="外接 (Cover) - 比率維持で枠全体を覆う" FontSize="12"/>
+                                            <ComboBoxItem Content="引き伸ばし (Fill) - 比率無視で全体リサイズ" FontSize="12"/>
+                                        </ComboBox>
                                     </Grid>
                                 </StackPanel>
-                                <CheckBox x:Name="WebPConvertCheck" Content="画像を WebP 形式に変換" IsChecked="{Binding ConvertToWebP, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6" FontSize="12"/>
-                                <StackPanel Margin="20,8,0,0" Visibility="{Binding IsChecked, ElementName=WebPConvertCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="WebP品質:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="35"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Slider Minimum="10" Maximum="100" Value="{Binding WebPQuality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding WebPQuality}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                                    </Grid>
-                                </StackPanel>
-                                <CheckBox x:Name="UseOxipngCheck" Content="PNGロスレス最適化に oxipng を使う" IsChecked="{Binding UseOxipng, Mode=TwoWay}" Margin="0,6" FontSize="11"/>
-                                <StackPanel Margin="20,0,0,4" Visibility="{Binding IsChecked, ElementName=UseOxipngCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock Text="oxipng 最適化レベル:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="30"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Slider Minimum="0" Maximum="6" Value="{Binding OxipngLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding OxipngLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                                    </Grid>
-                                </StackPanel>
-                                <CheckBox Content="JPEG高品質エンコードに jpegli を使う" IsChecked="{Binding UseJpegli, Mode=TwoWay}" Margin="0,6" FontSize="11" ToolTip="cjpegli による高品質JPEG最適化を有効にします"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 埋め込みメディア -->
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
-                            <StackPanel>
-                                <TextBlock Text="埋め込みメディア:" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
-                                <CheckBox Content="埋め込み動画を圧縮する" IsChecked="{Binding CompressMedia, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
-                                <TextBlock Text="ビデオ品質 (CRF):" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                                <Grid Margin="0,0,0,6">
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <Slider Minimum="0" Maximum="51" Value="{Binding MediaVideoCrf}" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding MediaVideoCrf}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="画像の拡大を許可する" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="元の寸法より大きくなるようなリサイズを許可します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ResizeStep.AllowUpscale}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,6">
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- フォーマット変換設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Format}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="100"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="映像コーデック:" VerticalAlignment="Center" FontSize="11"/>
-                                    <ComboBox Grid.Column="1" SelectedIndex="{Binding MediaVideoCodecIndex}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                                        <ComboBoxItem Content="libx264 (H.264)" FontSize="11"/>
-                                        <ComboBoxItem Content="libx265 (H.265/HEVC)" FontSize="11"/>
-                                        <ComboBoxItem Content="libvpx-vp9 (VP9)" FontSize="11"/>
-                                        <ComboBoxItem Content="libaom-av1 (AV1)" FontSize="11"/>
+                                    <TextBlock Text="出力形式" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                    <ComboBox Grid.Column="1" SelectedIndex="{Binding FormatStep.TargetFormatIndex}" Height="36">
+                                        <ComboBoxItem Content="JPEG" FontSize="12"/>
+                                        <ComboBoxItem Content="PNG" FontSize="12"/>
+                                        <ComboBoxItem Content="WebP" FontSize="12"/>
+                                        <ComboBoxItem Content="AVIF" FontSize="12"/>
+                                        <ComboBoxItem Content="TIFF" FontSize="12"/>
                                     </ComboBox>
                                 </Grid>
-                                <Grid Margin="0,6">
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <Grid>
+                                            <TextBlock Text="画像品質 (JPEG/WebP/AVIF)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding FormatStep.Quality, StringFormat={}{0}%}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                        </Grid>
+                                        <TextBlock Text="高いほど高画質ですがファイルサイズが大きくなります" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                        <Slider Minimum="0" Maximum="100" Value="{Binding FormatStep.Quality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,16" />
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="圧縮レベル (PNG)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding FormatStep.CompressionLevel}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                        </Grid>
+                                        <TextBlock Text="数値を大きくすると圧縮率が高くなりますが処理に時間がかかります" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                        <Slider Minimum="0" Maximum="9" Value="{Binding FormatStep.CompressionLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- 最適化設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Optimize}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="メタデータを削除" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Exifなどの撮影・編集情報を破棄して容量を削減します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding OptimizeStep.StripMetadata}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Huffman符号化の最適化 (JPEG)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="ハフマンテーブルを再計算して効率的に圧縮します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding OptimizeStep.OptimizeCoding}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Trellis量子化を有効化 (JPEG)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="量子化時の歪みとデータ量のバランスを最適化します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding OptimizeStep.TrellisQuant}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="ロスレス圧縮 (WebP/AVIF)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="画質を劣化させずに完全に可逆圧縮を行います" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding OptimizeStep.Lossless}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="圧縮努力レベル (WebP/AVIF)" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding OptimizeStep.ReductionEffort}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                    </Grid>
+                                    <TextBlock Text="高い値ほど圧縮率が上がりますがエンコード時間が延びます" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                    <Slider Minimum="0" Maximum="6" Value="{Binding OptimizeStep.ReductionEffort}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="外部ツールによるロスレス最適化" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="oxipng を使用" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="PNGのロスレス圧縮に外部ツール oxipng を利用します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch x:Name="UseOxipngCheckOpt" Grid.Column="1" IsChecked="{Binding UseOxipng, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <StackPanel Margin="0,12,0,0" Visibility="{Binding IsChecked, ElementName=UseOxipngCheckOpt, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid>
+                                            <TextBlock Text="oxipng 最適化レベル" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding OxipngLevel}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                        </Grid>
+                                        <Slider Minimum="0" Maximum="6" Value="{Binding OxipngLevel}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,12" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="jpegli を使用" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="JPEGエンコードに高品質な cjpegli を利用します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding UseJpegli, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- 減色設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Posterize}">
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="ビット深度" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding PosterizeStep.BitsIndex}" Height="36">
+                                            <ComboBoxItem Content="8 bit (フルカラー)" FontSize="12"/>
+                                            <ComboBoxItem Content="7 bit (128階調)" FontSize="12"/>
+                                            <ComboBoxItem Content="6 bit (64階調)" FontSize="12"/>
+                                            <ComboBoxItem Content="5 bit (32階調)" FontSize="12"/>
+                                            <ComboBoxItem Content="4 bit (16階調)" FontSize="12"/>
+                                            <ComboBoxItem Content="3 bit (8階調)" FontSize="12"/>
+                                            <ComboBoxItem Content="2 bit (4階調)" FontSize="12"/>
+                                            <ComboBoxItem Content="1 bit (2階調)" FontSize="12"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <TextBlock Text="{Binding PosterizeStep.LevelsPerChannel, StringFormat='階調レベル: 各チャンネル {0}階調'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- 回転設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Rotate}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="対象画像" FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+                                    <RadioButton Content="すべての画像を対象にする" IsChecked="{Binding RotateStep.RotateTarget, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=All}" GroupName="RotateTarget" Margin="0,6"/>
+                                    <RadioButton Content="横長画像のみ回転する" IsChecked="{Binding RotateStep.RotateTarget, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Landscape}" GroupName="RotateTarget" Margin="0,6"/>
+                                    <RadioButton Content="縦長画像のみ回転する" IsChecked="{Binding RotateStep.RotateTarget, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Portrait}" GroupName="RotateTarget" Margin="0,6"/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="100"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="音声コーデック:" VerticalAlignment="Center" FontSize="11"/>
-                                    <ComboBox Grid.Column="1" SelectedIndex="{Binding MediaAudioCodecIndex}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                                        <ComboBoxItem Content="aac (AAC)" FontSize="11"/>
-                                        <ComboBoxItem Content="libopus (Opus)" FontSize="11"/>
-                                        <ComboBoxItem Content="copy (コピー)" FontSize="11"/>
+                                    <TextBlock Text="回転角度" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                    <ComboBox Grid.Column="1" SelectedIndex="{Binding RotateStep.RotationAngleIndex, Mode=TwoWay}" Height="36">
+                                        <ComboBoxItem Content="90度 右回転" FontSize="12"/>
+                                        <ComboBoxItem Content="180度 回転" FontSize="12"/>
+                                        <ComboBoxItem Content="270度 右回転 (90度 左回転)" FontSize="12"/>
                                     </ComboBox>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Office PDF 変換設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=OfficePdf}">
-                        <CheckBox Content="PDF/A 準拠"
-                                  IsChecked="{Binding ConvertOfficeToPdfA, Mode=TwoWay}"
-                                  IsEnabled="{Binding IsOfficePdfConversionAvailable}"
-                                  Margin="0,6"
-                                  FontSize="12"
-                                  ToolTip="Word と PowerPoint は PDF/A として出力します。Excel は Microsoft Office Interop の制約により PDF/A 指定に対応していません。"/>
-                    </StackPanel>
-
-                    <!-- PDF 画像最適化設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfImage}">
-                        <StackPanel Margin="0,2,0,0">
-                            <TextBlock Text="JPEG品質" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                            <Grid Margin="0,2,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="36"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Minimum="1" Maximum="100" Value="{Binding PdfJpegQuality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1" Text="{Binding PdfJpegQuality}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                            </Grid>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="88"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="最小幅" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBox Grid.Column="1" Text="{Binding PdfMinWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            </Grid>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="88"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="最小高さ" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBox Grid.Column="1" Text="{Binding PdfMinHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            </Grid>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="88"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="最小面積" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBox Grid.Column="1" Text="{Binding PdfMinArea, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            </Grid>
-
-                            <CheckBox Content="インライン画像を保持" IsChecked="{Binding PdfKeepInlineImages, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
+                            </ui:Card>
                         </StackPanel>
-                    </StackPanel>
 
-                    <!-- PDF ストリーム圧縮設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfStream}">
-                        <StackPanel Margin="0,2,0,0">
-                            <TextBlock Text="圧縮レベル" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}"/>
-                            <Grid Margin="0,2,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="28"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Minimum="1" Maximum="9" Value="{Binding PdfCompressionLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1" Text="{Binding PdfCompressionLevel}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="11"/>
-                            </Grid>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="88"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="デコード" VerticalAlignment="Center" FontSize="11"/>
-                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfDecodeLevelIndex, Mode=TwoWay}" FontSize="12" Height="32" VerticalContentAlignment="Center" Padding="6,0,24,0">
-                                    <ComboBoxItem Content="none"/>
-                                    <ComboBoxItem Content="generalized"/>
-                                    <ComboBoxItem Content="specialized"/>
-                                    <ComboBoxItem Content="all"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <CheckBox Content="Flateを再圧縮" IsChecked="{Binding PdfRecompressFlate, Mode=TwoWay}" Margin="0,8,0,0" FontSize="11"/>
+                        <!-- トリミング設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Crop}">
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="幅 (px)" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding CropStep.CropWidth, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="トリミング後の幅" Height="36" />
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="高さ (px)" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding CropStep.CropHeight, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="トリミング後の高さ" Height="36" />
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
                         </StackPanel>
-                    </StackPanel>
 
-                    <!-- PDF 構造整理設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfStructure}">
-                        <StackPanel Margin="0,2,0,0">
-                            <CheckBox x:Name="PdfStructureExternalizeInlineImagesCheck" Content="インライン画像を通常画像に変換" IsChecked="{Binding PdfExternalizeInlineImages, Mode=TwoWay}" Margin="0,2" FontSize="11"/>
-
-                            <Grid Margin="20,6,0,0" Visibility="{Binding IsChecked, ElementName=PdfStructureExternalizeInlineImagesCheck, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="88"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="最小バイト" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBox Grid.Column="1" Text="{Binding PdfInlineImageMinBytes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            </Grid>
-
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="112"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="オブジェクト" VerticalAlignment="Center" FontSize="11"/>
-                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfObjectStreamModeIndex, Mode=TwoWay}" FontSize="12" Height="32" VerticalContentAlignment="Center" Padding="6,0,24,0">
-                                    <ComboBoxItem Content="preserve"/>
-                                    <ComboBoxItem Content="disable"/>
-                                    <ComboBoxItem Content="generate"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="112"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="未参照リソース" VerticalAlignment="Center" FontSize="11"/>
-                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfRemoveUnreferencedResourcesIndex, Mode=TwoWay}" FontSize="12" Height="32" VerticalContentAlignment="Center" Padding="6,0,24,0">
-                                    <ComboBoxItem Content="auto"/>
-                                    <ComboBoxItem Content="yes"/>
-                                    <ComboBoxItem Content="no"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <CheckBox Content="未参照オブジェクトを保持" IsChecked="{Binding PdfPreserveUnreferencedObjects, Mode=TwoWay}" Margin="0,8,0,0" FontSize="11"/>
-                            <CheckBox Content="コンテンツ改行を正規化" IsChecked="{Binding PdfNormalizeContent, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
-                            <CheckBox Content="コンテンツストリームを結合" IsChecked="{Binding PdfCoalesceContents, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
-                            <CheckBox Content="endstream前に改行を追加" IsChecked="{Binding PdfNewlineBeforeEndStream, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- PDF 配布・互換性設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfCompatibility}">
-                        <StackPanel Margin="0,2,0,0">
-                            <CheckBox Content="Web表示用にリニアライズ" IsChecked="{Binding PdfLinearize, Mode=TwoWay}" Margin="0,2,0,6" FontSize="11"/>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="112"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="最小バージョン" VerticalAlignment="Center" FontSize="11"/>
-                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfMinVersionIndex, Mode=TwoWay}" FontSize="12" Height="32" VerticalContentAlignment="Center" Padding="6,0,24,0">
-                                    <ComboBoxItem Content="指定なし"/>
-                                    <ComboBoxItem Content="1.3"/>
-                                    <ComboBoxItem Content="1.4"/>
-                                    <ComboBoxItem Content="1.5"/>
-                                    <ComboBoxItem Content="1.6"/>
-                                    <ComboBoxItem Content="1.7"/>
-                                    <ComboBoxItem Content="2.0"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <Grid Margin="0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="112"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="強制バージョン" VerticalAlignment="Center" FontSize="11"/>
-                                <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfForceVersionIndex, Mode=TwoWay}" FontSize="12" Height="32" VerticalContentAlignment="Center" Padding="6,0,24,0" ToolTip="PDF機能との互換性に注意してください">
-                                    <ComboBoxItem Content="指定なし"/>
-                                    <ComboBoxItem Content="1.3"/>
-                                    <ComboBoxItem Content="1.4"/>
-                                    <ComboBoxItem Content="1.5"/>
-                                    <ComboBoxItem Content="1.6"/>
-                                    <ComboBoxItem Content="1.7"/>
-                                    <ComboBoxItem Content="2.0"/>
-                                </ComboBox>
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- PDF 制限解除設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfRestrictions}">
-                        <StackPanel Margin="0,2,0,0">
-                            <CheckBox Content="暗号化を解除" IsChecked="{Binding PdfDecrypt, Mode=TwoWay}" Margin="0,2" FontSize="11"/>
-                            <CheckBox Content="署名/制限を解除" IsChecked="{Binding PdfRemoveRestrictions, Mode=TwoWay}" Margin="0,6,0,0" FontSize="11" ToolTip="電子署名は無効になります"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- オプション設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Options}">
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="言語" VerticalAlignment="Center" FontSize="12"/>
-                            <ComboBox Grid.Column="1" SelectedIndex="{Binding LanguageIndex}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                                <ComboBoxItem Content="日本語" FontSize="11"/>
-                                <ComboBoxItem Content="English" FontSize="11"/>
-                            </ComboBox>
-                        </Grid>
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,6,0,0"/>
-
-                        <Grid Margin="0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="テーマ" VerticalAlignment="Center" FontSize="12"/>
-                            <ComboBox Grid.Column="1" SelectedIndex="{Binding ThemeModeIndex}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0,24,0">
-                                <ComboBoxItem Content="ライト" FontSize="11"/>
-                                <ComboBoxItem Content="ダーク" FontSize="11"/>
-                                <ComboBoxItem Content="自動 (Windowsに従う)" FontSize="11"/>
-                            </ComboBox>
-                        </Grid>
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,6,0,0"/>
-
-                        <CheckBox Content="処理完了時に通知音を鳴らす" IsChecked="{Binding PlaySoundOnComplete, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
-                        <CheckBox Content="リストを空にするとき確認する" IsChecked="{Binding ConfirmOnClear, Mode=TwoWay}" Margin="0,6" FontSize="12"/>
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
-                            <StackPanel>
-                                <TextBlock Text="出力ファイル名:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,2"/>
-                                <TextBlock Text="元のファイル名の末尾に付与する文字列" FontSize="10" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding FileNameRule, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                            </StackPanel>
-                        </Border>
-                        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
-                            <StackPanel>
-                                <TextBlock Text="外部ツール パス:" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,4"/>
-                                <Grid Margin="0,6">
+                        <!-- 余白の追加設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Padding}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="余白サイズ (px)" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                    <ui:TextBox Grid.Column="1" Text="{Binding PaddingStep.PaddingSize, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="追加する余白のサイズ" Height="36" />
+                                </Grid>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="余白の背景色 (RGB)" FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="R" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource RGBRedBrush}"/>
+                                        <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingRed}" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingRed}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12"/>
+                                    </Grid>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="G" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource RGBGreenBrush}"/>
+                                        <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingGreen}" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingGreen}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12"/>
+                                    </Grid>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="B" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource RGBBlueBrush}"/>
+                                        <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding PaddingStep.PaddingBlue}" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding PaddingStep.PaddingBlue}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- アンシャープマスク設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Sharpen}">
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="適用量 (Sigma)" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SharpenStep.SharpenSigma, StringFormat={}{0:F1}}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                    </Grid>
+                                    <TextBlock Text="輪郭強調の強さを調整します (推奨: 0.5〜1.5)" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                    <Slider Minimum="0.1" Maximum="5.0" Value="{Binding SharpenStep.SharpenSigma}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- 色調補正設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ColorAdjust}">
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <Grid>
+                                            <TextBlock Text="明るさ (Brightness)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding ColorAdjustStep.Brightness}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                        </Grid>
+                                        <Slider Minimum="-100" Maximum="100" Value="{Binding ColorAdjustStep.Brightness}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,16" />
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="コントラスト (Contrast)" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding ColorAdjustStep.Contrast}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                        </Grid>
+                                        <Slider Minimum="-100" Maximum="100" Value="{Binding ColorAdjustStep.Contrast}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- トーンカーブ設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ToneCurve}">
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="ガンマ補正値" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding ToneCurveStep.ToneGamma, StringFormat={}{0:F1}}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                    </Grid>
+                                    <TextBlock Text="明るさの中間トーン（ガンマ）を調整します (標準: 1.0)" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                    <Slider Minimum="0.1" Maximum="3.0" Value="{Binding ToneCurveStep.ToneGamma}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- 画像合成設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Composite}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="合成画像パス (ウォーターマーク)" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBox Text="{Binding CompositeStep.CompositePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="合成したい画像ファイルを選択" Height="36" VerticalContentAlignment="Center" />
+                                        <ui:Button Grid.Column="1" Content="参照..." Width="70" Height="36" Command="{Binding BrowseCompositeCommand}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="配置位置オフセット (左上からのピクセル数)" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="X座標" VerticalAlignment="Center" FontSize="11" Margin="0,0,8,0"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding CompositeStep.CompositeX, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                                        <TextBlock Grid.Column="3" Text="Y座標" VerticalAlignment="Center" FontSize="11" Margin="0,0,8,0"/>
+                                        <ui:TextBox Grid.Column="4" Text="{Binding CompositeStep.CompositeY, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- Office 最適化設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=OfficeOptimize}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="基本クリーンアップ" FontSize="13" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="ドキュメントのメタデータを削除" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="作成者、最終保存者、編集履歴等の個人情報を削除します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding StripOfficeMetadata, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="未使用オブジェクトの整理" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="内部の不要データやゴーストオブジェクトをクリーンアップします" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding CleanUnusedObjects, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="Excel 固有の処理" FontSize="13" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="初期セル位置を A1 に戻す" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="全シートの選択セルおよびスクロール開始位置を A1 に揃えます" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ResetCellSelection, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="埋め込み画像の圧縮設定" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="埋め込み画像を圧縮" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="文書内画像の圧縮・形式変換を有効化します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch x:Name="CompressImagesToggle" Grid.Column="1" IsChecked="{Binding CompressEmbeddedImages, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    
+                                    <StackPanel Margin="0,12,0,0" Visibility="{Binding IsChecked, ElementName=CompressImagesToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="解像度を制限する (PPI)" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="指定PPIを超える高解像度画像を文書表示サイズにあわせ縮小します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <ui:ToggleSwitch x:Name="PpiLimitToggle" Grid.Column="1" IsChecked="{Binding ResizeEmbeddedImagesByPpi, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Margin="0,10,0,12" Visibility="{Binding IsChecked, ElementName=PpiLimitToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid>
+                                                <TextBlock Text="目標解像度 (PPI)" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                <TextBlock Text="{Binding TargetImagePpi, StringFormat={}{0} PPI}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                            </Grid>
+                                            <Slider Minimum="72" Maximum="600" Value="{Binding TargetImagePpi}" TickFrequency="10" IsSnapToTickEnabled="True" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="画像を WebP 形式に変換" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="埋め込み画像を次世代のWebPに自動変換して容量を極小化します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <ui:ToggleSwitch x:Name="WebpConvertToggle" Grid.Column="1" IsChecked="{Binding ConvertToWebP, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Margin="0,10,0,12" Visibility="{Binding IsChecked, ElementName=WebpConvertToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid>
+                                                <TextBlock Text="WebP品質設定" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                <TextBlock Text="{Binding WebPQuality, StringFormat={}{0}%}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                            </Grid>
+                                            <Slider Minimum="10" Maximum="100" Value="{Binding WebPQuality}" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="oxipng を使った PNG の最適化" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="埋め込みPNG画像を外部ツール oxipng で極限まで無劣化圧縮します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <ui:ToggleSwitch x:Name="OxipngToggle" Grid.Column="1" IsChecked="{Binding UseOxipng, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Margin="0,10,0,12" Visibility="{Binding IsChecked, ElementName=OxipngToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid>
+                                                <TextBlock Text="oxipng 最適化レベル" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                <TextBlock Text="{Binding OxipngLevel}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                            </Grid>
+                                            <Slider Minimum="0" Maximum="6" Value="{Binding OxipngLevel}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="jpegli を使った JPEG の最適化" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="埋め込みJPEG画像を高品質 cjpegli エンコーダで最適化します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding UseJpegli, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="埋め込みメディア (動画・音声) 圧縮" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="動画・音声を再圧縮する" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="大容量の動画などをFFmpegを使用して小さくエンコードします" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch x:Name="MediaCompressToggle" Grid.Column="1" IsChecked="{Binding CompressMedia, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    
+                                    <StackPanel Margin="0,12,0,0" Visibility="{Binding IsChecked, ElementName=MediaCompressToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12" />
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid>
+                                                <TextBlock Text="映像の品質 (CRF)" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}"/>
+                                                <TextBlock Text="{Binding MediaVideoCrf}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                            </Grid>
+                                            <Slider Minimum="0" Maximum="51" Value="{Binding MediaVideoCrf}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,4,0,0"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="映像コーデック" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                            <ComboBox Grid.Column="1" SelectedIndex="{Binding MediaVideoCodecIndex}" Height="36">
+                                                <ComboBoxItem Content="libx264 (標準 H.264 - 互換性高)" FontSize="12"/>
+                                                <ComboBoxItem Content="libx265 (HEVC - 圧縮率大・互換性中)" FontSize="12"/>
+                                                <ComboBoxItem Content="libvpx-vp9 (VP9)" FontSize="12"/>
+                                                <ComboBoxItem Content="libaom-av1 (AV1 - 超圧縮・互換性低)" FontSize="12"/>
+                                            </ComboBox>
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="音声コーデック" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                            <ComboBox Grid.Column="1" SelectedIndex="{Binding MediaAudioCodecIndex}" Height="36">
+                                                <ComboBoxItem Content="aac (標準 AAC 音声)" FontSize="12"/>
+                                                <ComboBoxItem Content="libopus (Opus 音声)" FontSize="12"/>
+                                                <ComboBoxItem Content="copy (音声を再エンコードせずコピー)" FontSize="12"/>
+                                            </ComboBox>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- Office PDF 変換設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=OfficePdf}">
+                            <ui:Card Padding="16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="oxipng" VerticalAlignment="Center" FontSize="11" Width="70"/>
-                                    <TextBox Grid.Column="1" Text="{Binding OxipngPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                                    <Button Grid.Column="2" Content="..." Width="32" Height="32" Command="{Binding BrowseToolPathCommand}" CommandParameter="oxipng" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="PDF/A 規格に準拠する" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="長期保存用に制定された国際規格である PDF/A 準拠形式で出力します（Excel は Interop 側の制約のため対象外です）" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ConvertOfficeToPdfA, Mode=TwoWay}" IsEnabled="{Binding IsOfficePdfConversionAvailable}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,6">
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- PDF 画像最適化設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfImage}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="埋め込みJPEG画像品質" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding PdfJpegQuality, StringFormat={}{0}%}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                    </Grid>
+                                    <TextBlock Text="PDF内部の画像圧縮率を設定します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                    <Slider Minimum="1" Maximum="100" Value="{Binding PdfJpegQuality}" TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="圧縮・処理対象外にする画像サイズ制限" FontSize="13" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <TextBlock Text="これ以下の寸法の極小画像はアイコンやロゴ等の可能性があるため、圧縮をスキップして画質を保護します。" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="最小幅 (px)" VerticalAlignment="Center" FontSize="12"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding PdfMinWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="最小高さ (px)" VerticalAlignment="Center" FontSize="12"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding PdfMinHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="最小面積 (px²)" VerticalAlignment="Center" FontSize="12"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding PdfMinArea, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="jpegli" VerticalAlignment="Center" FontSize="11" Width="70"/>
-                                    <TextBox Grid.Column="1" Text="{Binding CjpegliPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                                    <Button Grid.Column="2" Content="..." Width="32" Height="32" Command="{Binding BrowseToolPathCommand}" CommandParameter="cjpegli" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="インライン画像を保持する" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="PDFの描画命令内に直接書き込まれたインライン画像を、再圧縮せずにそのまま保護します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfKeepInlineImages, Mode=TwoWay}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,6">
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- PDF ストリーム圧縮設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfStream}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="テキスト・構造データの圧縮レベル" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding PdfCompressionLevel}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                    </Grid>
+                                    <TextBlock Text="ページ内容（テキスト、描画座標）を可逆圧縮する強さです (9: 最高圧縮)" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,8"/>
+                                    <Slider Minimum="1" Maximum="9" Value="{Binding PdfCompressionLevel}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="デコードレベル" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                    <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfDecodeLevelIndex, Mode=TwoWay}" Height="36">
+                                        <ComboBoxItem Content="none - ストリームを圧縮したまま保持 (最速)" FontSize="12"/>
+                                        <ComboBoxItem Content="generalized - 汎用的なテキストデータを伸長してクリーン化" FontSize="12"/>
+                                        <ComboBoxItem Content="specialized - 特定の構造データもデコード" FontSize="12"/>
+                                        <ComboBoxItem Content="all - すべてのストリームをデコードして再圧縮 (容量小)" FontSize="12"/>
+                                    </ComboBox>
+                                </Grid>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="ffmpeg" VerticalAlignment="Center" FontSize="11" Width="70"/>
-                                    <TextBox Grid.Column="1" Text="{Binding FfmpegPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                                    <Button Grid.Column="2" Content="..." Width="32" Height="32" Command="{Binding BrowseToolPathCommand}" CommandParameter="ffmpeg" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Flate（Deflate）ストリームを再圧縮する" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="すでに圧縮済みのデータストリームを取り出し、高効率な設定で再度圧縮を試みます" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfRecompressFlate, Mode=TwoWay}" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid Margin="0,6">
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- PDF 構造整理設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfStructure}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="インライン画像を通常オブジェクトに変換" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="コンテンツ内のインライン画像データを抽出し、標準の画像XObjectに分離します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch x:Name="PdfStructureExternalizeToggle" Grid.Column="1" IsChecked="{Binding PdfExternalizeInlineImages, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <StackPanel Margin="0,12,0,0" Visibility="{Binding IsChecked, ElementName=PdfStructureExternalizeToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="変換を試みる最小サイズ (Bytes)" VerticalAlignment="Center" FontSize="12"/>
+                                            <ui:TextBox Grid.Column="1" Text="{Binding PdfInlineImageMinBytes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="オブジェクトストリーム形式" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfObjectStreamModeIndex, Mode=TwoWay}" Height="36">
+                                            <ComboBoxItem Content="preserve - 現在のストリーム状態をそのまま保持" FontSize="12"/>
+                                            <ComboBoxItem Content="disable - ストリームを展開して古い形式に準拠" FontSize="12"/>
+                                            <ComboBoxItem Content="generate - 構造を集約してオブジェクトストリーム化 (容量小)" FontSize="12"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="未参照リソースの除去" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfRemoveUnreferencedResourcesIndex, Mode=TwoWay}" Height="36">
+                                            <ComboBoxItem Content="auto - 自動判断" FontSize="12"/>
+                                            <ComboBoxItem Content="yes - 使用されていないリソース項目を完全に削除する" FontSize="12"/>
+                                            <ComboBoxItem Content="no - すべてのリソースを安全のために保持する" FontSize="12"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="未参照オブジェクトを保持する" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="論理的に参照のない独立したオブジェクトを削除せず保護します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfPreserveUnreferencedObjects, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="コンテンツの改行コードを正規化" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="ストリーム内の不要なCR/LFなどの余分な制御文字を整理します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfNormalizeContent, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="コンテンツストリームを結合" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="断片化しているテキスト・描画ストリームを1本に統合します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfCoalesceContents, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="endstream 前に改行を挿入" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="一部の古いPDFリーダーとの互換性のためにブロック末尾を改行します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfNewlineBeforeEndStream, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- PDF 配布・互換性設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfCompatibility}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="qpdf" VerticalAlignment="Center" FontSize="11" Width="70"/>
-                                    <TextBox Grid.Column="1" Text="{Binding QpdfPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="32" VerticalContentAlignment="Center" FontSize="12" Padding="6,0" />
-                                    <Button Grid.Column="2" Content="..." Width="32" Height="32" Command="{Binding BrowseToolPathCommand}" CommandParameter="qpdf" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Web表示用にリニアライズ (Fast Web View)" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="PDFの構造を整理し、ブラウザ等で最初のページから順次ストリーミング読み込み可能にします" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfLinearize, Mode=TwoWay}" VerticalAlignment="Center"/>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="適合最小バージョン" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfMinVersionIndex, Mode=TwoWay}" Height="36">
+                                            <ComboBoxItem Content="指定なし"/>
+                                            <ComboBoxItem Content="1.3 (Acrobat 4相当)"/>
+                                            <ComboBoxItem Content="1.4 (Acrobat 5相当)"/>
+                                            <ComboBoxItem Content="1.5 (Acrobat 6相当)"/>
+                                            <ComboBoxItem Content="1.6 (Acrobat 7相当)"/>
+                                            <ComboBoxItem Content="1.7 (Acrobat 8相当)"/>
+                                            <ComboBoxItem Content="2.0 (ISO 32000-2準拠)"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="強制バージョン設定" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding PdfForceVersionIndex, Mode=TwoWay}" Height="36" ToolTip="特定のPDF互換バージョンを強制します">
+                                            <ComboBoxItem Content="指定なし"/>
+                                            <ComboBoxItem Content="1.3"/>
+                                            <ComboBoxItem Content="1.4"/>
+                                            <ComboBoxItem Content="1.5"/>
+                                            <ComboBoxItem Content="1.6"/>
+                                            <ComboBoxItem Content="1.7"/>
+                                            <ComboBoxItem Content="2.0"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
 
-                    <!-- グレースケール化設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Grayscale}">
-                        <TextBlock Text="グレースケール化は画像を白黒に変換します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                    </StackPanel>
+                        <!-- PDF 制限解除設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=PdfRestrictions}">
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="所有者パスワード制限の解除" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="PDFの閲覧・印刷等のセキュリティ保護を無効化してプレーンなPDFにします" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfDecrypt, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="電子署名および編集制限の解除" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="コピー制限や編集禁止フラグを取り除きます（埋め込まれた電子署名は失われます）" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PdfRemoveRestrictions, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
 
-                    <!-- Exif自動回転設定 -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ExifAutoRotate}">
-                        <TextBlock Text="画像に埋め込まれたExifの回転情報に基づいて、自動的に画像の向きを補正します。追加の設定項目はありません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,6"/>
-                    </StackPanel>
+                        <!-- オプション設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Options}">
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="表示言語" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding LanguageIndex}" Height="36">
+                                            <ComboBoxItem Content="日本語 (Japanese)"/>
+                                            <ComboBoxItem Content="English"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="テーマ設定" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox Grid.Column="1" SelectedIndex="{Binding ThemeModeIndex}" Height="36">
+                                            <ComboBoxItem Content="ライトテーマ (Light)"/>
+                                            <ComboBoxItem Content="ダークテーマ (Dark)"/>
+                                            <ComboBoxItem Content="システム自動判定"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="処理完了通知" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="すべてのファイル変換が終了した際、システム音を鳴らして通知します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding PlaySoundOnComplete, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Margin="0,8" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="クリア時の確認ダイアログ" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="変換リストからすべてのファイルを一括クリアする前に、警告ポップアップを表示します" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ConfirmOnClear, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="出力ファイル命名規則" FontSize="13" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="元のファイル名の末尾に付加する接尾辞（Suffix）" FontSize="11" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,0,0,8"/>
+                                    <ui:TextBox Text="{Binding FileNameRule, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="例: _optimized (空欄時は同名ファイルが上書きされます)" Height="36" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                            </ui:Card>
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="外部ツール実行ファイル パス設定" FontSize="13" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="oxipng" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding OxipngPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="oxipng.exe の絶対パス" Height="36" VerticalContentAlignment="Center" />
+                                        <ui:Button Grid.Column="2" Content="参照..." Width="70" Height="36" Command="{Binding BrowseToolPathCommand}" CommandParameter="oxipng" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid Margin="0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="jpegli" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding CjpegliPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="cjpegli.exe の絶対パス" Height="36" VerticalContentAlignment="Center" />
+                                        <ui:Button Grid.Column="2" Content="参照..." Width="70" Height="36" Command="{Binding BrowseToolPathCommand}" CommandParameter="cjpegli" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid Margin="0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="ffmpeg" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding FfmpegPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ffmpeg.exe の絶対パス" Height="36" VerticalContentAlignment="Center" />
+                                        <ui:Button Grid.Column="2" Content="参照..." Width="70" Height="36" Command="{Binding BrowseToolPathCommand}" CommandParameter="ffmpeg" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid Margin="0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="qpdf" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding QpdfPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="qpdf.exe の絶対パス" Height="36" VerticalContentAlignment="Center" />
+                                        <ui:Button Grid.Column="2" Content="参照..." Width="70" Height="36" Command="{Binding BrowseToolPathCommand}" CommandParameter="qpdf" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
 
-                    <!-- デフォルト -->
-                    <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Default}">
-                        <TextBlock Text="この機能の設定項目は準備中です。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" Margin="0,10"/>
-                    </StackPanel>
-                </Grid>
-            </ScrollViewer>
-        </Border>
+                        <!-- グレースケール化設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Grayscale}">
+                            <ui:Card Padding="16">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Info24" FontSize="20" Foreground="{DynamicResource SystemAccentColorBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="グレースケール化は、画像のカラーチャンネルを輝度値に基づいて統合し、完全な白黒（モノクロ）画像に変換します。この機能に追加の設定オプションはありません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
 
-        <!-- アクションボタン -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,12">
-            <Button Content="{x:Static properties:Loc.ButtonOK}" IsDefault="True" Click="OK_Click" MinWidth="80" Width="Auto" Height="32" Margin="0,0,8,0"/>
-            <Button Content="{x:Static properties:Loc.ButtonCancel}" IsCancel="True" Click="Cancel_Click" MinWidth="80" Width="Auto" Height="32"/>
-        </StackPanel>
+                        <!-- Exif自動回転設定 -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=ExifAutoRotate}">
+                            <ui:Card Padding="16">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Info24" FontSize="20" Foreground="{DynamicResource SystemAccentColorBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="デジカメやスマートフォンで撮影した画像に埋め込まれている「Exifオリエンテーションメタデータ」を解析し、画像本体を物理的に適切な向き（正対方向）に回転して保存します。この機能に追加の設定オプションはありません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+
+                        <!-- デフォルト -->
+                        <StackPanel Visibility="{Binding ActiveModalType, Converter={StaticResource ModalTypeToVis}, ConverterParameter=Default}">
+                            <ui:Card Padding="16">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Info24" FontSize="20" Foreground="{DynamicResource SystemAccentColorBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="選択した機能の設定オプションは準備中または追加パラメータを必要としません。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ControlForegroundDim}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+
+            <!-- アクションボタン -->
+            <Border Grid.Row="2" Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,1,0,0" Padding="24,16">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <ui:Button Content="{x:Static properties:Loc.ButtonOK}" Appearance="Primary" IsDefault="True" Click="OK_Click" MinWidth="80" Height="36" Margin="0,0,8,0"/>
+                    <ui:Button Content="{x:Static properties:Loc.ButtonCancel}" Appearance="Secondary" IsCancel="True" Click="Cancel_Click" MinWidth="80" Height="36"/>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </ui:FluentWindow>

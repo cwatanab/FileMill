@@ -39,10 +39,10 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
     <ui:TitleBar Grid.Row="0" Title="FileMill" Icon="app.ico" />
-    <ui:Button Name="AboutButton" Grid.Row="0" ToolTip="このアプリについて" Appearance="Transparent" Width="36" Height="36" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,180,0" Click="MenuItem_About_Click">
+    <ui:Button Name="AboutButton" Grid.Row="0" ToolTip="このアプリについて" Appearance="Transparent" Width="36" Height="36" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,180,0" Click="MenuItem_About_Click" WindowChrome.IsHitTestVisibleInChrome="True">
       <ui:SymbolIcon Symbol="Info24" />
     </ui:Button>
-    <ui:Button Name="SettingsButton" Grid.Row="0" CommandParameter="Options" ToolTip="環境設定" Appearance="Transparent" Width="36" Height="36" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,140,0" Command="{Binding OpenModalCommand}">
+    <ui:Button Name="SettingsButton" Grid.Row="0" CommandParameter="Options" ToolTip="環境設定" Appearance="Transparent" Width="36" Height="36" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,140,0" Command="{Binding OpenModalCommand}" WindowChrome.IsHitTestVisibleInChrome="True">
       <ui:SymbolIcon Symbol="Settings24" />
     </ui:Button>
     <Grid Row="1">
@@ -75,16 +75,16 @@
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep1Label}" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontWeight="SemiBold" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
+                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlForegroundDim}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlForegroundDim}" BorderThickness="1">
                     <TextBlock Text="2" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep2Label}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
+                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlForegroundDim}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlForegroundDim}" BorderThickness="1">
                     <TextBlock Text="3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep3Label}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
@@ -170,7 +170,7 @@
                     </FrameworkElement.Resources>
                     <ListView.View>
                       <GridView>
-                        <GridViewColumn Width="40">
+                        <GridViewColumn Width="46">
                           <GridViewColumn.Header>
                             <CheckBox Name="HeaderSelectAllCheckBox" IsChecked="True" Click="HeaderSelectAllCheckBox_Click" />
                           </GridViewColumn.Header>
@@ -245,21 +245,21 @@
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlForegroundDim}" BorderThickness="1">
                     <TextBlock Text="1" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep1Label}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
+                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlForegroundDim}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SystemAccentColorBrush}" BorderBrush="{DynamicResource SystemAccentColorBrush}" BorderThickness="1">
                     <TextBlock Text="2" Foreground="#FFFFFFFF" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep2Label}" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontWeight="SemiBold" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
+                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlForegroundDim}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlForegroundDim}" BorderThickness="1">
                     <TextBlock Text="3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep3Label}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
@@ -419,7 +419,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="回転角度:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Grid.Column="1" Height="32" Padding="6,0,24,0" SelectedIndex="{Binding RotationAngleIndex}">
+                                  <ComboBox Grid.Column="1" Height="36" SelectedIndex="{Binding RotationAngleIndex}">
                                     <ComboBoxItem Content="90度" FontSize="13" />
                                     <ComboBoxItem Content="180度" FontSize="13" />
                                     <ComboBoxItem Content="270度" FontSize="13" />
@@ -456,7 +456,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="サイズ調整:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Grid.Column="1" Height="32" Padding="6,0,24,0" SelectedIndex="{Binding FitModeIndex}">
+                                  <ComboBox Grid.Column="1" Height="36" SelectedIndex="{Binding FitModeIndex}">
                                     <ComboBoxItem Content="内包 (Inside)" FontSize="13" />
                                     <ComboBoxItem Content="外接 (Cover)" FontSize="13" />
                                     <ComboBoxItem Content="引き伸ばし (Fill)" FontSize="13" />
@@ -584,7 +584,7 @@
                               </HeaderedContentControl.Header>
                               <StackPanel Margin="8" DataContext="{Binding PosterizeStep}">
                                 <TextBlock Text="ビット深度:" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                                <ComboBox Height="32" Padding="6,0,24,0" SelectedIndex="{Binding BitsIndex}">
+                                <ComboBox Height="36" SelectedIndex="{Binding BitsIndex}">
                                   <ComboBoxItem Content="8 bit (フルカラー)" FontSize="13" />
                                   <ComboBoxItem Content="7 bit (128階調)" FontSize="13" />
                                   <ComboBoxItem Content="6 bit (64階調)" FontSize="13" />
@@ -640,7 +640,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="出力形式:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Grid.Column="1" Height="32" Padding="6,0,24,0" SelectedIndex="{Binding TargetFormatIndex}">
+                                  <ComboBox Grid.Column="1" Height="36" SelectedIndex="{Binding TargetFormatIndex}">
                                     <ComboBoxItem Content="JPEG" FontSize="13" />
                                     <ComboBoxItem Content="PNG" FontSize="13" />
                                     <ComboBoxItem Content="WebP" FontSize="13" />
@@ -825,7 +825,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="映像映像コーデック:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Grid.Column="1" Height="32" Padding="6,0,24,0" SelectedIndex="{Binding MediaVideoCodecIndex}">
+                                  <ComboBox Grid.Column="1" Height="36" SelectedIndex="{Binding MediaVideoCodecIndex}">
                                     <ComboBoxItem Content="libx264 (H.264)" FontSize="13" />
                                     <ComboBoxItem Content="libx265 (H.265/HEVC)" FontSize="13" />
                                     <ComboBoxItem Content="libvpx-vp9 (VP9)" FontSize="13" />
@@ -838,7 +838,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="音声コーデック:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Grid.Column="1" Height="32" Padding="6,0,24,0" SelectedIndex="{Binding MediaAudioCodecIndex}">
+                                  <ComboBox Grid.Column="1" Height="36" SelectedIndex="{Binding MediaAudioCodecIndex}">
                                     <ComboBoxItem Content="aac (AAC)" FontSize="13" />
                                     <ComboBoxItem Content="libopus (Opus)" FontSize="13" />
                                     <ComboBoxItem Content="copy (コピー)" FontSize="13" />
@@ -941,7 +941,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="デコードレベル:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Height="32" Padding="6,0,24,0" SelectedIndex="{Binding PdfDecodeLevelIndex}">
+                                  <ComboBox Height="36" SelectedIndex="{Binding PdfDecodeLevelIndex}">
                                     <ComboBoxItem Content="none (デコードしない)" />
                                     <ComboBoxItem Content="generalized (通常)" />
                                     <ComboBoxItem Content="specialized (高度)" />
@@ -974,7 +974,7 @@
                                     <ColumnDefinition Width="*" />
                                   </Grid.ColumnDefinitions>
                                   <TextBlock Text="最小PDF互換バージョン:" VerticalAlignment="Center" FontSize="13" />
-                                  <ComboBox Grid.Column="1" Height="32" Padding="6,0,24,0" SelectedIndex="{Binding PdfMinVersionIndex}">
+                                  <ComboBox Grid.Column="1" Height="36" SelectedIndex="{Binding PdfMinVersionIndex}">
                                     <ComboBoxItem Content="指定なし" />
                                     <ComboBoxItem Content="1.3" />
                                     <ComboBoxItem Content="1.4" />
@@ -1039,19 +1039,19 @@
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlForegroundDim}" BorderThickness="1">
                     <TextBlock Text="1" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep1Label}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
+                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlForegroundDim}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                  <Border Width="24" Height="24" CornerRadius="12" Background="#00FFFFFF" BorderBrush="{DynamicResource ControlForegroundDim}" BorderThickness="1">
                     <TextBlock Text="2" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
                   </Border>
                   <TextBlock Text="{x:Static properties:Loc.WizardStep2Label}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
+                <Line X1="0" Y1="0" X2="20" Y2="0" Stroke="{DynamicResource ControlForegroundDim}" StrokeThickness="2" VerticalAlignment="Center" Margin="8,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SystemAccentColorBrush}" BorderBrush="{DynamicResource SystemAccentColorBrush}" BorderThickness="1">
                     <TextBlock Text="3" Foreground="#FFFFFFFF" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" />
