@@ -74,15 +74,10 @@ public class MainViewModel : INotifyPropertyChanged
     ];
 
     // --- ファイルリスト ---
-    public ObservableCollection<ImageFile> Files { get; } = [];
-    public ObservableCollection<OptimizeFile> OptimizeFiles { get; } = [];
-    public ObservableCollection<OptimizeFile> PdfFiles { get; } = [];
+    public ObservableCollection<UnifiedFile> Files { get; } = [];
 
     // --- パイプライン ---
     public ObservableCollection<PipelineStep> Steps { get; } = [];
-    public ObservableCollection<string> ImagePresetNames { get; } = [];
-    public ObservableCollection<string> OfficePresetNames { get; } = [];
-    public ObservableCollection<string> PdfPresetNames { get; } = [];
 
     // 固定ステップのショートカットプロパティ
     public PipelineStep? GrayscaleStep => GetStep(PipelineStepType.Grayscale);
@@ -773,70 +768,118 @@ public class MainViewModel : INotifyPropertyChanged
             _isProcessing = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanGoNext));
+            OnPropertyChanged(nameof(CanGoBack));
+            if (!value)
+            {
+                OnPropertyChanged(nameof(TotalOriginalSizeDisplay));
+                OnPropertyChanged(nameof(TotalOptimizedSizeDisplay));
+                OnPropertyChanged(nameof(TotalSavingDisplay));
+            }
             RefreshCommands();
         }
     }
 
     public bool CanEdit => !IsProcessing;
 
+    private int _wizardStep = 0; // 0: Select Files, 1: Configure Settings, 2: Run & Results
+    public int WizardStep
+    {
+        get => _wizardStep;
+        set
+        {
+            if (_wizardStep == value) return;
+            _wizardStep = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsStep1));
+            OnPropertyChanged(nameof(IsStep2));
+            OnPropertyChanged(nameof(IsStep3));
+            OnPropertyChanged(nameof(CanGoNext));
+            OnPropertyChanged(nameof(CanGoBack));
+            RefreshCommands();
+        }
+    }
+
+    public bool IsStep1 => _wizardStep == 0;
+    public bool IsStep2 => _wizardStep == 1;
+    public bool IsStep3 => _wizardStep == 2;
+
+    public bool CanGoNext => _wizardStep == 0 && Files.Count > 0 && !IsProcessing;
+    public bool CanGoBack => _wizardStep == 1 && !IsProcessing;
+
+    public long TotalOriginalSize => Files.Sum(f => f.OriginalSize);
+    public long TotalOptimizedSize => Files.Sum(f => f.OptimizedSize ?? f.OriginalSize);
+    public double TotalSavingPercentage
+    {
+        get
+        {
+            long orig = TotalOriginalSize;
+            if (orig == 0) return 0;
+            long opt = TotalOptimizedSize;
+            return Math.Max(0.0, (double)(orig - opt) / orig * 100.0);
+        }
+    }
+    public string TotalOriginalSizeDisplay => FormatHelper.FormatFileSize(TotalOriginalSize);
+    public string TotalOptimizedSizeDisplay => FormatHelper.FormatFileSize(TotalOptimizedSize);
+    public string TotalSavingDisplay => TotalSavingPercentage > 0 ? $"-{TotalSavingPercentage:F1}%" : "0%";
+
+
     public bool IsFileListEmpty => Files.Count == 0;
-    public bool IsOptimizeFileListEmpty => OptimizeFiles.Count == 0;
-    public bool IsPdfFileListEmpty => PdfFiles.Count == 0;
+    public bool IsOptimizeFileListEmpty => Files.Count == 0;
+    public bool IsPdfFileListEmpty => Files.Count == 0;
 
     public string OutputSummary
-        => string.Format(Properties.Loc.SummaryOutput, OutputDirectory, Files.Count, Steps.Count(s => s.Enabled));
+        => string.Format(Properties.Loc.SummaryOutput, OutputDirectory, Files.Count(f => f.FileType == FileType.Image), Steps.Count(s => s.Enabled));
 
     public string OptimizeOutputSummary
-        => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, OptimizeFiles.Count);
+        => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, Files.Count(f => f.FileType == FileType.Office));
 
     public string PdfOutputSummary
-        => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, PdfFiles.Count);
+        => string.Format(Properties.Loc.SummaryOptimizeOutput, OutputDirectory, Files.Count(f => f.FileType == FileType.Pdf));
 
-    private string _selectedImagePresetName = "";
-    public string SelectedImagePresetName
+    public ObservableCollection<string> PresetNames { get; } = [];
+
+    private string _selectedPresetName = "";
+    public string SelectedPresetName
     {
-        get => _selectedImagePresetName;
+        get => _selectedPresetName;
         set
         {
-            if (_selectedImagePresetName == value) return;
-            _selectedImagePresetName = value;
+            if (_selectedPresetName == value) return;
+            _selectedPresetName = value;
             OnPropertyChanged();
-            RaiseCanExecuteChanged(SaveImagePresetCommand);
+            RaiseCanExecuteChanged(SavePresetCommand);
 
-            if (!_suppressNotifications && ImagePresetNames.Contains(value))
-                LoadPreset("Image", value, Properties.Loc.PresetTypeImage);
+            if (!_suppressNotifications && PresetNames.Contains(value))
+            {
+                LoadPreset(value);
+            }
         }
     }
 
-    private string _selectedOfficePresetName = "";
-    public string SelectedOfficePresetName
-    {
-        get => _selectedOfficePresetName;
-        set
-        {
-            if (_selectedOfficePresetName == value) return;
-            _selectedOfficePresetName = value;
-            OnPropertyChanged();
-            RaiseCanExecuteChanged(SaveOfficePresetCommand);
+    public ICommand SavePresetCommand { get; }
 
-            if (!_suppressNotifications && OfficePresetNames.Contains(value))
-                LoadPreset("Office", value, Properties.Loc.PresetTypeOffice);
+    private void SavePreset(object? _)
+    {
+        var presetName = AppPathHelper.SanitizePresetName(SelectedPresetName);
+        if (string.IsNullOrWhiteSpace(presetName))
+        {
+            StatusText = Properties.Loc.StatusPresetNameRequired;
+            return;
         }
-    }
 
-    private string _selectedPdfPresetName = "";
-    public string SelectedPdfPresetName
-    {
-        get => _selectedPdfPresetName;
-        set
+        try
         {
-            if (_selectedPdfPresetName == value) return;
-            _selectedPdfPresetName = value;
-            OnPropertyChanged();
-            RaiseCanExecuteChanged(SavePdfPresetCommand);
-
-            if (!_suppressNotifications && PdfPresetNames.Contains(value))
-                LoadPreset("Pdf", value, Properties.Loc.PresetTypePdf);
+            var settingsData = CreateSettingsData(includeGeneral: false, includeOffice: true, includePdf: true, includeImage: true);
+            SettingsService.Save(AppPathHelper.GetPresetFilePath(presetName), settingsData);
+            
+            LoadPresetNames();
+            SelectedPresetName = presetName;
+            StatusText = string.Format(Properties.Loc.StatusPresetSaved, "共通", presetName);
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to save preset: {ex.Message}");
         }
     }
 
@@ -903,9 +946,12 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CancelCommand { get; }
     public ICommand BrowseCompositeCommand { get; }
     public ICommand ToggleDebugCommand { get; }
-    public ICommand SaveImagePresetCommand { get; }
-    public ICommand SaveOfficePresetCommand { get; }
-    public ICommand SavePdfPresetCommand { get; }
+    public ICommand RunOrCancelAllCommand { get; }
+    public ICommand ProcessAllCommand { get; }
+    public ICommand GoNextCommand { get; }
+    public ICommand GoBackCommand { get; }
+    public ICommand StartOverCommand { get; }
+    public ICommand GoToSettingsCommand { get; }
 
     public MainViewModel(string? settingsPath = null)
     {
@@ -920,34 +966,34 @@ public class MainViewModel : INotifyPropertyChanged
         MoveStepDownCommand = new RelayCommand(MoveStepDown, _ => !IsProcessing);
         BrowseOutputCommand = new RelayCommand(BrowseOutput, _ => !IsProcessing);
         BrowseToolPathCommand = new RelayCommand(BrowseToolPath, _ => !IsProcessing);
-        ProcessCommand = new RelayCommand(async _ => await ProcessAsync(), _ => !IsProcessing && Files.Count > 0);
-        RunOrCancelImageCommand = new RelayCommand(async _ => await RunImageOrCancelAsync(), _ => IsProcessing || Files.Count > 0);
+        ProcessCommand = new RelayCommand(async _ => await ProcessAsync(), _ => !IsProcessing && Files.Any(f => f.FileType == FileType.Image));
+        RunOrCancelImageCommand = new RelayCommand(async _ => await RunImageOrCancelAsync(), _ => IsProcessing || Files.Any(f => f.FileType == FileType.Image));
         OpenModalCommand = new RelayCommand(OpenModal, _ => !IsProcessing);
         BrowseCompositeCommand = new RelayCommand(BrowseComposite, _ => !IsProcessing);
         ToggleDebugCommand = new RelayCommand(_ => IsDebugVisible = !IsDebugVisible);
-        SaveImagePresetCommand = new RelayCommand(SaveImagePreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedImagePresetName));
-        SaveOfficePresetCommand = new RelayCommand(SaveOfficePreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedOfficePresetName));
-        SavePdfPresetCommand = new RelayCommand(SavePdfPreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedPdfPresetName));
+        SavePresetCommand = new RelayCommand(SavePreset, _ => !IsProcessing && !string.IsNullOrWhiteSpace(SelectedPresetName));
         AddOptimizeFilesCommand = new RelayCommand(AddOptimizeFiles, _ => !IsProcessing);
         AddOptimizeFolderCommand = new RelayCommand(AddOptimizeFolder, _ => !IsProcessing);
         RemoveOptimizeFileCommand = new RelayCommand(RemoveOptimizeFile, _ => !IsProcessing);
         ClearOptimizeFilesCommand = new RelayCommand(ClearOptimizeFiles, _ => !IsProcessing);
-        ProcessOptimizeCommand = new RelayCommand(async _ => await ProcessOptimizeAsync(), _ => !IsProcessing && OptimizeFiles.Count > 0);
-        RunOrCancelOfficeCommand = new RelayCommand(async _ => await RunOfficeOrCancelAsync(), _ => IsProcessing || OptimizeFiles.Count > 0);
+        ProcessOptimizeCommand = new RelayCommand(async _ => await ProcessOptimizeAsync(), _ => !IsProcessing && Files.Any(f => f.FileType == FileType.Office));
+        RunOrCancelOfficeCommand = new RelayCommand(async _ => await RunOfficeOrCancelAsync(), _ => IsProcessing || Files.Any(f => f.FileType == FileType.Office));
         AddPdfFilesCommand = new RelayCommand(AddPdfFiles, _ => !IsProcessing);
         AddPdfFolderCommand = new RelayCommand(AddPdfFolder, _ => !IsProcessing);
         RemovePdfFileCommand = new RelayCommand(RemovePdfFile, _ => !IsProcessing);
         ClearPdfFilesCommand = new RelayCommand(ClearPdfFiles, _ => !IsProcessing);
-        ProcessPdfOptimizeCommand = new RelayCommand(async _ => await ProcessPdfOptimizeAsync(), _ => !IsProcessing && PdfFiles.Count > 0);
-        RunOrCancelPdfCommand = new RelayCommand(async _ => await RunPdfOrCancelAsync(), _ => IsProcessing || PdfFiles.Count > 0);
+        ProcessPdfOptimizeCommand = new RelayCommand(async _ => await ProcessPdfOptimizeAsync(), _ => !IsProcessing && Files.Any(f => f.FileType == FileType.Pdf));
+        RunOrCancelPdfCommand = new RelayCommand(async _ => await RunPdfOrCancelAsync(), _ => IsProcessing || Files.Any(f => f.FileType == FileType.Pdf));
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsProcessing);
+        ProcessAllCommand = new RelayCommand(async _ => await ProcessAllAsync(), _ => !IsProcessing && Files.Count > 0);
+        RunOrCancelAllCommand = new RelayCommand(async _ => await RunAllOrCancelAsync(), _ => IsProcessing || Files.Count > 0);
+        GoNextCommand = new RelayCommand(_ => WizardStep = 1, _ => CanGoNext);
+        GoBackCommand = new RelayCommand(_ => WizardStep = 0, _ => CanGoBack);
+        StartOverCommand = new RelayCommand(_ => { ClearFiles(null); WizardStep = 0; }, _ => !IsProcessing);
+        GoToSettingsCommand = new RelayCommand(_ => WizardStep = 1, _ => !IsProcessing);
 
         // ファイルリスト変更時に空表示を更新
-        Files.CollectionChanged += (_, _) => OnImageFilesChanged();
-
-        OptimizeFiles.CollectionChanged += (_, _) => OnOfficeFilesChanged();
-
-        PdfFiles.CollectionChanged += (_, _) => OnPdfFilesChanged();
+        Files.CollectionChanged += (_, _) => OnFilesChanged();
 
         // デフォルトのステップを追加（処理順に登録、FormatConvert/Optimize は最後に適用）
         foreach (var (type, enabled) in DefaultSteps)
@@ -975,24 +1021,24 @@ public class MainViewModel : INotifyPropertyChanged
         Steps.Add(new PipelineStep { Type = type, Enabled = enabled });
     }
 
-    private void OnImageFilesChanged()
+    private void OnFilesChanged()
     {
         OnPropertyChanged(nameof(IsFileListEmpty));
-        UpdateSummaries();
-    }
-
-    private void OnOfficeFilesChanged()
-    {
         OnPropertyChanged(nameof(IsOptimizeFileListEmpty));
-        OnPropertyChanged(nameof(OptimizeOutputSummary));
-        RaiseCanExecuteChanged(ProcessOptimizeCommand, RunOrCancelOfficeCommand);
-    }
-
-    private void OnPdfFilesChanged()
-    {
         OnPropertyChanged(nameof(IsPdfFileListEmpty));
+        OnPropertyChanged(nameof(OptimizeOutputSummary));
         OnPropertyChanged(nameof(PdfOutputSummary));
+        OnPropertyChanged(nameof(CanGoNext));
+        OnPropertyChanged(nameof(TotalOriginalSizeDisplay));
+        OnPropertyChanged(nameof(TotalOptimizedSizeDisplay));
+        OnPropertyChanged(nameof(TotalSavingDisplay));
+        UpdateSummaries();
+        RaiseCanExecuteChanged(ProcessCommand, RunOrCancelImageCommand);
+        RaiseCanExecuteChanged(ProcessOptimizeCommand, RunOrCancelOfficeCommand);
         RaiseCanExecuteChanged(ProcessPdfOptimizeCommand, RunOrCancelPdfCommand);
+        if (RunOrCancelAllCommand is RelayCommand r1) r1.RaiseCanExecuteChanged();
+        if (ProcessAllCommand is RelayCommand r2) r2.RaiseCanExecuteChanged();
+        if (GoNextCommand is RelayCommand r3) r3.RaiseCanExecuteChanged();
     }
 
     private void Step_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1045,7 +1091,19 @@ public class MainViewModel : INotifyPropertyChanged
         if (!IsSupportedImage(path) || Files.Any(f => string.Equals(f.FilePath, path, StringComparison.OrdinalIgnoreCase)))
             return false;
 
-        var info = ImageProcessingService.GetImageInfo(path);
+        var imgInfo = ImageProcessingService.GetImageInfo(path);
+        var info = new UnifiedFile
+        {
+            FilePath = path,
+            FileType = FileType.Image,
+            Format = imgInfo.Format,
+            Width = imgInfo.Width,
+            Height = imgInfo.Height,
+            OriginalSize = imgInfo.FileSize,
+            DateModified = imgInfo.DateModified,
+            DateTaken = imgInfo.DateTaken,
+            Status = Properties.Loc.StatusWaiting
+        };
         Files.Add(info);
         return true;
     }
@@ -1083,7 +1141,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void RemoveFile(object? parameter)
     {
-        if (parameter is ImageFile file)
+        if (parameter is UnifiedFile file)
             Files.Remove(file);
     }
 
@@ -1206,7 +1264,7 @@ public class MainViewModel : INotifyPropertyChanged
     // --- バッチ処理 ---
     private async Task ProcessAsync()
     {
-        var targets = Files.Where(f => f.IsChecked).ToList();
+        var targets = Files.Where(f => f.IsChecked && f.FileType == FileType.Image).ToList();
         if (targets.Count == 0)
         {
             StatusText = Properties.Loc.StatusNoFiles;
@@ -1338,9 +1396,11 @@ public class MainViewModel : INotifyPropertyChanged
             ProcessPdfOptimizeCommand,
             RunOrCancelPdfCommand,
             BrowseCompositeCommand,
-            SaveImagePresetCommand,
-            SaveOfficePresetCommand,
-            SavePdfPresetCommand);
+            SavePresetCommand,
+            GoNextCommand,
+            GoBackCommand,
+            StartOverCommand,
+            GoToSettingsCommand);
     }
 
     private void UpdateSummaries()
@@ -1397,12 +1457,28 @@ public class MainViewModel : INotifyPropertyChanged
         };
 
     // --- ファイル最適化機能用メソッド ---
+    private void AddOptimizeFileByPathInternal(string path, FileType fileType)
+    {
+        if (Files.Any(f => string.Equals(f.FilePath, path, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        var fileInfo = new FileInfo(path);
+        var info = new UnifiedFile
+        {
+            FilePath = path,
+            FileType = fileType,
+            OriginalSize = fileInfo.Length,
+            Status = Properties.Loc.StatusWaiting
+        };
+        Files.Add(info);
+    }
+
     public void AddOptimizeFileByPath(string path)
     {
         if (!IsSupportedOptimizeFile(path))
             return;
 
-        AddOptimizeFileInfo(OptimizeFiles, path);
+        AddOptimizeFileByPathInternal(path, FileType.Office);
     }
 
     private static bool IsSupportedOptimizeFile(string path)
@@ -1432,8 +1508,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void RemoveOptimizeFile(object? parameter)
     {
-        if (parameter is OptimizeFile file)
-            OptimizeFiles.Remove(file);
+        if (parameter is UnifiedFile file)
+            Files.Remove(file);
     }
 
     private void ClearOptimizeFiles(object? _)
@@ -1441,7 +1517,9 @@ public class MainViewModel : INotifyPropertyChanged
         if (!ConfirmClearSharedList())
             return;
 
-        OptimizeFiles.Clear();
+        var toRemove = Files.Where(f => f.FileType == FileType.Office).ToList();
+        foreach (var file in toRemove)
+            Files.Remove(file);
     }
 
     public void AddPdfFileByPath(string path)
@@ -1456,7 +1534,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (!IsSupportedPdfFile(path))
             return;
 
-        AddOptimizeFileInfo(PdfFiles, path);
+        AddOptimizeFileByPathInternal(path, FileType.Pdf);
     }
 
     private static bool IsSupportedPdfFile(string path)
@@ -1474,8 +1552,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void RemovePdfFile(object? parameter)
     {
-        if (parameter is OptimizeFile file)
-            PdfFiles.Remove(file);
+        if (parameter is UnifiedFile file)
+            Files.Remove(file);
     }
 
     private void ClearPdfFiles(object? _)
@@ -1483,21 +1561,9 @@ public class MainViewModel : INotifyPropertyChanged
         if (!ConfirmClearSharedList())
             return;
 
-        PdfFiles.Clear();
-    }
-
-    private static void AddOptimizeFileInfo(ObservableCollection<OptimizeFile> collection, string path)
-    {
-        if (collection.Any(f => string.Equals(f.FilePath, path, StringComparison.OrdinalIgnoreCase)))
-            return;
-
-        var fileInfo = new FileInfo(path);
-        collection.Add(new OptimizeFile
-        {
-            FilePath = path,
-            OriginalSize = fileInfo.Length,
-            Status = Properties.Loc.StatusWaiting
-        });
+        var toRemove = Files.Where(f => f.FileType == FileType.Pdf).ToList();
+        foreach (var file in toRemove)
+            Files.Remove(file);
     }
 
     private bool ConfirmClearSharedList()
@@ -1509,7 +1575,7 @@ public class MainViewModel : INotifyPropertyChanged
         return result == MessageBoxResult.Yes;
     }
 
-    private sealed record ConversionWorkItem(OptimizeFile File, string OriginalPath, string TargetPath);
+    private sealed record ConversionWorkItem(UnifiedFile File, string OriginalPath, string TargetPath);
 
     private sealed record OfficeProcessingOptions
     {
@@ -1541,7 +1607,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ProcessOptimizeAsync()
     {
-        var targets = OptimizeFiles.Where(f => f.IsChecked).ToList();
+        var targets = Files.Where(f => f.IsChecked && f.FileType == FileType.Office).ToList();
         if (targets.Count == 0)
         {
             StatusText = Properties.Loc.StatusNoFiles;
@@ -1679,7 +1745,7 @@ public class MainViewModel : INotifyPropertyChanged
             FileNameRule = FileNameRule
         };
 
-    private static List<ConversionWorkItem> CreateOfficeWorkItems(IEnumerable<OptimizeFile> targets, OfficeProcessingOptions options)
+    private static List<ConversionWorkItem> CreateOfficeWorkItems(IEnumerable<UnifiedFile> targets, OfficeProcessingOptions options)
     {
         var reservedOutputPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         return targets.Select(file =>
@@ -1724,7 +1790,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ProcessPdfOptimizeAsync()
     {
-        var targets = PdfFiles.Where(f => f.IsChecked).ToList();
+        var targets = Files.Where(f => f.IsChecked && f.FileType == FileType.Pdf).ToList();
         if (targets.Count == 0)
         {
             StatusText = Properties.Loc.StatusNoFiles;
@@ -1824,8 +1890,243 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private async Task RunAllOrCancelAsync()
+    {
+        if (IsProcessing)
+        {
+            Cancel();
+            return;
+        }
+        await RunOrCancelAsync(ProcessAllAsync);
+    }
+
+    private async Task ProcessAllAsync()
+    {
+        var imageTargets = Files.Where(f => f.IsChecked && f.FileType == FileType.Image).ToList();
+        var officeTargets = Files.Where(f => f.IsChecked && f.FileType == FileType.Office).ToList();
+        var pdfTargets = Files.Where(f => f.IsChecked && f.FileType == FileType.Pdf).ToList();
+
+        int totalTargets = imageTargets.Count + officeTargets.Count + pdfTargets.Count;
+        if (totalTargets == 0)
+        {
+            StatusText = Properties.Loc.StatusNoFiles;
+            return;
+        }
+
+        var token = BeginProcessing(totalTargets);
+        int success = 0;
+        int errors = 0;
+        int processed = 0;
+
+        void UpdateOverallProgress(int currentProcessed, string currentName)
+        {
+            UpdateProgressValue(currentProcessed);
+            StatusText = string.Format(Properties.Loc.StatusProcessingProgress, currentProcessed, totalTargets, currentName);
+        }
+
+        try
+        {
+            // --- 1. 画像変換 ---
+            if (imageTargets.Count > 0)
+            {
+                var enabledSteps = Steps.Where(s => s.Enabled).ToList();
+                var formatStep = enabledSteps.LastOrDefault(s => s.Type == PipelineStepType.FormatConvert);
+
+                await Task.Run(() =>
+                {
+                    for (int i = 0; i < imageTargets.Count; i++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var file = imageTargets[i];
+                        file.Status = Properties.Loc.StatusProcessing;
+                        file.IsProcessing = true;
+                        try
+                        {
+                            var ext = formatStep != null
+                                ? ImageProcessingService.GetExtension(formatStep.TargetFormat)
+                                : Path.GetExtension(file.FilePath);
+
+                            var outputPath = OutputPathHelper.GetUniqueSuffixedPath(file.FilePath, FileNameRule, ext, OutputDirectory);
+                            _processingService.Process(file.FilePath, outputPath, Steps, UseOxipng, OxipngPath, OxipngLevel, UseJpegli, CjpegliPath, logAction: LogDebug);
+                            
+                            success++;
+                            file.Status = Properties.Loc.StatusCompleted;
+                            LogDebug($"OK  {file.FileName} → {Path.GetFileName(outputPath)}");
+                            
+                            if (File.Exists(outputPath))
+                            {
+                                file.OptimizedSize = new FileInfo(outputPath).Length;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            errors++;
+                            file.Status = Properties.Loc.StatusErrorState;
+                            ReportFileError(file.FileName, ex.Message);
+                        }
+                        finally
+                        {
+                            file.IsProcessing = false;
+                            int current = Interlocked.Increment(ref processed);
+                            UpdateOverallProgress(current, file.FileName);
+                        }
+                    }
+                });
+            }
+
+            // --- 2. Office 最適化 ---
+            if (officeTargets.Count > 0)
+            {
+                var options = CreateOfficeProcessingOptions();
+                var workItems = CreateOfficeWorkItems(officeTargets, options);
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = options.ConvertToPdf ? 1 : GetParallelism(options.MaxDegreeOfParallelism),
+                    CancellationToken = token
+                };
+
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(workItems, parallelOptions, item =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var file = item.File;
+                        file.Status = Properties.Loc.StatusProcessing;
+                        file.IsProcessing = true;
+                        string? tempPath = null;
+                        try
+                        {
+                            var originalPath = item.OriginalPath;
+                            LogDebug($"処理開始: {file.FileName}");
+                            var targetPath = item.TargetPath;
+                            tempPath = OutputPathHelper.GetTemporarySiblingPath(targetPath);
+
+                            long optimizedSize;
+                            if (options.ConvertToPdf)
+                            {
+                                file.Status = Properties.Loc.StatusConvertingToPdf;
+                                optimizedSize = _processingService.ConvertOfficeToPdf(originalPath, tempPath, options.ConvertToPdfA, LogDebug, targetPath);
+                            }
+                            else
+                            {
+                                file.Status = Properties.Loc.StatusOptimizingPackage;
+                                optimizedSize = OptimizeOfficePackage(originalPath, tempPath, options);
+                            }
+
+                            FileMoveHelper.MoveWithRetries(tempPath, targetPath);
+                            tempPath = null;
+
+                            file.OptimizedSize = optimizedSize;
+                            file.Status = Properties.Loc.StatusCompleted;
+                            Interlocked.Increment(ref success);
+                        }
+                        catch (Exception ex)
+                        {
+                            file.Status = Properties.Loc.StatusErrorState;
+                            Interlocked.Increment(ref errors);
+                            ReportFileError(file.FileName, ex.Message);
+                            FileMoveHelper.DeleteIfExists(tempPath);
+                        }
+                        finally
+                        {
+                            file.IsProcessing = false;
+                            int current = Interlocked.Increment(ref processed);
+                            UpdateOverallProgress(current, file.FileName);
+                        }
+                    });
+                });
+            }
+
+            // --- 3. PDF 変換 ---
+            if (pdfTargets.Count > 0)
+            {
+                var qpdfPath = QpdfPath;
+                var pdfOptions = CreatePdfOptimizationOptions();
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = GetParallelism(MaxDegreeOfParallelism),
+                    CancellationToken = token
+                };
+
+                await Parallel.ForEachAsync(pdfTargets, parallelOptions, async (file, ct) =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    file.Status = Properties.Loc.StatusProcessing;
+                    file.IsProcessing = true;
+                    string? tempPath = null;
+                    try
+                    {
+                        var originalPath = file.FilePath;
+                        LogDebug($"PDF処理開始: {file.FileName}");
+                        var targetPath = OutputPathHelper.GetUniqueSuffixedPath(originalPath, FileNameRule, ".pdf", OutputDirectory);
+                        tempPath = OutputPathHelper.GetTemporarySiblingPath(targetPath);
+                        file.Status = Properties.Loc.StatusOptimizingPdf;
+
+                        var optimizedSize = await _pdfOptimizationService.OptimizeAsync(
+                            originalPath,
+                            tempPath,
+                            pdfOptions,
+                            qpdfPath,
+                            ct,
+                            LogDebug,
+                            targetPath);
+
+                        await FileMoveHelper.MoveWithRetriesAsync(tempPath, targetPath, ct);
+                        tempPath = null;
+
+                        CompleteOptimizeFile(file, optimizedSize);
+                        Interlocked.Increment(ref success);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        file.Status = Properties.Loc.StatusErrorState;
+                        Interlocked.Increment(ref errors);
+                        ReportFileError(file.FileName, ex.Message);
+                        FileMoveHelper.DeleteIfExists(tempPath);
+                    }
+                    finally
+                    {
+                        file.IsProcessing = false;
+                        int current = Interlocked.Increment(ref processed);
+                        UpdateOverallProgress(current, file.FileName);
+                    }
+                });
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+        catch (OperationCanceledException)
+        {
+            LogDebug("変換処理がキャンセルされました。");
+        }
+        catch (AggregateException ae) when (ae.InnerExceptions.Any(e => e is OperationCanceledException))
+        {
+            LogDebug("変換処理がキャンセルされました。");
+        }
+        finally
+        {
+            var isCancelled = EndProcessing(token);
+            if (isCancelled)
+            {
+                StatusText = Properties.Loc.StatusCancelled;
+                LogDebug($"変換キャンセル: {success} 成功, {errors} 失敗");
+            }
+            else
+            {
+                StatusText = string.Format(Properties.Loc.StatusDoneMsg, success, errors);
+                LogDebug($"変換完了: {success} 成功, {errors} 失敗");
+                PlayCompletionSoundIfEnabled();
+            }
+        }
+    }
+
     private static List<ConversionWorkItem> CreatePdfWorkItems(
-        IEnumerable<OptimizeFile> targets,
+        IEnumerable<UnifiedFile> targets,
         string fileNameRule,
         string outputDirectory)
     {
@@ -1853,6 +2154,7 @@ public class MainViewModel : INotifyPropertyChanged
         IsProcessing = true;
         ProgressValue = 0;
         ProgressMax = progressMax;
+        WizardStep = 2;
 
         _cts = new CancellationTokenSource();
         return _cts.Token;
@@ -1905,7 +2207,7 @@ public class MainViewModel : INotifyPropertyChanged
         });
     }
 
-    private void CompleteOptimizeFile(OptimizeFile file, long optimizedSize)
+    private void CompleteOptimizeFile(UnifiedFile file, long optimizedSize)
     {
         file.OptimizedSize = optimizedSize;
         file.Status = Properties.Loc.StatusCompleted;
@@ -1983,21 +2285,18 @@ public class MainViewModel : INotifyPropertyChanged
     public int SelectedTabIndex
     {
         get => _selectedTabIndex;
-        set { _selectedTabIndex = value; OnPropertyChanged(); }
+        set 
+        { 
+            _selectedTabIndex = value; 
+            OnPropertyChanged(); 
+        }
     }
 
     private void LoadPresetNames()
     {
-        LoadPresetNames(ImagePresetNames, "Image");
-        LoadPresetNames(OfficePresetNames, "Office");
-        LoadPresetNames(PdfPresetNames, "Pdf");
-    }
+        PresetNames.Clear();
 
-    private void LoadPresetNames(ObservableCollection<string> target, string presetType)
-    {
-        target.Clear();
-
-        var dir = AppPathHelper.GetPresetDirectoryPath(presetType);
+        var dir = AppPathHelper.GetPresetDirectoryPath();
         if (!Directory.Exists(dir))
             return;
 
@@ -2006,109 +2305,45 @@ public class MainViewModel : INotifyPropertyChanged
             foreach (var file in Directory.EnumerateFiles(dir, "*.ini")
                          .OrderBy(Path.GetFileNameWithoutExtension, StringComparer.OrdinalIgnoreCase))
             {
-                target.Add(Path.GetFileNameWithoutExtension(file));
+                PresetNames.Add(Path.GetFileNameWithoutExtension(file));
             }
         }
         catch (Exception ex)
         {
-            LogDebug($"Failed to load {presetType} presets: {ex.Message}");
+            LogDebug($"Failed to load presets: {ex.Message}");
         }
     }
 
-    private void LoadPreset(string presetType, string presetName, string displayName, bool updateStatus = true)
+    private void LoadPreset(string presetName, bool updateStatus = true)
     {
         var sanitizedName = AppPathHelper.SanitizePresetName(presetName);
         if (string.IsNullOrWhiteSpace(sanitizedName))
             return;
 
-        var path = AppPathHelper.GetPresetFilePath(presetType, sanitizedName);
+        var path = AppPathHelper.GetPresetFilePath(sanitizedName);
         if (!File.Exists(path))
             return;
 
         LoadSettings(path);
         if (updateStatus)
-            StatusText = string.Format(Properties.Loc.StatusPresetApplied, displayName, sanitizedName);
+            StatusText = string.Format(Properties.Loc.StatusPresetApplied, "共通", sanitizedName);
     }
 
     private void LoadLastUsedPresets()
     {
-        LoadLastUsedPreset("Image", SelectedImagePresetName, ImagePresetNames, name => SelectedImagePresetName = name, Properties.Loc.PresetTypeImage);
-        LoadLastUsedPreset("Office", SelectedOfficePresetName, OfficePresetNames, name => SelectedOfficePresetName = name, Properties.Loc.PresetTypeOffice);
-        LoadLastUsedPreset("Pdf", SelectedPdfPresetName, PdfPresetNames, name => SelectedPdfPresetName = name, Properties.Loc.PresetTypePdf);
-    }
-
-    private void LoadLastUsedPreset(string presetType, string selectedPresetName, ObservableCollection<string> availablePresetNames, Action<string> selectPreset, string displayName)
-    {
-        var presetName = AppPathHelper.SanitizePresetName(selectedPresetName);
+        var presetName = AppPathHelper.SanitizePresetName(SelectedPresetName);
         var matchedPresetName = string.IsNullOrWhiteSpace(presetName)
             ? null
-            : availablePresetNames.FirstOrDefault(name => string.Equals(name, presetName, StringComparison.OrdinalIgnoreCase));
+            : PresetNames.FirstOrDefault(name => string.Equals(name, presetName, StringComparison.OrdinalIgnoreCase));
 
         if (string.IsNullOrWhiteSpace(matchedPresetName))
         {
-            selectPreset("");
+            SelectedPresetName = "";
             return;
         }
 
-        selectPreset(matchedPresetName);
-        LoadPreset(presetType, matchedPresetName, displayName, updateStatus: false);
-    }
-
-    private void SaveImagePreset(object? parameter)
-    {
-        SavePreset(
-            "Image",
-            SelectedImagePresetName,
-            name => SelectedImagePresetName = name,
-            () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: false, includeImage: true),
-            Properties.Loc.PresetTypeImage);
-    }
-
-    private void SaveOfficePreset(object? parameter)
-    {
-        SavePreset(
-            "Office",
-            SelectedOfficePresetName,
-            name => SelectedOfficePresetName = name,
-            () => CreateSettingsData(includeGeneral: false, includeOffice: true, includePdf: false, includeImage: false),
-            Properties.Loc.PresetTypeOffice);
-    }
-
-    private void SavePdfPreset(object? parameter)
-    {
-        SavePreset(
-            "Pdf",
-            SelectedPdfPresetName,
-            name => SelectedPdfPresetName = name,
-            () => CreateSettingsData(includeGeneral: false, includeOffice: false, includePdf: true, includeImage: false),
-            Properties.Loc.PresetTypePdf);
-    }
-
-    private void SavePreset(
-        string presetType,
-        string selectedPresetName,
-        Action<string> selectPreset,
-        Func<Dictionary<string, Dictionary<string, string>>> createData,
-        string displayName)
-    {
-        var presetName = AppPathHelper.SanitizePresetName(selectedPresetName);
-        if (string.IsNullOrWhiteSpace(presetName))
-        {
-            StatusText = Properties.Loc.StatusPresetNameRequired;
-            return;
-        }
-
-        try
-        {
-            SettingsService.Save(AppPathHelper.GetPresetFilePath(presetType, presetName), createData());
-            LoadPresetNames();
-            selectPreset(presetName);
-            StatusText = string.Format(Properties.Loc.StatusPresetSaved, displayName, presetName);
-        }
-        catch (Exception ex)
-        {
-            LogDebug($"Failed to save {presetType} preset: {ex.Message}");
-        }
+        SelectedPresetName = matchedPresetName;
+        LoadPreset(matchedPresetName, updateStatus: false);
     }
 
     public void LoadSettings(string? customPath = null)
@@ -2155,9 +2390,7 @@ public class MainViewModel : INotifyPropertyChanged
         WindowTop = ReadDouble(general, "WindowTop", double.NaN);
         WindowState = NormalizeRestoredWindowState(ReadEnum(general, "WindowState", WindowState));
         SelectedTabIndex = ReadInt(general, "SelectedTabIndex", SelectedTabIndex);
-        SelectedImagePresetName = ReadString(general, "LastImagePresetName", SelectedImagePresetName);
-        SelectedOfficePresetName = ReadString(general, "LastOfficePresetName", SelectedOfficePresetName);
-        SelectedPdfPresetName = ReadString(general, "LastPdfPresetName", SelectedPdfPresetName);
+        SelectedPresetName = ReadString(general, "LastPresetName", SelectedPresetName);
     }
 
     private void ApplyOfficeSettings(Dictionary<string, Dictionary<string, string>> data)
@@ -2458,9 +2691,7 @@ public class MainViewModel : INotifyPropertyChanged
             ["WindowTop"] = WindowTop.ToString(CultureInfo.InvariantCulture),
             ["WindowState"] = (WindowState == WindowState.Minimized ? WindowState.Normal : WindowState).ToString(),
             ["SelectedTabIndex"] = SelectedTabIndex.ToString(),
-            ["LastImagePresetName"] = SelectedImagePresetName ?? "",
-            ["LastOfficePresetName"] = SelectedOfficePresetName ?? "",
-            ["LastPdfPresetName"] = SelectedPdfPresetName ?? ""
+            ["LastPresetName"] = SelectedPresetName ?? ""
         };
 
     private Dictionary<string, string> CreateOfficeSettingsSection()

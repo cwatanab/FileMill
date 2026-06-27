@@ -10,7 +10,7 @@
         ShowInTaskbar="False"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
-        Background="{DynamicResource WindowBackground}">
+        Background="Transparent">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -34,7 +34,7 @@
         </StackPanel>
 
         <!-- メッセージ・謝辞スクロール領域 -->
-        <Border Grid.Row="1" Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <TextBlock x:Name="MessageText" 
                            TextWrapping="Wrap" 
@@ -46,9 +46,10 @@
 
         <!-- OKボタン -->
         <Button Grid.Row="2" 
-                Content="OK" 
-                Width="80" 
-                Height="26" 
+                Content="{x:Static properties:Loc.ButtonOK}" 
+                MinWidth="80" 
+                Width="Auto"
+                Height="28" 
                 Margin="0,16,0,0" 
                 HorizontalAlignment="Right" 
                 IsDefault="True" 

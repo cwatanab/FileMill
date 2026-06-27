@@ -11,15 +11,15 @@ public static class AppPathHelper
         return Path.Combine(appData, "FileMill", "settings.ini");
     }
 
-    public static string GetPresetDirectoryPath(string presetType)
+    public static string GetPresetDirectoryPath()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, "FileMill", "presets", presetType.ToLowerInvariant());
+        return Path.Combine(appData, "FileMill", "presets");
     }
 
-    public static string GetPresetFilePath(string presetType, string presetName)
+    public static string GetPresetFilePath(string presetName)
     {
-        return Path.Combine(GetPresetDirectoryPath(presetType), SanitizePresetName(presetName) + ".ini");
+        return Path.Combine(GetPresetDirectoryPath(), SanitizePresetName(presetName) + ".ini");
     }
 
     public static string SanitizePresetName(string name)

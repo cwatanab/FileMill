@@ -30,6 +30,8 @@
     <SolidColorBrush x:Key="SettingsBackground" Color="White"/>
     <SolidColorBrush x:Key="SettingsBorderBrush" Color="#DFDFDF"/>
     <SolidColorBrush x:Key="TabBackground" Color="Transparent"/>
+    <SolidColorBrush x:Key="HeaderHoverBackground" Color="#E5E5E5"/>
+    <SolidColorBrush x:Key="HeaderPressedBackground" Color="#D0D0D0"/>
 
     <!-- ドラッグ＆ドロップ時のハイライト色 (ライト) -->
     <SolidColorBrush x:Key="DragOverBackground" Color="#E8F0FE"/>

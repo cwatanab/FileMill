@@ -14,7 +14,7 @@
     <SolidColorBrush x:Key="StatusBarBorderBrush" Color="#404040"/>
     <SolidColorBrush x:Key="ListBackground" Color="#252525"/>
     <SolidColorBrush x:Key="HeaderBackground" Color="#333333"/>
-    <SolidColorBrush x:Key="HeaderBorderBrush" Color="#404040"/>
+    <SolidColorBrush x:Key="HeaderBorderBrush" Color="#2A2A2A"/>
     <SolidColorBrush x:Key="AccentBackground" Color="#2F6F3E"/>
     <SolidColorBrush x:Key="AccentBorderBrush" Color="#5FC775"/>
     <SolidColorBrush x:Key="AccentForeground" Color="#F4FFF7"/>
@@ -30,6 +30,8 @@
     <SolidColorBrush x:Key="SettingsBackground" Color="#2D2D2D"/>
     <SolidColorBrush x:Key="SettingsBorderBrush" Color="#404040"/>
     <SolidColorBrush x:Key="TabBackground" Color="Transparent"/>
+    <SolidColorBrush x:Key="HeaderHoverBackground" Color="#3D3D3D"/>
+    <SolidColorBrush x:Key="HeaderPressedBackground" Color="#4D4D4D"/>
 
     <!-- ドラッグ＆ドロップ時のハイライト色 (ダーク) -->
     <SolidColorBrush x:Key="DragOverBackground" Color="#1A3A5A"/>
