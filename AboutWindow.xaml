@@ -44,16 +44,20 @@
             </ScrollViewer>
         </Border>
 
-        <!-- OKボタン -->
-        <Button Grid.Row="2" 
-                Content="{x:Static properties:Loc.ButtonOK}" 
-                MinWidth="80" 
-                Width="Auto"
-                Height="28" 
-                Margin="0,16,0,0" 
-                HorizontalAlignment="Right" 
-                IsDefault="True" 
-                Click="OkButton_Click"/>
+        <!-- アップデートを確認ボタン & OKボタン -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <ui:Button Content="アップデートを確認(_U)..." 
+                       HorizontalAlignment="Left"
+                       Height="28"
+                       Click="CheckForUpdates_Click"/>
+            <Button Content="{x:Static properties:Loc.ButtonOK}" 
+                    MinWidth="80" 
+                    Width="Auto"
+                    Height="28" 
+                    HorizontalAlignment="Right" 
+                    IsDefault="True" 
+                    Click="OkButton_Click"/>
+        </Grid>
         </Grid>
     </Grid>
 </ui:FluentWindow>

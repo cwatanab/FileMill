@@ -336,54 +336,7 @@ public partial class MainWindow : FluentWindow
         aboutWindow.ShowDialog();
     }
 
-    private async void MenuItem_CheckForUpdates_Click(object sender, RoutedEventArgs e)
-    {
-        var menuItem = sender as MenuItem;
-        if (menuItem != null)
-        {
-            menuItem.IsEnabled = false;
-        }
-        try
-        {
-            var result = await UpdateService.CheckForUpdatesAsync();
-            if (!result.IsUpdateAvailable)
-            {
-                System.Windows.MessageBox.Show(string.Format(Loc.MsgUpdateUpToDate, result.CurrentVersion), Loc.TitleUpdateCheck, MessageBoxButton.OK, MessageBoxImage.Asterisk);
-            }
-            else
-            {
-                if (System.Windows.MessageBox.Show(string.Format(Loc.MsgUpdateAvailable, result.LatestVersion, result.CurrentVersion), Loc.TitleUpdateCheck, MessageBoxButton.YesNo, MessageBoxImage.Asterisk) != MessageBoxResult.Yes)
-                {
-                    return;
-                }
-                if (string.IsNullOrWhiteSpace(result.PackageUrl))
-                {
-                    if (System.Windows.MessageBox.Show(Loc.MsgUpdateNoPackage, Loc.TitleUpdateCheck, MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes)
-                    {
-                        UpdateService.OpenReleasePage(result.ReleaseUrl);
-                    }
-                }
-                else
-                {
-                    Mouse.OverrideCursor = Cursors.Wait;
-                    UpdateService.StartUpdaterProcess(await UpdateService.DownloadUpdatePackageAsync(result));
-                    Application.Current.Shutdown();
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show(string.Format(Loc.MsgUpdateCheckFailed, ex.Message), Loc.TitleUpdateCheck, MessageBoxButton.OK, MessageBoxImage.Exclamation);
-        }
-        finally
-        {
-            Mouse.OverrideCursor = null;
-            if (menuItem != null)
-            {
-                menuItem.IsEnabled = true;
-            }
-        }
-    }
+
 
     protected override void OnClosing(CancelEventArgs e)
     {
