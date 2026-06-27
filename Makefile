@@ -48,6 +48,43 @@ release-check:
 		echo "Please run 'gh auth login' to authenticate with GitHub."; \
 		exit 1; \
 	fi
+	@if command -v powershell.exe >/dev/null 2>&1; then \
+		powershell.exe -NoProfile -Command " \
+			echo '==================================================='; \
+			echo ' Checking External Tools Versions'; \
+			echo '==================================================='; \
+			\
+			\$$oxipngLocal = (tools/oxipng.exe --version 2>\$$null) -replace 'oxipng\s+', ''; \
+			if (-not \$$oxipngLocal) { \$$oxipngLocal = 'Not found' }; \
+			\$$oxipngLatest = (gh api repos/shssoichiro/oxipng/releases/latest --jq .tag_name 2>\$$null) -replace '^v', ''; \
+			if (-not \$$oxipngLatest) { \$$oxipngLatest = 'Unknown' }; \
+			\
+			\$$qpdfLocal = ((tools/qpdf.exe --version 2>\$$null)[0] -replace 'qpdf version\s+', '').Trim(); \
+			if (-not \$$qpdfLocal) { \$$qpdfLocal = 'Not found' }; \
+			\$$qpdfLatest = (gh api repos/qpdf/qpdf/releases/latest --jq .tag_name 2>\$$null) -replace '^v', ''; \
+			if (-not \$$qpdfLatest) { \$$qpdfLatest = 'Unknown' }; \
+			\
+			\$$libjxlLatest = (gh api repos/libjxl/libjxl/releases/latest --jq .tag_name 2>\$$null) -replace '^v', ''; \
+			if (-not \$$libjxlLatest) { \$$libjxlLatest = 'Unknown' }; \
+			\
+			\$$ffmpegLocal = (tools/ffmpeg.exe -version 2>\$$null)[0]; \
+			if (\$$ffmpegLocal -match 'version\s+(N-\d+|[0-9\.]+)') { \$$ffmpegVer = \$$Matches[1] } else { \$$ffmpegVer = 'Not found' }; \
+			\
+			echo ('  - oxipng : Local=' + \$$oxipngLocal + ' / Latest=' + \$$oxipngLatest); \
+			echo ('  - qpdf   : Local=' + \$$qpdfLocal + ' / Latest=' + \$$qpdfLatest); \
+			echo ('  - cjpegli: (libjxl Latest=' + \$$libjxlLatest + ')'); \
+			echo ('  - ffmpeg : Local=' + \$$ffmpegVer); \
+			\
+			if (\$$oxipngLocal -ne 'Not found' -and \$$oxipngLatest -ne 'Unknown' -and \$$oxipngLocal -ne \$$oxipngLatest) { \
+				echo '  [WARNING] oxipng is outdated! Latest is ' + \$$oxipngLatest; \
+			}; \
+			if (\$$qpdfLocal -ne 'Not found' -and \$$qpdfLatest -ne 'Unknown' -and \$$qpdfLocal -ne \$$qpdfLatest) { \
+				echo '  [WARNING] qpdf is outdated! Latest is ' + \$$qpdfLatest; \
+			}; \
+			echo '==================================================='; \
+			echo ''; \
+		"; \
+	fi
 	#@if ! git diff-index --quiet HEAD --; then \
 	#	echo "[WARNING] You have uncommitted changes in your working tree."; \
 	#	printf "Do you want to continue despite uncommitted changes? (y/N): "; \
